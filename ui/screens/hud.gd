@@ -22,9 +22,12 @@ extends CanvasLayer
 @onready var damage_vignette: ColorRect = %DamageVignette
 @onready var audio_player: AudioStreamPlayer = %AudioPlayer
 
+@onready var oxygen_status_label: Label = %OxygenStatusLabel
+
 # Warning & Feedback State
 var _low_hp_alert: bool = false
 var _low_o2_alert: bool = false
+var _is_refilling_o2: bool = false
 var _pulse_timer: float = 0.0
 var _damage_flash_alpha: float = 0.0
 var _last_health: float = 100.0
@@ -76,6 +79,20 @@ func _process(delta: float) -> void:
 		oxygen_bar.modulate = Color(0.4 + pulse * 0.6, 1.0, 1.0)
 	elif oxygen_bar:
 		oxygen_bar.modulate = Color.WHITE
+	
+	# Oxygen Status Badge (Recharging or Critical Warning)
+	if oxygen_status_label:
+		if _is_refilling_o2:
+			oxygen_status_label.visible = true
+			oxygen_status_label.text = "▲ LIFE SUPPORT RECHARGING"
+			oxygen_status_label.modulate = Color(0.15, 1.0, 0.75)
+		elif _low_o2_alert:
+			oxygen_status_label.visible = true
+			var p := (sin(_pulse_timer * 2.0) + 1.0) * 0.5
+			oxygen_status_label.text = "⚠ O2 CRITICAL // SEEK STATION"
+			oxygen_status_label.modulate = Color(1.0, 0.35 + p * 0.35, 0.35 + p * 0.35)
+		else:
+			oxygen_status_label.visible = false
 
 
 func _connect_game_state_signals() -> void:
@@ -87,6 +104,10 @@ func _connect_game_state_signals() -> void:
 		gs.connect("health_changed", _on_health_changed)
 	if gs.has_signal("oxygen_changed") and not gs.is_connected("oxygen_changed", _on_oxygen_changed):
 		gs.connect("oxygen_changed", _on_oxygen_changed)
+	if gs.has_signal("oxygen_low_warning") and not gs.is_connected("oxygen_low_warning", _on_oxygen_low_warning):
+		gs.connect("oxygen_low_warning", _on_oxygen_low_warning)
+	if gs.has_signal("oxygen_refill_status_changed") and not gs.is_connected("oxygen_refill_status_changed", _on_oxygen_refill_status_changed):
+		gs.connect("oxygen_refill_status_changed", _on_oxygen_refill_status_changed)
 	if gs.has_signal("resource_changed") and not gs.is_connected("resource_changed", _on_resource_changed):
 		gs.connect("resource_changed", _on_resource_changed)
 	if gs.has_signal("objective_changed") and not gs.is_connected("objective_changed", _on_objective_changed):
@@ -154,7 +175,31 @@ func _on_oxygen_changed(current: float, max_o2: float) -> void:
 		oxygen_bar.value = current
 	if oxygen_label:
 		oxygen_label.text = "%d%%" % int(ceil((current / max_o2) * 100.0))
-	_low_o2_alert = current < (max_o2 * 0.20) and current > 0.0
+	_low_o2_alert = current < (max_o2 * 0.25) and current > 0.0
+
+
+func _on_oxygen_low_warning(is_low: bool) -> void:
+	if is_low and not _low_o2_alert:
+		_play_low_oxygen_sound()
+	_low_o2_alert = is_low
+
+
+func _on_oxygen_refill_status_changed(is_refilling: bool) -> void:
+	_is_refilling_o2 = is_refilling
+
+
+func _play_low_oxygen_sound() -> void:
+	if not audio_player or not audio_player.stream is AudioStreamGenerator:
+		return
+	if not audio_player.playing:
+		audio_player.play()
+	var playback = audio_player.get_stream_playback()
+	if playback:
+		var frames: int = playback.get_frames_available()
+		for i in mini(frames, 400):
+			var sample: float = sin(float(i) * 0.5) * 0.25
+			playback.push_frame(Vector2(sample, sample))
+
 
 
 func _on_resource_changed(resource_id: String, count: int) -> void:

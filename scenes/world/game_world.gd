@@ -21,6 +21,7 @@ var _debris_script := preload("res://scripts/components/research_debris.gd")
 var _resource_script := preload("res://scripts/components/resource_deposit.gd")
 var _rock_script := preload("res://scripts/components/alien_rock.gd")
 var _plant_script := preload("res://scripts/components/alien_plant.gd")
+var _oxygen_station_script := preload("res://scripts/components/oxygen_station.gd")
 
 var _player_ref: Node2D = null
 
@@ -37,6 +38,7 @@ func _ready() -> void:
 	_build_resource_fields()
 	_build_scattered_rocks()
 	_build_alien_flora()
+	_build_oxygen_stations()
 	_spawn_player()
 	_build_hud()
 	
@@ -267,6 +269,65 @@ func _build_alien_flora() -> void:
 		plant.position = plant_positions[i]
 		container.add_child(plant)
 		plant.call("setup")
+
+
+# ---------------------------------------------------------------------------
+# Oxygen Stations & Atmospheric Safe Zones
+# ---------------------------------------------------------------------------
+func _build_oxygen_stations() -> void:
+	var container := Node2D.new()
+	container.name = "OxygenStations"
+	add_child(container)
+	
+	var station_specs: Array[Dictionary] = [
+		# 1. Base Camp Atmospheric Safe Zone Dome (At Player Spawn)
+		{
+			"pos": Vector2.ZERO,
+			"name": "BaseCampAtmosphericDome",
+			"display_name": "EVA Base Camp Atmospheric Dome",
+			"type": "safe_zone_dome",
+			"radius": 115.0,
+			"refill_rate": 35.0
+		},
+		# 2. North-East Research Outpost Life-Support Station
+		{
+			"pos": Vector2(360, -440),
+			"name": "ResearchOutpostO2Station",
+			"display_name": "Research Outpost O2 Refill Station",
+			"type": "station",
+			"radius": 85.0,
+			"refill_rate": 30.0
+		},
+		# 3. South-West Crystal Valley Life-Support Station
+		{
+			"pos": Vector2(-420, 420),
+			"name": "CrystalValleyO2Station",
+			"display_name": "Crystal Valley O2 Refill Station",
+			"type": "station",
+			"radius": 85.0,
+			"refill_rate": 30.0
+		},
+		# 4. East Labyrinth Canyon Life-Support Pylon
+		{
+			"pos": Vector2(650, 100),
+			"name": "EastCanyonO2Station",
+			"display_name": "East Canyon O2 Pylon",
+			"type": "station",
+			"radius": 80.0,
+			"refill_rate": 25.0
+		}
+	]
+	
+	for spec in station_specs:
+		var st := Area2D.new()
+		st.name = spec["name"]
+		st.set_script(_oxygen_station_script)
+		st.position = spec["pos"]
+		container.add_child(st)
+		st.set("station_name", spec["display_name"])
+		st.set("station_type", spec["type"])
+		st.set("radius", spec["radius"])
+		st.set("refill_rate", spec["refill_rate"])
 
 
 # ---------------------------------------------------------------------------

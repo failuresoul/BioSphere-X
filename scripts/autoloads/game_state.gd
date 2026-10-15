@@ -5,6 +5,8 @@ extends Node
 
 signal health_changed(current: float, max_health: float)
 signal oxygen_changed(current: float, max_oxygen: float)
+signal oxygen_low_warning(is_low: bool)
+signal oxygen_refill_status_changed(is_refilling: bool)
 signal resource_changed(resource_id: String, count: int)
 signal objective_changed(text: String)
 signal game_paused(paused: bool)
@@ -16,8 +18,16 @@ var health: float = 100.0
 
 var max_oxygen: float = 100.0
 var oxygen: float = 100.0
-var oxygen_depletion_rate: float = 1.0 # Units per second in harsh alien atmosphere
+
+# Configurable Survival & Atmosphere Parameters
+@export var oxygen_depletion_rate: float = 1.5      # Units consumed per second during surface exploration
+@export var suffocation_damage_rate: float = 4.0    # Gradual health damage per second when oxygen == 0
+@export var oxygen_refill_rate: float = 25.0        # Units replenished per second inside safe zones or stations
+@export var low_oxygen_threshold: float = 25.0      # Percentage threshold that triggers audio/visual warning
+
 var is_oxygen_depleted: bool = false
+var is_low_oxygen: bool = false
+var is_oxygen_refilling: bool = false
 
 # Resource Inventory
 var resources: Dictionary = {
@@ -39,19 +49,36 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	# Oxygen timer and depletion strictly freeze when paused or in game-over state
 	if is_paused or is_game_over:
 		return
 	
-	# Deplete oxygen in alien environment
-	if oxygen > 0.0:
+	if is_oxygen_refilling:
+		# Replenish life support atmosphere smoothly inside safe zones or stations
+		refill_oxygen(oxygen_refill_rate * delta)
+	elif oxygen > 0.0:
+		# Gradual consumption in harsh alien atmosphere
 		oxygen = maxf(0.0, oxygen - oxygen_depletion_rate * delta)
 		oxygen_changed.emit(oxygen, max_oxygen)
-		if oxygen <= 0.0 and not is_oxygen_depleted:
-			is_oxygen_depleted = true
-			objective_changed.emit("CRITICAL WARNING // Oxygen depleted! Seek shelter or life support.")
+		_check_oxygen_warnings()
 	else:
-		# Suffocation damage when out of oxygen (2.5 damage per second)
-		damage_player(2.5 * delta)
+		# Configurable suffocation damage over time (prevents arbitrary instant death)
+		damage_player(suffocation_damage_rate * delta)
+
+
+func _check_oxygen_warnings() -> void:
+	var pct: float = (oxygen / max_oxygen) * 100.0 if max_oxygen > 0.0 else 0.0
+	var low: bool = pct <= low_oxygen_threshold and pct > 0.0
+	
+	if low != is_low_oxygen:
+		is_low_oxygen = low
+		oxygen_low_warning.emit(is_low_oxygen)
+		if is_low_oxygen:
+			objective_changed.emit("WARNING // Oxygen levels low! Return to Safe Zone or Life Support Station.")
+	
+	if oxygen <= 0.0 and not is_oxygen_depleted:
+		is_oxygen_depleted = true
+		objective_changed.emit("CRITICAL HAZARD // Oxygen depleted! Taking suffocation damage.")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -95,6 +122,11 @@ func set_oxygen(amount: float, max_o2: float = -1.0) -> void:
 		max_oxygen = max_o2
 	oxygen = clampf(amount, 0.0, max_oxygen)
 	is_oxygen_depleted = oxygen <= 0.0
+	var pct: float = (oxygen / max_oxygen) * 100.0 if max_oxygen > 0.0 else 0.0
+	var low: bool = pct <= low_oxygen_threshold and pct > 0.0
+	if low != is_low_oxygen:
+		is_low_oxygen = low
+		oxygen_low_warning.emit(is_low_oxygen)
 	oxygen_changed.emit(oxygen, max_oxygen)
 
 
@@ -103,8 +135,25 @@ func refill_oxygen(amount: float = -1.0) -> void:
 		oxygen = max_oxygen
 	else:
 		oxygen = minf(max_oxygen, oxygen + amount)
-	is_oxygen_depleted = oxygen <= 0.0
+	
+	if oxygen > 0.0:
+		is_oxygen_depleted = false
+	var pct: float = (oxygen / max_oxygen) * 100.0 if max_oxygen > 0.0 else 0.0
+	if pct > low_oxygen_threshold and is_low_oxygen:
+		is_low_oxygen = false
+		oxygen_low_warning.emit(false)
+	
 	oxygen_changed.emit(oxygen, max_oxygen)
+
+
+func set_oxygen_refilling(refilling: bool, rate: float = -1.0) -> void:
+	if rate > 0.0:
+		oxygen_refill_rate = rate
+	if is_oxygen_refilling != refilling:
+		is_oxygen_refilling = refilling
+		oxygen_refill_status_changed.emit(is_oxygen_refilling)
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -172,6 +221,8 @@ func restart_game() -> void:
 	health = max_health
 	oxygen = max_oxygen
 	is_oxygen_depleted = false
+	is_low_oxygen = false
+	is_oxygen_refilling = false
 	resources = {"crystals": 0, "titanium": 0, "biomass": 0}
 	current_objective = "SURVEY SURFACE // Gather 3 Energy Crystals from alien deposits."
 	
