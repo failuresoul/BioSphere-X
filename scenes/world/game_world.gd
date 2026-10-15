@@ -58,6 +58,11 @@ func _ready() -> void:
 	var nav_mgr = get_node_or_null("/root/NavigationManager")
 	if nav_mgr and nav_mgr.has_method("set_map_data"):
 		nav_mgr.call("set_map_data", map_data)
+	
+	# Navigation & Grid Debug Visualizer
+	var debug_viz := preload("res://scenes/world/navigation_debug_visualizer.gd").new()
+	debug_viz.name = "NavigationDebugVisualizer"
+	add_child(debug_viz)
 
 
 func _build_hud() -> void:

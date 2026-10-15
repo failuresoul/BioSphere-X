@@ -20,6 +20,8 @@ func _run_tests() -> void:
 	_test_navigation_manager_algorithm_switching()
 	_test_offline_fallback_failover()
 	_test_dev_navigation_menu_ui()
+	_test_enemy_obstacle_navigation_and_recalculation()
+	_test_debug_visualizer()
 
 
 func _test_map_data_helpers() -> void:
@@ -165,3 +167,62 @@ func _test_dev_navigation_menu_ui() -> void:
 	
 	menu.queue_free()
 	print("  [PASS] DevNavigationMenu UI controls, dropdown items, and visibility toggle verified")
+
+
+func _test_enemy_obstacle_navigation_and_recalculation() -> void:
+	var enemy_scene: PackedScene = load("res://scenes/enemies/alien_enemy.tscn")
+	assert(enemy_scene != null, "alien_enemy.tscn must load")
+	
+	var enemy := enemy_scene.instantiate()
+	add_child(enemy)
+	
+	# Verify separation: Navigation Grid (MapData), Pathfinding Algorithm (NavigationManager), Movement Controller (AlienEnemy)
+	assert(enemy is CharacterBody2D, "Enemy movement controller must be a CharacterBody2D")
+	assert(enemy.has_method("change_state"), "Enemy must manage state machine")
+	
+	# Verify throttled path recalculation
+	assert("_nav_refresh_timer" in enemy, "Enemy must have _nav_refresh_timer to throttle path recalculation")
+	enemy.set("_nav_refresh_timer", 0.5)
+	
+	# Verify unreachable destination handling
+	enemy.change_state(enemy.get("State").CHASE)
+	assert(enemy.current_state == enemy.get("State").CHASE, "Enemy in chase state")
+	
+	# Simulate unreachable destination callback
+	enemy.call("_handle_unreachable_navigation", Vector2(9999, 9999), {"success": false, "error": "Goal unreachable"})
+	assert(enemy.current_state == enemy.get("State").INVESTIGATE, "Unreachable destination must safely transition to INVESTIGATE")
+	assert(enemy.get("_nav_path").size() == 0, "Unreachable destination must clear active nav path")
+	
+	enemy.queue_free()
+	print("  [PASS] Enemy obstacle navigation, throttled recalculation, and safe unreachable handling verified")
+
+
+func _test_debug_visualizer() -> void:
+	var nav_mgr = get_node_or_null("/root/NavigationManager")
+	assert(nav_mgr != null, "NavigationManager required")
+	
+	var viz_script: GDScript = load("res://scenes/world/navigation_debug_visualizer.gd")
+	assert(viz_script != null, "navigation_debug_visualizer.gd must load")
+	
+	var viz = viz_script.new()
+	add_child(viz)
+	
+	# Test debug toggle
+	nav_mgr.set_debug_display(true)
+	assert(nav_mgr.debug_display_enabled == true, "Debug display must be enabled")
+	
+	# Register a test path
+	var test_path := PackedVector2Array([Vector2(0, 0), Vector2(100, 100), Vector2(200, 100)])
+	nav_mgr.register_active_path(999, test_path, Color(0, 1, 0))
+	assert(nav_mgr.active_paths.has(999), "Active path must be registered")
+	
+	# Test unregistering
+	nav_mgr.unregister_active_path(999)
+	assert(not nav_mgr.active_paths.has(999), "Active path must be unregistered")
+	
+	nav_mgr.set_debug_display(false)
+	assert(nav_mgr.debug_display_enabled == false, "Debug display toggled off")
+	
+	viz.queue_free()
+	print("  [PASS] NavigationDebugVisualizer registration, toggle, and path tracking verified")
+

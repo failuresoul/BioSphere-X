@@ -158,6 +158,27 @@ func grid_to_world_path(grid_path: Array) -> PackedVector2Array:
 	return world_path
 
 
+func get_nearest_walkable_grid_pos(grid_pos: Vector2i, max_radius: int = 5) -> Vector2i:
+	if is_in_bounds(grid_pos) and not is_cell_blocked(grid_pos):
+		return grid_pos
+	
+	for r in range(1, max_radius + 1):
+		for dx in range(-r, r + 1):
+			for dy in range(-r, r + 1):
+				if abs(dx) != r and abs(dy) != r:
+					continue
+				var candidate := Vector2i(grid_pos.x + dx, grid_pos.y + dy)
+				if is_in_bounds(candidate) and not is_cell_blocked(candidate):
+					return candidate
+	return grid_pos
+
+
+func get_nearest_walkable_world_pos(world_pos: Vector2, max_radius: int = 5) -> Vector2:
+	var g_pos := world_to_grid(world_pos)
+	var walkable_g := get_nearest_walkable_grid_pos(g_pos, max_radius)
+	return grid_to_world(walkable_g)
+
+
 func get_astar() -> AStarGrid2D:
 	return _astar
 

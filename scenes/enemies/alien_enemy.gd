@@ -53,6 +53,8 @@ var _target_player: Node2D = null
 var _nav_path: PackedVector2Array = PackedVector2Array()
 var _nav_path_index: int = 0
 var _nav_refresh_timer: float = 0.0
+var _nav_goal_pos: Vector2 = Vector2.ZERO
+var _is_recalculating_nav: bool = false
 
 @onready var visual: Node2D = $Visual
 @onready var health_component: Node = $HealthComponent
@@ -172,8 +174,12 @@ func _process_chase(delta: float) -> void:
 		return
 	
 	# Chase movement with navigation waypoints
+	# Recalculate paths when needed rather than every frame
 	_nav_refresh_timer -= delta
-	if _nav_refresh_timer <= 0.0 or _nav_path.is_empty():
+	var target_shifted := _target_player.global_position.distance_squared_to(_nav_goal_pos) > 64.0 * 64.0
+	var needs_path := _nav_path.is_empty() or (_nav_path_index >= _nav_path.size()) or target_shifted
+	
+	if needs_path and _nav_refresh_timer <= 0.0 and not _is_recalculating_nav:
 		_nav_refresh_timer = 0.6
 		_request_navigation_path(_target_player.global_position)
 	
@@ -267,6 +273,9 @@ func change_state(new_state: State) -> void:
 	if old_state == State.CHASE and new_state != State.CHASE:
 		_nav_path.clear()
 		_nav_path_index = 0
+		var nav_mgr = get_node_or_null("/root/NavigationManager")
+		if nav_mgr and nav_mgr.has_method("unregister_active_path"):
+			nav_mgr.call("unregister_active_path", get_instance_id())
 	
 	match new_state:
 		State.IDLE:
@@ -277,6 +286,10 @@ func change_state(new_state: State) -> void:
 			_attack_timer = 0.0
 		State.DEAD:
 			velocity = Vector2.ZERO
+			_nav_path.clear()
+			var nav_mgr = get_node_or_null("/root/NavigationManager")
+			if nav_mgr and nav_mgr.has_method("unregister_active_path"):
+				nav_mgr.call("unregister_active_path", get_instance_id())
 			if collision_shape:
 				collision_shape.disabled = true
 				collision_shape.set_deferred("disabled", true)
@@ -319,11 +332,39 @@ func _can_detect_player() -> bool:
 func _request_navigation_path(target_pos: Vector2) -> void:
 	var nav_mgr = get_node_or_null("/root/NavigationManager")
 	if nav_mgr and nav_mgr.has_method("request_path"):
-		nav_mgr.call("request_path", global_position, target_pos, null, func(path: PackedVector2Array, _metrics: Dictionary) -> void:
-			if is_instance_valid(self) and path.size() > 0:
+		_is_recalculating_nav = true
+		nav_mgr.call("request_path", global_position, target_pos, null, func(path: PackedVector2Array, metrics: Dictionary) -> void:
+			if not is_instance_valid(self):
+				return
+			_is_recalculating_nav = false
+			if path.size() > 0:
 				_nav_path = path
 				_nav_path_index = 0
+				_nav_goal_pos = target_pos
+				# Register active trajectory for visual debug rendering
+				nav_mgr.call("register_active_path", get_instance_id(), path, Color(1.0, 0.4, 0.2, 0.9))
+			else:
+				# Safely handle unreachable destinations without crashing or freezing
+				_handle_unreachable_navigation(target_pos, metrics)
 		)
+
+
+func _handle_unreachable_navigation(target_pos: Vector2, _metrics: Dictionary) -> void:
+	_nav_path.clear()
+	_nav_path_index = 0
+	_nav_refresh_timer = 1.0 # Back off recalculation for 1s
+	# If target is unreachable in CHASE and beyond immediate attack proximity, investigate last known accessible area
+	if current_state == State.CHASE:
+		var dist := global_position.distance_to(target_pos)
+		if dist > attack_range * 1.5:
+			last_known_player_pos = target_pos
+			change_state(State.INVESTIGATE)
+
+
+func _exit_tree() -> void:
+	var nav_mgr = get_node_or_null("/root/NavigationManager")
+	if nav_mgr and nav_mgr.has_method("unregister_active_path"):
+		nav_mgr.call("unregister_active_path", get_instance_id())
 
 
 # ---------------------------------------------------------------------------

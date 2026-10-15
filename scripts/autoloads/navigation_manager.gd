@@ -8,6 +8,8 @@ signal algorithm_changed(new_algorithm: String)
 signal metrics_updated(metrics: Dictionary)
 signal backend_status_changed(is_online: bool, message: String)
 signal fallback_triggered(reason: String)
+signal debug_display_changed(enabled: bool)
+signal active_paths_changed()
 
 const ALGORITHMS: Array[String] = [
 	"astar",
@@ -23,10 +25,12 @@ const ALGORITHMS: Array[String] = [
 @export var dls_depth_limit: int = 100
 @export var allow_diagonal: bool = true
 @export var force_fallback: bool = false
+@export var debug_display_enabled: bool = false
 
 var is_backend_online: bool = false
 var last_metrics: Dictionary = {}
 var last_error_message: String = ""
+var active_paths: Dictionary = {}
 
 # Keep reference to active world MapData
 var _map_data_ref: RefCounted = null
@@ -37,6 +41,13 @@ func _ready() -> void:
 	_init_client_listeners()
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F2:
+			toggle_debug_display()
+			get_viewport().set_input_as_handled()
+
+
 func _init_client_listeners() -> void:
 	var client = get_node_or_null("/root/AIClient")
 	if client:
@@ -44,6 +55,31 @@ func _init_client_listeners() -> void:
 			is_backend_online = online
 			backend_status_changed.emit(online, "Backend online" if online else "Backend offline")
 		)
+
+
+func set_debug_display(enabled: bool) -> void:
+	debug_display_enabled = enabled
+	debug_display_changed.emit(debug_display_enabled)
+
+
+func toggle_debug_display() -> bool:
+	debug_display_enabled = not debug_display_enabled
+	debug_display_changed.emit(debug_display_enabled)
+	return debug_display_enabled
+
+
+func register_active_path(source_id: int, path: PackedVector2Array, color: Color = Color(0, 0.95, 1, 0.85)) -> void:
+	active_paths[source_id] = {
+		"path": path,
+		"color": color
+	}
+	active_paths_changed.emit()
+
+
+func unregister_active_path(source_id: int) -> void:
+	if active_paths.has(source_id):
+		active_paths.erase(source_id)
+		active_paths_changed.emit()
 
 
 func set_algorithm(algo_name: String) -> void:
@@ -73,17 +109,30 @@ func request_path(
 ) -> void:
 	var m_data = map_data if map_data != null else _map_data_ref
 	if m_data == null:
-		var empty_metrics := {
-			"success": false,
-			"algorithm": current_algorithm,
-			"source": "NONE",
-			"error": "No MapData available for coordinate transformation"
+		var direct_path := PackedVector2Array([from_world, to_world])
+		var direct_metrics := {
+			"success": true,
+			"algorithm": "DirectLine",
+			"source": "[DIRECT_FALLBACK]",
+			"nodes_expanded": 2,
+			"execution_time_ms": 0.0,
+			"path_length": 2,
+			"is_fallback": true,
+			"message": "Direct line navigation fallback (No MapData mounted)"
 		}
-		_finish_path_request(PackedVector2Array(), empty_metrics, callback)
+		_finish_path_request(direct_path, direct_metrics, callback)
 		return
 
 	var start_grid: Vector2i = m_data.call("world_to_grid", from_world)
 	var goal_grid: Vector2i = m_data.call("world_to_grid", to_world)
+	
+	# If goal or start is on a blocked obstacle edge, snap to nearest walkable cell
+	if m_data.has_method("get_nearest_walkable_grid_pos"):
+		if m_data.call("is_cell_blocked", goal_grid):
+			goal_grid = m_data.call("get_nearest_walkable_grid_pos", goal_grid, 4)
+		if m_data.call("is_cell_blocked", start_grid):
+			start_grid = m_data.call("get_nearest_walkable_grid_pos", start_grid, 4)
+	
 	var algo: String = override_algorithm if override_algorithm != "" else current_algorithm
 
 	# If forced fallback is enabled, immediately route to Godot native fallback

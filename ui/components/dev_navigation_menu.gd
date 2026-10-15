@@ -10,6 +10,7 @@ signal fallback_toggled(force_fallback: bool)
 @onready var depth_spin: SpinBox = %DepthSpin
 @onready var diagonal_check: CheckBox = %DiagonalCheck
 @onready var force_fallback_check: CheckBox = %ForceFallbackCheck
+@onready var debug_display_check: CheckBox = %DebugDisplayCheck
 @onready var ping_button: Button = %PingButton
 @onready var test_query_button: Button = %TestQueryButton
 @onready var close_button: Button = %CloseButton
@@ -83,6 +84,8 @@ func _connect_signals() -> void:
 		diagonal_check.toggled.connect(_on_diagonal_toggled)
 	if force_fallback_check:
 		force_fallback_check.toggled.connect(_on_force_fallback_toggled)
+	if debug_display_check:
+		debug_display_check.toggled.connect(_on_debug_display_toggled)
 	if ping_button:
 		ping_button.pressed.connect(_on_ping_pressed)
 	if test_query_button:
@@ -98,6 +101,11 @@ func _connect_signals() -> void:
 			nav_mgr.connect("backend_status_changed", _on_backend_status_changed)
 		if nav_mgr.has_signal("fallback_triggered"):
 			nav_mgr.connect("fallback_triggered", _on_fallback_triggered)
+		if nav_mgr.has_signal("debug_display_changed"):
+			nav_mgr.connect("debug_display_changed", func(enabled):
+				if debug_display_check:
+					debug_display_check.button_pressed = enabled
+			)
 
 
 func _refresh_display() -> void:
@@ -118,6 +126,9 @@ func _refresh_display() -> void:
 		
 	if force_fallback_check and "force_fallback" in nav_mgr:
 		force_fallback_check.button_pressed = nav_mgr.get("force_fallback")
+		
+	if debug_display_check and "debug_display_enabled" in nav_mgr:
+		debug_display_check.button_pressed = nav_mgr.get("debug_display_enabled")
 		
 	var is_online: bool = nav_mgr.get("is_backend_online") if "is_backend_online" in nav_mgr else false
 	var last_err: String = nav_mgr.get("last_error_message") if "last_error_message" in nav_mgr else ""
@@ -146,6 +157,12 @@ func _on_diagonal_toggled(toggled: bool) -> void:
 	var nav_mgr = get_node_or_null("/root/NavigationManager")
 	if nav_mgr:
 		nav_mgr.set("allow_diagonal", toggled)
+
+
+func _on_debug_display_toggled(toggled: bool) -> void:
+	var nav_mgr = get_node_or_null("/root/NavigationManager")
+	if nav_mgr and nav_mgr.has_method("set_debug_display"):
+		nav_mgr.call("set_debug_display", toggled)
 
 
 func _on_force_fallback_toggled(toggled: bool) -> void:
