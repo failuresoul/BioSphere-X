@@ -22,6 +22,7 @@ var _resource_script := preload("res://scripts/components/resource_deposit.gd")
 var _rock_script := preload("res://scripts/components/alien_rock.gd")
 var _plant_script := preload("res://scripts/components/alien_plant.gd")
 var _oxygen_station_script := preload("res://scripts/components/oxygen_station.gd")
+var _collectable_scene := preload("res://scenes/items/collectable_resource.tscn")
 
 var _player_ref: Node2D = null
 
@@ -39,6 +40,7 @@ func _ready() -> void:
 	_build_scattered_rocks()
 	_build_alien_flora()
 	_build_oxygen_stations()
+	_build_collectables()
 	_spawn_player()
 	_build_hud()
 	
@@ -328,6 +330,43 @@ func _build_oxygen_stations() -> void:
 		st.set("station_type", spec["type"])
 		st.set("radius", spec["radius"])
 		st.set("refill_rate", spec["refill_rate"])
+
+
+# ---------------------------------------------------------------------------
+# Collectable Resources (Oxygen Cells, Metal, Energy Crystals, Samples)
+# ---------------------------------------------------------------------------
+func _build_collectables() -> void:
+	var container := Node2D.new()
+	container.name = "Collectables"
+	add_child(container)
+	
+	var items: Array[Dictionary] = [
+		# Oxygen Cells (Type 0)
+		{"pos": Vector2(100, -120), "type": 0, "qty": 1},
+		{"pos": Vector2(-320, -320), "type": 0, "qty": 1},
+		{"pos": Vector2(460, 200), "type": 0, "qty": 2},
+		# Metal / Titanium (Type 1)
+		{"pos": Vector2(520, -380), "type": 1, "qty": 2},
+		{"pos": Vector2(660, -420), "type": 1, "qty": 3},
+		{"pos": Vector2(-220, 260), "type": 1, "qty": 2},
+		# Energy Crystals (Type 2)
+		{"pos": Vector2(-540, 540), "type": 2, "qty": 1},
+		{"pos": Vector2(-600, 620), "type": 2, "qty": 2},
+		{"pos": Vector2(160, 220), "type": 2, "qty": 1},
+		# Scientific Samples (Type 3)
+		{"pos": Vector2(-140, 100), "type": 3, "qty": 1},
+		{"pos": Vector2(460, 560), "type": 3, "qty": 2},
+		{"pos": Vector2(640, -220), "type": 3, "qty": 1}
+	]
+	
+	for i in items.size():
+		var data: Dictionary = items[i]
+		var item: Node2D = _collectable_scene.instantiate()
+		item.name = "Collectable_%d" % i
+		item.position = data["pos"]
+		item.set("resource_type", data["type"])
+		item.set("quantity", data["qty"])
+		container.add_child(item)
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ extends CanvasLayer
 @onready var crystal_count_label: Label = %CrystalCount
 @onready var titanium_count_label: Label = %TitaniumCount
 @onready var biomass_count_label: Label = %BiomassCount
+@onready var oxygen_cell_count_label: Label = %OxygenCellCount
 
 @onready var objective_label: Label = %ObjectiveLabel
 @onready var pause_overlay: Control = %PauseOverlay
@@ -133,6 +134,7 @@ func _initialize_hud_values() -> void:
 	_on_resource_changed("crystals", res.get("crystals", 0))
 	_on_resource_changed("titanium", res.get("titanium", 0))
 	_on_resource_changed("biomass", res.get("biomass", 0))
+	_on_resource_changed("oxygen_cells", res.get("oxygen_cells", 0))
 
 
 # ---------------------------------------------------------------------------
@@ -213,6 +215,9 @@ func _on_resource_changed(resource_id: String, count: int) -> void:
 		"biomass":
 			if biomass_count_label:
 				biomass_count_label.text = "%d" % count
+		"oxygen_cells":
+			if oxygen_cell_count_label:
+				oxygen_cell_count_label.text = "%d" % count
 
 
 func _on_objective_changed(new_text: String) -> void:

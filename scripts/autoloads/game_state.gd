@@ -33,7 +33,8 @@ var is_oxygen_refilling: bool = false
 var resources: Dictionary = {
 	"crystals": 0,
 	"titanium": 0,
-	"biomass": 0
+	"biomass": 0,
+	"oxygen_cells": 0
 }
 
 # Mission Objectives
@@ -165,6 +166,19 @@ func add_resource(resource_id: String, amount: int = 1) -> void:
 	if not resources.has(resource_id):
 		resources[resource_id] = 0
 	resources[resource_id] += amount
+	
+	# Handle aliases for backwards compatibility
+	if resource_id == "metal":
+		resources["titanium"] = resources.get("titanium", 0) + amount
+		resource_changed.emit("titanium", resources["titanium"])
+	elif resource_id == "titanium":
+		resources["metal"] = resources["titanium"]
+	elif resource_id == "samples":
+		resources["biomass"] = resources.get("biomass", 0) + amount
+		resource_changed.emit("biomass", resources["biomass"])
+	elif resource_id == "biomass":
+		resources["samples"] = resources["biomass"]
+		
 	resource_changed.emit(resource_id, resources[resource_id])
 	_check_objective_progress()
 
@@ -223,7 +237,7 @@ func restart_game() -> void:
 	is_oxygen_depleted = false
 	is_low_oxygen = false
 	is_oxygen_refilling = false
-	resources = {"crystals": 0, "titanium": 0, "biomass": 0}
+	resources = {"crystals": 0, "titanium": 0, "biomass": 0, "oxygen_cells": 0}
 	current_objective = "SURVEY SURFACE // Gather 3 Energy Crystals from alien deposits."
 	
 	health_changed.emit(health, max_health)
@@ -231,6 +245,7 @@ func restart_game() -> void:
 	resource_changed.emit("crystals", 0)
 	resource_changed.emit("titanium", 0)
 	resource_changed.emit("biomass", 0)
+	resource_changed.emit("oxygen_cells", 0)
 	objective_changed.emit(current_objective)
 	
 	get_tree().change_scene_to_file.call_deferred("res://scenes/world/game_world.tscn")
