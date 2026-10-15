@@ -23,10 +23,10 @@ script = ExtResource("2_visual")
 zoom = Vector2(2.5, 2.5)
 position_smoothing_enabled = true
 position_smoothing_speed = 6.0
-limit_left = -1520
-limit_top = -1520
-limit_right = 1520
-limit_bottom = 1520
+limit_left = -1280
+limit_top = -1280
+limit_right = 1280
+limit_bottom = 1280
 
 [node name="HealthComponent" type="Node" parent="."]
 script = ExtResource("3_health")
