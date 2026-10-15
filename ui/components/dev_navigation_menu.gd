@@ -145,6 +145,17 @@ func _on_algo_selected(index: int) -> void:
 		if nav_mgr and nav_mgr.has_method("set_algorithm"):
 			nav_mgr.call("set_algorithm", chosen_key)
 		algorithm_selected.emit(chosen_key)
+		
+		# Update suitability profile notice
+		var profile := ModularPathfinder.get_algorithm_profile(chosen_key)
+		if error_banner:
+			if not profile.get("gameplay_suitable", true):
+				error_banner.visible = true
+				error_banner.text = "⚠️ %s CAVEAT: %s" % [profile.get("name", chosen_key), profile.get("caveats", "")]
+			else:
+				var is_online: bool = nav_mgr.get("is_backend_online") if nav_mgr and "is_backend_online" in nav_mgr else false
+				var last_err: String = nav_mgr.get("last_error_message") if nav_mgr and "last_error_message" in nav_mgr else ""
+				_update_backend_ui(is_online, last_err)
 
 
 func _on_depth_changed(val: float) -> void:

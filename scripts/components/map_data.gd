@@ -201,3 +201,55 @@ func get_obstacle_summary() -> Dictionary:
 			CellType.DEBRIS: counts["debris"] += 1
 			CellType.RESOURCE: counts["resource"] += 1
 	return counts
+
+
+
+# ---------------------------------------------------------------------------
+# Line of Sight & Perception Grid Traversal
+# ---------------------------------------------------------------------------
+func has_line_of_sight(from_world: Vector2, to_world: Vector2) -> bool:
+	var start_grid := world_to_grid(from_world)
+	var end_grid := world_to_grid(to_world)
+	return has_grid_line_of_sight(start_grid, end_grid)
+
+
+func has_grid_line_of_sight(start_grid: Vector2i, end_grid: Vector2i) -> bool:
+	if not is_in_bounds(start_grid) or not is_in_bounds(end_grid):
+		return false
+	
+	if start_grid == end_grid:
+		return not is_cell_blocked(start_grid)
+	
+	var x0 := start_grid.x
+	var y0 := start_grid.y
+	var x1 := end_grid.x
+	var y1 := end_grid.y
+	
+	var dx := absi(x1 - x0)
+	var dy := -absi(y1 - y0)
+	var sx := 1 if x0 < x1 else -1
+	var sy := 1 if y0 < y1 else -1
+	var err := dx + dy
+	
+	var cur_x := x0
+	var cur_y := y0
+	
+	while true:
+		var cur_pt := Vector2i(cur_x, cur_y)
+		if cur_pt != start_grid:
+			if is_cell_blocked(cur_pt):
+				return false
+		
+		if cur_x == x1 and cur_y == y1:
+			break
+			
+		var e2 := 2 * err
+		if e2 >= dy:
+			err += dy
+			cur_x += sx
+		if e2 <= dx:
+			err += dx
+			cur_y += sy
+			
+	return true
+

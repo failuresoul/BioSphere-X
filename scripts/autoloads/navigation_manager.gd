@@ -181,7 +181,8 @@ func request_path(
 					"path_length": world_path.size(),
 					"source": "PYTHON_AI_BACKEND",
 					"is_fallback": false,
-					"message": str(data.get("message", "OK"))
+					"message": str(data.get("message", "OK")),
+					"suitability": ModularPathfinder.get_algorithm_profile(algo)
 				}
 				_finish_path_request(world_path, metrics, callback)
 			else:
@@ -205,23 +206,58 @@ func _execute_fallback(
 
 	var t_start := Time.get_ticks_usec()
 	var fallback_path := PackedVector2Array()
-	if m_data.has_method("get_fallback_path_points"):
-		fallback_path = m_data.call("get_fallback_path_points", from_world, to_world)
-	elif m_data.has_method("get_path_points"):
-		fallback_path = m_data.call("get_path_points", from_world, to_world)
+	var nodes_expanded: int = 0
+	var source_tag: String = "[FALLBACK_ASTAR2D]"
+	var algo_display_name: String = "AStarGrid2D (Fallback)"
+
+	var start_grid: Vector2i = m_data.call("world_to_grid", from_world) if m_data.has_method("world_to_grid") else Vector2i.ZERO
+	var goal_grid: Vector2i = m_data.call("world_to_grid", to_world) if m_data.has_method("world_to_grid") else Vector2i.ZERO
+	var grid_size: Vector2i = m_data.get("grid_size") if "grid_size" in m_data else Vector2i(80, 80)
+	var blocked_cells: Array[Vector2i] = m_data.call("get_blocked_cells") if m_data.has_method("get_blocked_cells") else []
+
+	if intended_algo != "astar":
+		# Execute selected algorithm locally via ModularPathfinder
+		var local_res := ModularPathfinder.search(
+			intended_algo,
+			start_grid,
+			goal_grid,
+			blocked_cells,
+			grid_size,
+			{
+				"allow_diagonal": allow_diagonal,
+				"depth_limit": dls_depth_limit,
+				"max_depth": grid_size.x * grid_size.y
+			}
+		)
+		var raw_path: Array = local_res.get("path", [])
+		if m_data.has_method("grid_to_world_path"):
+			fallback_path = m_data.call("grid_to_world_path", raw_path)
+		nodes_expanded = int(local_res.get("nodes_expanded", 0))
+		source_tag = "[LOCAL_MODULAR_ENGINE]"
+		algo_display_name = "%s (Local Modular)" % intended_algo.to_upper()
+	else:
+		if m_data.has_method("get_fallback_path_points"):
+			fallback_path = m_data.call("get_fallback_path_points", from_world, to_world)
+		elif m_data.has_method("get_path_points"):
+			fallback_path = m_data.call("get_path_points", from_world, to_world)
+		nodes_expanded = fallback_path.size()
+		source_tag = "[FALLBACK_ASTAR2D]"
+		algo_display_name = "AStarGrid2D (Fallback)"
+
 	var t_elapsed_ms := float(Time.get_ticks_usec() - t_start) / 1000.0
 
 	var metrics := {
 		"success": fallback_path.size() > 0,
-		"algorithm": "AStarGrid2D (Fallback)",
+		"algorithm": algo_display_name,
 		"requested_algorithm": intended_algo,
-		"nodes_expanded": fallback_path.size(),
+		"nodes_expanded": nodes_expanded,
 		"execution_time_ms": t_elapsed_ms,
 		"path_length": fallback_path.size(),
-		"source": "[FALLBACK_ASTAR2D]",
+		"source": source_tag,
 		"is_fallback": true,
 		"fallback_reason": reason,
-		"message": "Used native Godot AStarGrid2D fallback (%s)" % reason
+		"message": "Used %s (%s)" % [algo_display_name, reason],
+		"suitability": ModularPathfinder.get_algorithm_profile(intended_algo)
 	}
 	_finish_path_request(fallback_path, metrics, callback)
 
