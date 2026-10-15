@@ -30,6 +30,7 @@ var _enemy_scene := preload("res://scenes/enemies/alien_enemy.tscn")
 var _enemy_scout_scene := preload("res://scenes/enemies/enemy_scout.tscn")
 var _enemy_brute_scene := preload("res://scenes/enemies/enemy_brute.tscn")
 var _enemy_spitter_scene := preload("res://scenes/enemies/enemy_spitter.tscn")
+var _boss_scene := preload("res://scenes/boss/boss_enemy.tscn")
 
 var _player_ref: Node2D = null
 var _terminal_ref: Node2D = null
@@ -52,6 +53,7 @@ func _ready() -> void:
 	_build_research_terminals()
 	_spawn_player()
 	_spawn_enemies()
+	_spawn_boss()
 	_build_tutorial_system()
 	_build_hud()
 	
@@ -463,6 +465,18 @@ func _spawn_enemies() -> void:
 		enemy.name = spec["name"]
 		enemy.position = spec["pos"]
 		container.add_child(enemy)
+
+
+# ---------------------------------------------------------------------------
+# Colossal Boss Spawning (Ancient Crater Basin)
+# ---------------------------------------------------------------------------
+func _spawn_boss() -> void:
+	if not _boss_scene:
+		return
+	var boss: CharacterBody2D = _boss_scene.instantiate()
+	boss.name = "GoliathPrime_Boss"
+	boss.position = Vector2(560, -820) # Ancient Crater Basin North of Outpost
+	add_child(boss)
 
 
 
