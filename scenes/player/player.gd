@@ -47,6 +47,12 @@ func _connect_component_signals() -> void:
 			hc.connect("healed", _on_health_healed)
 		if hc.has_signal("died") and not hc.is_connected("died", _on_health_died):
 			hc.connect("died", _on_health_died)
+	
+	var gs := get_node_or_null("/root/GameState")
+	if gs:
+		gs.call("set_health", get_current_health(), get_max_health())
+		if gs.has_signal("health_changed") and not gs.is_connected("health_changed", _on_game_state_health_changed):
+			gs.connect("health_changed", _on_game_state_health_changed)
 
 
 func _physics_process(delta: float) -> void:
@@ -205,3 +211,12 @@ func _on_health_healed(amount: float) -> void:
 func _on_health_died() -> void:
 	print("BioSphere-X: Astronaut perished.")
 	player_died.emit()
+
+
+func _on_game_state_health_changed(current: float, _max_hp: float) -> void:
+	var hc := _get_health_component()
+	if hc and "current_health" in hc:
+		if absf(float(hc.get("current_health")) - current) > 0.5:
+			hc.set("current_health", current)
+			if current <= 0.0 and hc.has_signal("died"):
+				hc.emit_signal("died")

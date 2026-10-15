@@ -52,11 +52,20 @@ func interact(user: Node2D) -> void:
 		return
 	
 	remaining_units -= 1
-	print("BioSphere-X: Harvested resource from %s (Remaining: %d)" % [name, remaining_units])
+	var type_name := "crystals"
+	match resource_type:
+		ResourceType.ENERGY_CRYSTAL: type_name = "crystals"
+		ResourceType.TITANIUM_ORE: type_name = "titanium"
+		ResourceType.ALIEN_BIOMASS: type_name = "biomass"
+	
+	print("BioSphere-X: Harvested resource from %s (Type: %s, Remaining: %d)" % [name, type_name, remaining_units])
 	resource_harvested.emit(resource_type, 1)
 	
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.has_method("add_resource"):
+		gs.call("add_resource", type_name, 1)
+	
 	if remaining_units <= 0:
-		# Depleted visual state
 		queue_redraw()
 
 

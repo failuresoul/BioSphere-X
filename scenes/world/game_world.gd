@@ -14,6 +14,7 @@ const MapDataScript := preload("res://scripts/components/map_data.gd")
 var map_data: RefCounted
 
 var _player_scene := preload("res://scenes/player/player.tscn")
+var _hud_scene := preload("res://ui/screens/hud.tscn")
 var _ground_script := preload("res://scripts/components/ground_layer.gd")
 var _canyon_wall_script := preload("res://scripts/components/canyon_wall.gd")
 var _debris_script := preload("res://scripts/components/research_debris.gd")
@@ -37,9 +38,16 @@ func _ready() -> void:
 	_build_scattered_rocks()
 	_build_alien_flora()
 	_spawn_player()
+	_build_hud()
 	
 	var summary: Dictionary = map_data.call("get_obstacle_summary")
 	print("BioSphere-X: Complete alien planet map generated. Obstacles: ", summary)
+
+
+func _build_hud() -> void:
+	var hud := _hud_scene.instantiate()
+	hud.name = "HUD"
+	add_child(hud)
 
 
 # ---------------------------------------------------------------------------

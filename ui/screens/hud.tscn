@@ -1,0 +1,384 @@
+[gd_scene load_steps=10 format=3 uid="uid://bsxhudscreen"]
+
+[ext_resource type="Script" path="res://ui/screens/hud.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+bg_color = Color(0.06, 0.08, 0.13, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.12, 0.65, 0.95, 0.5)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_bg"]
+bg_color = Color(0.16, 0.06, 0.08, 0.85)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_fill"]
+bg_color = Color(0.95, 0.25, 0.35, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oxy_bg"]
+bg_color = Color(0.05, 0.12, 0.18, 0.85)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oxy_fill"]
+bg_color = Color(0.12, 0.8, 1, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_objective"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.05, 0.07, 0.11, 0.9)
+border_width_left = 2
+border_width_top = 1
+border_width_right = 2
+border_width_bottom = 1
+border_color = Color(0.95, 0.75, 0.15, 0.6)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pause_panel"]
+content_margin_left = 32.0
+content_margin_top = 28.0
+content_margin_right = 32.0
+content_margin_bottom = 28.0
+bg_color = Color(0.06, 0.09, 0.15, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.15, 0.8, 1, 0.75)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.6)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+bg_color = Color(0.12, 0.45, 0.75, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.85, 1, 0.9)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="HUD" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_hud")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopLeftMargin" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 296.0
+offset_bottom = 138.0
+
+[node name="VitalityPanel" type="PanelContainer" parent="Root/TopLeftMargin"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+
+[node name="VBox" type="VBoxContainer" parent="Root/TopLeftMargin/VitalityPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 0.9)
+theme_override_font_sizes/font_size = 11
+text = "EVA LIFE SUPPORT // MARK-IV"
+
+[node name="HealthRow" type="HBoxContainer" parent="Root/TopLeftMargin/VitalityPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Tag" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/HealthRow"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.3, 0.4, 1)
+theme_override_font_sizes/font_size = 12
+text = "VIT"
+
+[node name="HealthBar" type="ProgressBar" parent="Root/TopLeftMargin/VitalityPanel/VBox/HealthRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("StyleBoxFlat_health_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
+value = 100.0
+show_percentage = false
+
+[node name="HealthLabel" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/HealthRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "100 / 100"
+horizontal_alignment = 2
+
+[node name="OxygenRow" type="HBoxContainer" parent="Root/TopLeftMargin/VitalityPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Tag" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/OxygenRow"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.12, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "O2"
+
+[node name="OxygenBar" type="ProgressBar" parent="Root/TopLeftMargin/VitalityPanel/VBox/OxygenRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("StyleBoxFlat_oxy_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_oxy_fill")
+value = 100.0
+show_percentage = false
+
+[node name="OxygenLabel" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/OxygenRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "100%"
+horizontal_alignment = 2
+
+[node name="TopRightMargin" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -306.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 114.0
+grow_horizontal = 0
+
+[node name="ResourcesPanel" type="PanelContainer" parent="Root/TopRightMargin"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+
+[node name="VBox" type="VBoxContainer" parent="Root/TopRightMargin/ResourcesPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 0.9)
+theme_override_font_sizes/font_size = 11
+text = "HARVESTED RESOURCES"
+horizontal_alignment = 2
+
+[node name="ResourcesGrid" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 2
+
+[node name="CrystalsCol" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/CrystalsCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.4, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "⚡"
+
+[node name="CrystalCount" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/CrystalsCol"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "0"
+
+[node name="TitaniumCol" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/TitaniumCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.65, 0.15, 1)
+theme_override_font_sizes/font_size = 13
+text = "⛏"
+
+[node name="TitaniumCount" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/TitaniumCol"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "0"
+
+[node name="BiomassCol" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/BiomassCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.15, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 13
+text = "🧬"
+
+[node name="BiomassCount" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/BiomassCol"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "0"
+
+[node name="BottomObjectiveMargin" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -340.0
+offset_top = -60.0
+offset_right = 340.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ObjectivePanel" type="PanelContainer" parent="Root/BottomObjectiveMargin"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_objective")
+
+[node name="HBox" type="HBoxContainer" parent="Root/BottomObjectiveMargin/ObjectivePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Tag" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.15, 1)
+theme_override_font_sizes/font_size = 11
+text = "[OBJECTIVE]"
+
+[node name="ObjectiveLabel" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
+theme_override_font_sizes/font_size = 12
+text = "SURVEY SURFACE // Gather 3 Energy Crystals from alien deposits."
+text_overrun_behavior = 3
+
+[node name="PauseOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="PauseOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.04, 0.08, 0.85)
+
+[node name="CenterContainer" type="CenterContainer" parent="PauseOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PausePanel" type="PanelContainer" parent="PauseOverlay/CenterContainer"]
+custom_minimum_size = Vector2(400, 220)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_pause_panel")
+
+[node name="VBox" type="VBoxContainer" parent="PauseOverlay/CenterContainer/PausePanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="StatusHeader" type="Label" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "// SYSTEM SUSPENDED //"
+horizontal_alignment = 1
+
+[node name="SubHeader" type="Label" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 12
+text = "BIOSPHERE-X EXPLORATION PAUSED"
+horizontal_alignment = 1
+
+[node name="Desc" type="Label" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
+theme_override_font_sizes/font_size = 11
+text = "Telemetry on standby. Atmosphere simulation frozen."
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="ResumeButton" type="Button" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "RESUME MISSION (ESC / P)"
