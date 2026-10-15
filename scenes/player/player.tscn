@@ -1,21 +1,35 @@
-[gd_scene load_steps=3 format=3 uid="uid://bsxplayer"]
+[gd_scene load_steps=6 format=3 uid="uid://bsxplayer"]
 
 [ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scenes/player/astronaut_visual.gd" id="2_visual"]
+[ext_resource type="Script" path="res://scripts/components/health_component.gd" id="3_health"]
+[ext_resource type="Script" path="res://scripts/components/interaction_component.gd" id="4_interact"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
-radius = 11.0
+radius = 12.0
 
 [node name="Player" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 1
 script = ExtResource("1_player")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_player")
 
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+
 [node name="Camera2D" type="Camera2D" parent="."]
 zoom = Vector2(2.5, 2.5)
 position_smoothing_enabled = true
-position_smoothing_speed = 5.0
+position_smoothing_speed = 6.0
 limit_left = -1520
 limit_top = -1520
 limit_right = 1520
 limit_bottom = 1520
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_health")
+
+[node name="InteractionComponent" type="Area2D" parent="."]
+script = ExtResource("4_interact")

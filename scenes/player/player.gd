@@ -1,45 +1,186 @@
 extends CharacterBody2D
-## Player character — sci-fi explorer on an alien exoplanet.
-## Supports arrow keys and WASD for top-down movement.
+class_name Player
+## Astronaut Player Controller for BioSphere-X.
+## Handles physics movement with normalized diagonal motion, acceleration/deceleration,
+## and maintains clean separation between movement, health, interaction, and visuals.
 
-const SPEED := 220.0
+signal player_died()
+signal player_damaged(amount: float, current_health: float, max_health: float)
+signal player_healed(amount: float, current_health: float, max_health: float)
 
-# Visual palette
-var body_color := Color(0.0, 0.83, 1.0)        # Cyan suit
-var visor_color := Color(0.22, 1.0, 0.08)       # Green visor
-var pack_color := Color(0.0, 0.45, 0.6)         # Darker cyan backpack
-var outline_color := Color(0.75, 0.9, 1.0, 0.8) # Light outline
+@export_group("Movement")
+@export var max_speed: float = 240.0
+@export var acceleration: float = 1400.0
+@export var friction: float = 1600.0
+
+@export_group("Camera")
+@export var camera_zoom: Vector2 = Vector2(2.5, 2.5)
+@export var camera_smoothing_enabled: bool = true
+@export var camera_smoothing_speed: float = 6.0
+
+@onready var visual: Node2D = $Visual
+@onready var health_component: Node = $HealthComponent
+@onready var interaction_component: Area2D = $InteractionComponent
+@onready var camera: Camera2D = $Camera2D
+@onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
 
-func _physics_process(_delta: float) -> void:
-	var dir := Vector2.ZERO
-	if Input.is_action_pressed("ui_left") or Input.is_key_pressed(KEY_A):
-		dir.x -= 1.0
-	if Input.is_action_pressed("ui_right") or Input.is_key_pressed(KEY_D):
-		dir.x += 1.0
-	if Input.is_action_pressed("ui_up") or Input.is_key_pressed(KEY_W):
-		dir.y -= 1.0
-	if Input.is_action_pressed("ui_down") or Input.is_key_pressed(KEY_S):
-		dir.y += 1.0
-	velocity = dir.normalized() * SPEED if dir != Vector2.ZERO else Vector2.ZERO
+func _ready() -> void:
+	add_to_group("player")
+	_setup_camera()
+	_connect_component_signals()
+
+
+func _setup_camera() -> void:
+	if camera:
+		camera.zoom = camera_zoom
+		camera.position_smoothing_enabled = camera_smoothing_enabled
+		camera.position_smoothing_speed = camera_smoothing_speed
+
+
+func _connect_component_signals() -> void:
+	var hc := _get_health_component()
+	if hc:
+		if hc.has_signal("damaged") and not hc.is_connected("damaged", _on_health_damaged):
+			hc.connect("damaged", _on_health_damaged)
+		if hc.has_signal("healed") and not hc.is_connected("healed", _on_health_healed):
+			hc.connect("healed", _on_health_healed)
+		if hc.has_signal("died") and not hc.is_connected("died", _on_health_died):
+			hc.connect("died", _on_health_died)
+
+
+func _physics_process(delta: float) -> void:
+	var input_vector := _get_input_vector()
+	_apply_movement(input_vector, delta)
 	move_and_slide()
+	
+	var vis := _get_visual()
+	if vis and vis.has_method("update_motion"):
+		vis.call("update_motion", velocity, delta)
 
 
-func _draw() -> void:
-	# Drop shadow
-	draw_circle(Vector2(2, 3), 13.0, Color(0, 0, 0, 0.35))
-	# Backpack
-	draw_rect(Rect2(-6, 3, 12, 9), pack_color)
-	# Main body
-	draw_circle(Vector2.ZERO, 11.0, body_color)
-	# Shoulder pads
-	draw_circle(Vector2(-9, -1), 4.0, pack_color)
-	draw_circle(Vector2(9, -1), 4.0, pack_color)
-	# Helmet visor glow (outer)
-	draw_circle(Vector2(0, -2), 7.0, Color(visor_color, 0.15))
-	# Helmet visor (inner)
-	draw_circle(Vector2(0, -2), 4.0, visor_color)
-	# Visor shine
-	draw_circle(Vector2(-1.5, -3.5), 1.5, Color(1, 1, 1, 0.6))
-	# Body outline
-	draw_arc(Vector2.ZERO, 11.0, 0, TAU, 32, outline_color, 1.5)
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_E or event.keycode == KEY_SPACE:
+			try_interact()
+	elif InputMap.has_action("interact") and event.is_action_pressed("interact"):
+		try_interact()
+
+
+# ---------------------------------------------------------------------------
+# Movement Logic
+# ---------------------------------------------------------------------------
+func _get_input_vector() -> Vector2:
+	var dir := Vector2.ZERO
+	
+	# Primary checks: standard UI actions (built-in Godot) and direct keys (WASD + Arrows)
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT) or Input.is_action_pressed("ui_left"):
+		dir.x -= 1.0
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT) or Input.is_action_pressed("ui_right"):
+		dir.x += 1.0
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP) or Input.is_action_pressed("ui_up"):
+		dir.y -= 1.0
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN) or Input.is_action_pressed("ui_down"):
+		dir.y += 1.0
+	
+	# Optional custom mapped actions if defined
+	if InputMap.has_action("move_left") and Input.is_action_pressed("move_left"):
+		dir.x -= 1.0
+	if InputMap.has_action("move_right") and Input.is_action_pressed("move_right"):
+		dir.x += 1.0
+	if InputMap.has_action("move_up") and Input.is_action_pressed("move_up"):
+		dir.y -= 1.0
+	if InputMap.has_action("move_down") and Input.is_action_pressed("move_down"):
+		dir.y += 1.0
+	
+	# Strict normalization guarantees diagonal movement is not faster than straight movement
+	return dir.normalized()
+
+
+func _apply_movement(input_vector: Vector2, delta: float) -> void:
+	if input_vector != Vector2.ZERO:
+		var target_velocity := input_vector * max_speed
+		velocity = velocity.move_toward(target_velocity, acceleration * delta)
+	else:
+		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
+
+
+# ---------------------------------------------------------------------------
+# Component Helper Getters
+# ---------------------------------------------------------------------------
+func _get_health_component() -> Node:
+	if not health_component:
+		health_component = get_node_or_null("HealthComponent")
+	return health_component
+
+
+func _get_interaction_component() -> Area2D:
+	if not interaction_component:
+		interaction_component = get_node_or_null("InteractionComponent") as Area2D
+	return interaction_component
+
+
+func _get_visual() -> Node2D:
+	if not visual:
+		visual = get_node_or_null("Visual") as Node2D
+	return visual
+
+
+# ---------------------------------------------------------------------------
+# Public Health & Interaction API
+# ---------------------------------------------------------------------------
+func take_damage(amount: float, source: Node = null) -> bool:
+	var hc := _get_health_component()
+	if hc and hc.has_method("damage"):
+		return hc.call("damage", amount, source)
+	return false
+
+
+func heal(amount: float) -> void:
+	var hc := _get_health_component()
+	if hc and hc.has_method("heal"):
+		hc.call("heal", amount)
+
+
+func get_current_health() -> float:
+	var hc := _get_health_component()
+	if hc and "current_health" in hc:
+		return hc.get("current_health")
+	return 0.0
+
+
+func get_max_health() -> float:
+	var hc := _get_health_component()
+	if hc and "max_health" in hc:
+		return hc.get("max_health")
+	return 0.0
+
+
+func try_interact() -> bool:
+	var ic := _get_interaction_component()
+	if ic and ic.has_method("try_interact"):
+		return ic.call("try_interact", self)
+	return false
+
+
+# ---------------------------------------------------------------------------
+# Component Event Callbacks
+# ---------------------------------------------------------------------------
+func _on_health_damaged(amount: float, _source: Node = null) -> void:
+	var vis := _get_visual()
+	if vis and vis.has_method("play_damage_flash"):
+		vis.call("play_damage_flash")
+	var cur := get_current_health()
+	var mx := get_max_health()
+	player_damaged.emit(amount, cur, mx)
+
+
+func _on_health_healed(amount: float) -> void:
+	var cur := get_current_health()
+	var mx := get_max_health()
+	player_healed.emit(amount, cur, mx)
+
+
+func _on_health_died() -> void:
+	print("BioSphere-X: Astronaut perished.")
+	player_died.emit()
