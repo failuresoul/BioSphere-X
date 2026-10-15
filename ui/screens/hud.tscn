@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bsxhudscreen"]
+[gd_scene load_steps=12 format=3 uid="uid://bsxhudscreen"]
 
 [ext_resource type="Script" path="res://ui/screens/hud.gd" id="1_hud"]
 
@@ -96,6 +96,40 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_game_over_panel"]
+content_margin_left = 32.0
+content_margin_top = 28.0
+content_margin_right = 32.0
+content_margin_bottom = 28.0
+bg_color = Color(0.12, 0.04, 0.06, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.95, 0.2, 0.25, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0.8, 0.1, 0.1, 0.4)
+shadow_size = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_restart_btn"]
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+bg_color = Color(0.8, 0.15, 0.22, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.4, 0.45, 0.95)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="HUD" type="CanvasLayer"]
 layer = 10
 script = ExtResource("1_hud")
@@ -108,6 +142,17 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="DamageVignette" type="ColorRect" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.95, 0.15, 0.2, 0)
 
 [node name="TopLeftMargin" type="MarginContainer" parent="Root"]
 layout_mode = 1
@@ -382,3 +427,78 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "RESUME MISSION (ESC / P)"
+
+[node name="AudioPlayer" type="AudioStreamPlayer" parent="."]
+unique_name_in_owner = true
+
+[node name="GameOverOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="GameOverOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.01, 0.02, 0.88)
+
+[node name="CenterContainer" type="CenterContainer" parent="GameOverOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="GameOverPanel" type="PanelContainer" parent="GameOverOverlay/CenterContainer"]
+custom_minimum_size = Vector2(440, 260)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_game_over_panel")
+
+[node name="VBox" type="VBoxContainer" parent="GameOverOverlay/CenterContainer/GameOverPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="StatusHeader" type="Label" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.25, 0.3, 1)
+theme_override_font_sizes/font_size = 20
+text = "// EVA MISSION FAILED //"
+horizontal_alignment = 1
+
+[node name="SubHeader" type="Label" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.75, 0.75, 1)
+theme_override_font_sizes/font_size = 12
+text = "ASTRONAUT VITAL SIGNS TERMINATED"
+horizontal_alignment = 1
+
+[node name="Desc" type="Label" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.55, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "Suit integrity lost. Atmosphere breach or lethal trauma detected on alien surface."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Spacer" type="Control" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="RestartButton" type="Button" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_restart_btn")
+text = "REDEPLOY ASTRONAUT (RESTART)"
+

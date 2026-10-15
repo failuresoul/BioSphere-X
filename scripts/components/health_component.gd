@@ -1,6 +1,6 @@
 extends Node
 class_name HealthComponent
-## Reusable health and vitality component for entities.
+## Reusable health and vitality component for entities (Player, Enemies, Bosses).
 ## Manages health values, damage mitigation, healing, and life/death signals.
 
 signal health_changed(current: float, max_health: float)
@@ -14,7 +14,7 @@ signal died()
 		current_health = clampf(current_health, 0.0, max_health)
 		health_changed.emit(current_health, max_health)
 
-@export var invulnerability_time: float = 0.5
+@export var invulnerability_time: float = 0.4
 @export var is_invulnerable: bool = false
 
 var current_health: float = 100.0
@@ -34,6 +34,14 @@ func is_alive() -> bool:
 	return current_health > 0.0
 
 
+func is_dead() -> bool:
+	return current_health <= 0.0
+
+
+func get_health_ratio() -> float:
+	return current_health / max_health if max_health > 0.0 else 0.0
+
+
 func damage(amount: float, source: Node = null) -> bool:
 	if not is_alive() or is_invulnerable or _invuln_timer > 0.0:
 		return false
@@ -42,7 +50,8 @@ func damage(amount: float, source: Node = null) -> bool:
 	if actual_damage <= 0.0:
 		return false
 	
-	current_health = maxf(0.0, current_health - actual_damage)
+	# Clamp strictly between 0 and max_health
+	current_health = clampf(current_health - actual_damage, 0.0, max_health)
 	_invuln_timer = invulnerability_time
 	
 	damaged.emit(actual_damage, source)
@@ -62,8 +71,8 @@ func heal(amount: float) -> void:
 	if actual_heal <= 0.0:
 		return
 	
-	var old_health: float = current_health
-	current_health = minf(max_health, current_health + actual_heal)
+	var old_health := current_health
+	current_health = clampf(current_health + actual_heal, 0.0, max_health)
 	var diff: float = current_health - old_health
 	if diff > 0.0:
 		healed.emit(diff)
@@ -76,3 +85,9 @@ func set_health_percentage(pct: float) -> void:
 	health_changed.emit(current_health, max_health)
 	if current_health <= 0.0:
 		died.emit()
+
+
+func reset() -> void:
+	current_health = max_health
+	_invuln_timer = 0.0
+	health_changed.emit(current_health, max_health)

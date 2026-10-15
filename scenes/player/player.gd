@@ -55,7 +55,14 @@ func _connect_component_signals() -> void:
 			gs.connect("health_changed", _on_game_state_health_changed)
 
 
+var is_dead: bool = false
+
+
 func _physics_process(delta: float) -> void:
+	if is_dead:
+		velocity = Vector2.ZERO
+		return
+	
 	var input_vector := _get_input_vector()
 	_apply_movement(input_vector, delta)
 	move_and_slide()
@@ -66,6 +73,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_dead:
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E or event.keycode == KEY_SPACE:
 			try_interact()
@@ -209,7 +218,20 @@ func _on_health_healed(amount: float) -> void:
 
 
 func _on_health_died() -> void:
+	if is_dead:
+		return
+	is_dead = true
+	velocity = Vector2.ZERO
 	print("BioSphere-X: Astronaut perished.")
+	
+	var vis := _get_visual()
+	if vis and vis.has_method("play_death"):
+		vis.call("play_death")
+	
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.has_method("trigger_game_over"):
+		gs.call("trigger_game_over")
+	
 	player_died.emit()
 
 

@@ -104,8 +104,24 @@ func update_motion(velocity: Vector2, delta: float) -> void:
 	_prev_velocity = velocity
 
 
+var is_dead: bool = false
+
+
 func play_damage_flash() -> void:
-	_damage_flash_timer = 0.22
+	_damage_flash_timer = 0.25
+	_spawn_hit_sparks()
+	queue_redraw()
+
+
+func play_death() -> void:
+	is_dead = true
+	_spawn_dust_burst(Vector2.ZERO, 8)
+	queue_redraw()
+
+
+func reset_visual() -> void:
+	is_dead = false
+	_damage_flash_timer = 0.0
 	queue_redraw()
 
 
@@ -115,6 +131,16 @@ func play_damage_flash() -> void:
 func _draw() -> void:
 	# 1. Render ground particles first (beneath astronaut)
 	_draw_particles()
+	
+	if is_dead:
+		# Collapsed suit on exoplanet ground
+		draw_set_transform(Vector2(2, 6), 0.0, Vector2(1.3, 0.6))
+		draw_circle(Vector2.ZERO, 12.0, Color(0.02, 0.03, 0.05, 0.5))
+		draw_set_transform(Vector2(0, 3), PI * 0.42, Vector2(1.0, 0.75))
+		draw_circle(Vector2(-2, 0), 10.0, suit_shadow)
+		draw_circle(Vector2(4, 0), 7.0, Color(0.18, 0.22, 0.26)) # Depowered helmet
+		draw_arc(Vector2(-2, 0), 10.0, 0, TAU, 16, outline_color, 1.2)
+		return
 	
 	# 2. Ground Drop Shadow (adjusts dynamically during idle/walk)
 	var shadow_squash: float = 1.0
@@ -255,6 +281,19 @@ func _spawn_dust_burst(offset: Vector2, count: int) -> void:
 			"color": dust_color,
 			"life": 0.0,
 			"max_life": randf_range(0.25, 0.45)
+		}
+		_particles.append(p)
+
+
+func _spawn_hit_sparks() -> void:
+	for i in 8:
+		var p := {
+			"pos": Vector2(randf_range(-6, 6), randf_range(-6, 6)),
+			"vel": Vector2(randf_range(-60, 60), randf_range(-60, 60)),
+			"radius": randf_range(2.0, 4.0),
+			"color": Color(1.0, 0.45, 0.2, 0.95),
+			"life": 0.0,
+			"max_life": randf_range(0.18, 0.32)
 		}
 		_particles.append(p)
 
