@@ -8,6 +8,8 @@ extends CanvasLayer
 @onready var health_label: Label = %HealthLabel
 @onready var oxygen_bar: ProgressBar = %OxygenBar
 @onready var oxygen_label: Label = %OxygenLabel
+@onready var energy_bar: ProgressBar = %EnergyBar
+@onready var energy_label: Label = %EnergyLabel
 
 @onready var crystal_count_label: Label = %CrystalCount
 @onready var titanium_count_label: Label = %TitaniumCount
@@ -123,6 +125,8 @@ func _connect_game_state_signals() -> void:
 		gs.connect("health_changed", _on_health_changed)
 	if gs.has_signal("oxygen_changed") and not gs.is_connected("oxygen_changed", _on_oxygen_changed):
 		gs.connect("oxygen_changed", _on_oxygen_changed)
+	if gs.has_signal("energy_changed") and not gs.is_connected("energy_changed", _on_energy_changed):
+		gs.connect("energy_changed", _on_energy_changed)
 	if gs.has_signal("oxygen_low_warning") and not gs.is_connected("oxygen_low_warning", _on_oxygen_low_warning):
 		gs.connect("oxygen_low_warning", _on_oxygen_low_warning)
 	if gs.has_signal("oxygen_refill_status_changed") and not gs.is_connected("oxygen_refill_status_changed", _on_oxygen_refill_status_changed):
@@ -149,6 +153,8 @@ func _initialize_hud_values() -> void:
 	_last_health = gs.get("health")
 	_on_health_changed(gs.get("health"), gs.get("max_health"))
 	_on_oxygen_changed(gs.get("oxygen"), gs.get("max_oxygen"))
+	if gs.get("max_energy") != null:
+		_on_energy_changed(gs.get("energy"), gs.get("max_energy"))
 	_on_objective_changed(gs.get("current_objective"))
 	_on_game_paused(gs.get("is_paused"))
 	
@@ -210,6 +216,17 @@ func _on_oxygen_low_warning(is_low: bool) -> void:
 
 func _on_oxygen_refill_status_changed(is_refilling: bool) -> void:
 	_is_refilling_o2 = is_refilling
+
+
+func _on_energy_changed(current: float, max_nrg: float) -> void:
+	if energy_bar:
+		energy_bar.max_value = max_nrg
+		energy_bar.value = current
+	if energy_label:
+		if max_nrg > 0.0:
+			energy_label.text = "%d%%" % int(ceil((current / max_nrg) * 100.0))
+		else:
+			energy_label.text = "0%"
 
 
 func _play_low_oxygen_sound() -> void:

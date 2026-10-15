@@ -7,11 +7,15 @@ class_name Player
 signal player_died()
 signal player_damaged(amount: float, current_health: float, max_health: float)
 signal player_healed(amount: float, current_health: float, max_health: float)
+signal player_attacked(projectile: Node2D, direction: Vector2)
 
 @export_group("Movement")
 @export var max_speed: float = 240.0
 @export var acceleration: float = 1400.0
 @export var friction: float = 1600.0
+
+@export_group("Combat")
+@export var attack_enabled: bool = true
 
 @export_group("Camera")
 @export var camera_zoom: Vector2 = Vector2(2.5, 2.5)
@@ -21,8 +25,10 @@ signal player_healed(amount: float, current_health: float, max_health: float)
 @onready var visual: Node2D = $Visual
 @onready var health_component: Node = $HealthComponent
 @onready var interaction_component: Area2D = $InteractionComponent
+@onready var weapon_component: WeaponComponent = $WeaponComponent
 @onready var camera: Camera2D = $Camera2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
+
 
 
 func _ready() -> void:
@@ -75,11 +81,32 @@ func _physics_process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if is_dead:
 		return
+	
+	# Primary attack input: Mouse Left Click or Attack Key (J, F, Ctrl, or 'attack' action)
+	if attack_enabled:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			var mouse_pos := get_global_mouse_position()
+			var aim_dir := (mouse_pos - global_position).normalized()
+			attack(aim_dir)
+			get_viewport().set_input_as_handled()
+			return
+		elif event is InputEventKey and event.pressed and not event.echo:
+			if event.keycode == KEY_J or event.keycode == KEY_F or event.keycode == KEY_CTRL:
+				attack()
+				get_viewport().set_input_as_handled()
+				return
+		elif InputMap.has_action("attack") and event.is_action_pressed("attack"):
+			attack()
+			get_viewport().set_input_as_handled()
+			return
+	
+	# Interaction input: E, Space, or 'interact' action
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E or event.keycode == KEY_SPACE:
 			try_interact()
 	elif InputMap.has_action("interact") and event.is_action_pressed("interact"):
 		try_interact()
+
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +166,45 @@ func _get_visual() -> Node2D:
 	if not visual:
 		visual = get_node_or_null("Visual") as Node2D
 	return visual
+
+
+func _get_weapon_component() -> WeaponComponent:
+	if not weapon_component:
+		weapon_component = get_node_or_null("WeaponComponent") as WeaponComponent
+	return weapon_component
+
+
+# ---------------------------------------------------------------------------
+# Public Combat API
+# ---------------------------------------------------------------------------
+func attack(direction: Vector2 = Vector2.ZERO) -> bool:
+	if is_dead or not attack_enabled:
+		return false
+	
+	var aim_dir := direction
+	if aim_dir == Vector2.ZERO:
+		var mouse_pos := get_global_mouse_position()
+		var to_mouse := mouse_pos - global_position
+		if to_mouse.length() > 8.0:
+			aim_dir = to_mouse.normalized()
+		else:
+			aim_dir = get_facing_vector()
+	
+	var wc := _get_weapon_component()
+	if not wc:
+		return false
+	
+	var spawn_pos := global_position + aim_dir * 14.0
+	var proj := wc.attack(aim_dir, spawn_pos, self)
+	if proj:
+		var vis := _get_visual()
+		if vis and vis.has_method("play_attack_recoil"):
+			vis.call("play_attack_recoil", aim_dir)
+		player_attacked.emit(proj, aim_dir)
+		return true
+	
+	return false
+
 
 
 # ---------------------------------------------------------------------------

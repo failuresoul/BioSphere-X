@@ -63,6 +63,13 @@ func damage(amount: float, source: Node = null) -> bool:
 	return true
 
 
+func apply_damage(damage_data: DamageData) -> bool:
+	if not damage_data:
+		return false
+	return damage(damage_data.amount, damage_data.source)
+
+
+
 func heal(amount: float) -> void:
 	if not is_alive():
 		return

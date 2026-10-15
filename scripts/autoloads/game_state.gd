@@ -7,6 +7,8 @@ signal health_changed(current: float, max_health: float)
 signal oxygen_changed(current: float, max_oxygen: float)
 signal oxygen_low_warning(is_low: bool)
 signal oxygen_refill_status_changed(is_refilling: bool)
+signal energy_changed(current: float, max_energy: float)
+signal energy_depleted()
 signal resource_changed(resource_id: String, count: int)
 signal objective_changed(text: String)
 signal game_paused(paused: bool)
@@ -21,11 +23,18 @@ var health: float = 100.0
 var max_oxygen: float = 100.0
 var oxygen: float = 100.0
 
+var max_energy: float = 100.0
+var energy: float = 100.0
+
 # Configurable Survival & Atmosphere Parameters
 @export var oxygen_depletion_rate: float = 1.5      # Units consumed per second during surface exploration
 @export var suffocation_damage_rate: float = 4.0    # Gradual health damage per second when oxygen == 0
 @export var oxygen_refill_rate: float = 25.0        # Units replenished per second inside safe zones or stations
 @export var low_oxygen_threshold: float = 25.0      # Percentage threshold that triggers audio/visual warning
+@export var energy_recharge_rate: float = 24.0      # Energy points restored per second
+@export var energy_recharge_delay: float = 0.35     # Pause before recharge begins after firing
+
+var _energy_recharge_timer: float = 0.0
 
 var is_oxygen_depleted: bool = false
 var is_low_oxygen: bool = false
@@ -67,6 +76,14 @@ func _process(delta: float) -> void:
 	else:
 		# Configurable suffocation damage over time (prevents arbitrary instant death)
 		damage_player(suffocation_damage_rate * delta)
+	
+	# Suit energy recharge
+	if _energy_recharge_timer > 0.0:
+		_energy_recharge_timer = maxf(0.0, _energy_recharge_timer - delta)
+	elif energy < max_energy:
+		energy = minf(max_energy, energy + energy_recharge_rate * delta)
+		energy_changed.emit(energy, max_energy)
+
 
 
 func _check_oxygen_warnings() -> void:
@@ -157,10 +174,41 @@ func set_oxygen_refilling(refilling: bool, rate: float = -1.0) -> void:
 		oxygen_refill_status_changed.emit(is_oxygen_refilling)
 
 
+# ---------------------------------------------------------------------------
+# Suit Energy Management API
+# ---------------------------------------------------------------------------
+func use_energy(amount: float) -> bool:
+	if amount <= 0.0:
+		return true
+	if energy < amount:
+		energy_depleted.emit()
+		return false
+	
+	energy = maxf(0.0, energy - amount)
+	_energy_recharge_timer = energy_recharge_delay
+	energy_changed.emit(energy, max_energy)
+	return true
+
+
+func refill_energy(amount: float = -1.0) -> void:
+	if amount < 0.0:
+		energy = max_energy
+	else:
+		energy = minf(max_energy, energy + amount)
+	energy_changed.emit(energy, max_energy)
+
+
+func get_energy() -> float:
+	return energy
+
+
+func get_max_energy() -> float:
+	return max_energy
 
 
 # ---------------------------------------------------------------------------
 # Resource Inventory API
+
 # ---------------------------------------------------------------------------
 func add_resource(resource_id: String, amount: int = 1) -> void:
 	if is_game_over:
@@ -236,6 +284,7 @@ func restart_game() -> void:
 	
 	health = max_health
 	oxygen = max_oxygen
+	energy = max_energy
 	is_oxygen_depleted = false
 	is_low_oxygen = false
 	is_oxygen_refilling = false
@@ -244,6 +293,8 @@ func restart_game() -> void:
 	
 	health_changed.emit(health, max_health)
 	oxygen_changed.emit(oxygen, max_oxygen)
+	energy_changed.emit(energy, max_energy)
+
 	resource_changed.emit("crystals", 0)
 	resource_changed.emit("titanium", 0)
 	resource_changed.emit("biomass", 0)

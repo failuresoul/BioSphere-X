@@ -38,6 +38,9 @@ var _start_burst_timer: float = 0.0
 var _stop_settle_timer: float = 0.0
 var _turn_tilt: float = 0.0
 var _damage_flash_timer: float = 0.0
+var _recoil_offset: Vector2 = Vector2.ZERO
+var _muzzle_flash_timer: float = 0.0
+var _muzzle_flash_pos: Vector2 = Vector2.ZERO
 
 # Procedural visual particles (dust and thruster sparks)
 var _particles: Array[Dictionary] = []
@@ -53,11 +56,23 @@ func _process(delta: float) -> void:
 		_stop_settle_timer = maxf(0.0, _stop_settle_timer - delta)
 	if _damage_flash_timer > 0.0:
 		_damage_flash_timer = maxf(0.0, _damage_flash_timer - delta)
+	if _muzzle_flash_timer > 0.0:
+		_muzzle_flash_timer = maxf(0.0, _muzzle_flash_timer - delta)
 	
+	_recoil_offset = _recoil_offset.move_toward(Vector2.ZERO, delta * 35.0)
 	_turn_tilt = lerpf(_turn_tilt, 0.0, delta * 10.0)
 	
 	_update_particles(delta)
 	queue_redraw()
+
+
+func play_attack_recoil(direction: Vector2) -> void:
+	var dir := direction.normalized() if direction != Vector2.ZERO else Vector2.DOWN
+	_recoil_offset = -dir * 4.0
+	_muzzle_flash_timer = 0.08
+	_muzzle_flash_pos = dir * 18.0
+	queue_redraw()
+
 
 
 func update_motion(velocity: Vector2, delta: float) -> void:
@@ -183,7 +198,8 @@ func _draw() -> void:
 	
 	# Apply astronaut root visual transform
 	var total_rot: float = _facing_angle + _turn_tilt
-	draw_set_transform(Vector2(0, bob_y), total_rot, Vector2(scale_x, scale_y))
+	draw_set_transform(Vector2(0, bob_y) + _recoil_offset, total_rot, Vector2(scale_x, scale_y))
+
 	
 	# Palette adjustments for damage flash
 	var is_flash := _damage_flash_timer > 0.0
@@ -267,6 +283,13 @@ func _draw() -> void:
 	# Specular Glare Highlight on Visor Glass
 	draw_line(visor_center + Vector2(2.0, -3.0), visor_center + Vector2(4.0, -0.8), Color(1.0, 1.0, 1.0, 0.85), 1.3)
 	draw_line(visor_center + Vector2(1.5, -1.0), visor_center + Vector2(2.5, 0.2), Color(1.0, 1.0, 1.0, 0.50), 1.0)
+	
+	# Muzzle Flash Flare
+	if _muzzle_flash_timer > 0.0:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		draw_circle(_muzzle_flash_pos, 5.0, Color(0.2, 0.9, 1.0, 0.85))
+		draw_circle(_muzzle_flash_pos, 2.5, Color(1.0, 1.0, 1.0, 0.95))
+
 
 
 # ---------------------------------------------------------------------------

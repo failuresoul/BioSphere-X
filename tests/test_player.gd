@@ -15,15 +15,18 @@ func _init() -> void:
 	var visual: Node = player.get_node_or_null("Visual")
 	var health_comp: Node = player.get_node_or_null("HealthComponent")
 	var interact_comp: Node = player.get_node_or_null("InteractionComponent")
+	var weapon_comp: Node = player.get_node_or_null("WeaponComponent")
 	var camera: Camera2D = player.get_node_or_null("Camera2D")
 	var collision: CollisionShape2D = player.get_node_or_null("CollisionShape2D")
 	
 	assert(visual != null, "Visual node must exist")
 	assert(health_comp != null, "HealthComponent must exist")
 	assert(interact_comp != null, "InteractionComponent must exist")
+	assert(weapon_comp != null, "WeaponComponent must exist")
 	assert(camera != null, "Camera2D must exist")
 	assert(collision != null, "CollisionShape2D must exist")
 	print("  [PASS] Component hierarchy verified")
+
 	
 	# 2. Movement & Normalization Verification
 	var test_diag := Vector2(1.0, 1.0).normalized()
