@@ -27,6 +27,9 @@ var _terminal_script := preload("res://scripts/components/research_terminal.gd")
 var _door_script := preload("res://scripts/components/airlock_door.gd")
 var _tutorial_script := preload("res://scripts/components/tutorial_manager.gd")
 var _enemy_scene := preload("res://scenes/enemies/alien_enemy.tscn")
+var _enemy_scout_scene := preload("res://scenes/enemies/enemy_scout.tscn")
+var _enemy_brute_scene := preload("res://scenes/enemies/enemy_brute.tscn")
+var _enemy_spitter_scene := preload("res://scenes/enemies/enemy_spitter.tscn")
 
 var _player_ref: Node2D = null
 var _terminal_ref: Node2D = null
@@ -445,18 +448,20 @@ func _spawn_enemies() -> void:
 	container.name = "AlienEnemies"
 	add_child(container)
 	
-	var spawn_points: Array[Vector2] = [
-		Vector2(-650, 480), # South-West Crystal Valley
-		Vector2(180, -320), # North Canyon defile
-		Vector2(720, -50),  # Deep East Labyrinth
-		Vector2(680, -600), # North Ruins outer perimeter
-		Vector2(-420, -280) # North-West canyon gateway
+	var enemy_spawns: Array[Dictionary] = [
+		{"scene": _enemy_scout_scene, "pos": Vector2(-420, -280), "name": "Scout_NorthWestGateway"},
+		{"scene": _enemy_scout_scene, "pos": Vector2(180, -320), "name": "Scout_NorthCanyon"},
+		{"scene": _enemy_scout_scene, "pos": Vector2(320, 240), "name": "Scout_SouthPlains"},
+		{"scene": _enemy_spitter_scene, "pos": Vector2(680, -600), "name": "Spitter_RuinsPerimeter"},
+		{"scene": _enemy_spitter_scene, "pos": Vector2(720, -50), "name": "Spitter_EastLabyrinth"},
+		{"scene": _enemy_brute_scene, "pos": Vector2(-650, 480), "name": "Brute_CrystalValleyGuard"}
 	]
 	
-	for i in spawn_points.size():
-		var enemy: CharacterBody2D = _enemy_scene.instantiate()
-		enemy.name = "AlienCrawler_%d" % i
-		enemy.position = spawn_points[i]
+	for spec in enemy_spawns:
+		var scene: PackedScene = spec["scene"]
+		var enemy: CharacterBody2D = scene.instantiate()
+		enemy.name = spec["name"]
+		enemy.position = spec["pos"]
 		container.add_child(enemy)
 
 

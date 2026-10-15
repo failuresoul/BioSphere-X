@@ -1,0 +1,41 @@
+[gd_scene load_steps=5 format=3 uid="uid://bsxenemyscout"]
+
+[ext_resource type="Script" path="res://scenes/enemies/alien_enemy.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scenes/enemies/alien_enemy_visual.gd" id="2_visual"]
+[ext_resource type="Script" path="res://scripts/components/health_component.gd" id="3_health"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_scout"]
+radius = 10.0
+
+[node name="EnemyScout" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_enemy")
+enemy_type = 0
+enemy_name = "Xeno Scout"
+patrol_speed = 110.0
+chase_speed = 210.0
+acceleration = 1100.0
+detection_range = 320.0
+lose_interest_range = 420.0
+reaction_delay = 0.1
+attack_style = 0
+attack_range = 32.0
+attack_damage = 8.0
+attack_cooldown = 0.75
+attack_windup_time = 0.18
+reward_drop_chance = 0.9
+primary_resource_type = 3
+primary_resource_min = 1
+primary_resource_max = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_scout")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+enemy_type = 0
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_health")
+max_health = 35.0

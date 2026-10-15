@@ -101,6 +101,8 @@ func _handle_collision(target: Node) -> void:
 		return
 	if target.is_in_group("player") and source_node and source_node.is_in_group("player"):
 		return
+	if target.is_in_group("enemies") and source_node and source_node.is_in_group("enemies"):
+		return
 	if target.is_in_group("team_a") and source_node and source_node.is_in_group("team_a"):
 		return
 	if target.is_in_group("team_b") and source_node and source_node.is_in_group("team_b"):

@@ -210,6 +210,16 @@ func attack(direction: Vector2 = Vector2.ZERO) -> bool:
 # ---------------------------------------------------------------------------
 # Public Health & Interaction API
 # ---------------------------------------------------------------------------
+func apply_damage(damage_data: RefCounted) -> bool:
+	if not damage_data or is_dead:
+		return false
+	var force: float = float(damage_data.get("knockback_force"))
+	if force > 0.0:
+		var dir: Vector2 = damage_data.get("knockback_direction")
+		velocity += dir * force
+	return take_damage(float(damage_data.get("amount")), damage_data.get("source"))
+
+
 func take_damage(amount: float, source: Node = null) -> bool:
 	var hc := _get_health_component()
 	if hc and hc.has_method("damage"):

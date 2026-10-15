@@ -1,0 +1,46 @@
+[gd_scene load_steps=5 format=3 uid="uid://bsxenemyspitter"]
+
+[ext_resource type="Script" path="res://scenes/enemies/alien_enemy.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scenes/enemies/alien_enemy_visual.gd" id="2_visual"]
+[ext_resource type="Script" path="res://scripts/components/health_component.gd" id="3_health"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_spitter"]
+radius = 13.0
+
+[node name="EnemySpitter" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_enemy")
+enemy_type = 2
+enemy_name = "Acid Spitter"
+patrol_speed = 70.0
+chase_speed = 115.0
+acceleration = 800.0
+detection_range = 270.0
+lose_interest_range = 380.0
+reaction_delay = 0.2
+attack_style = 2
+attack_range = 220.0
+attack_damage = 14.0
+attack_cooldown = 1.5
+attack_windup_time = 0.4
+projectile_speed = 340.0
+projectile_color = Color(0.2, 1, 0.4, 1)
+reward_drop_chance = 0.85
+primary_resource_type = 2
+primary_resource_min = 1
+primary_resource_max = 2
+secondary_drop_chance = 0.4
+secondary_resource_type = 3
+secondary_resource_amount = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_spitter")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+enemy_type = 2
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_health")
+max_health = 65.0
