@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://test_aiclient_scene"]
+
+[ext_resource type="Script" path="res://tests/test_ai_client.gd" id="1_test"]
+
+[node name="TestAIClient" type="Node"]
+script = ExtResource("1_test")

@@ -7,6 +7,15 @@ export/
 *.x86_64
 *.pck
 
+# Python virtual environment & caches
+.venv/
+*/.venv/
+__pycache__/
+*/__pycache__/
+*.pyc
+.pytest_cache/
+*/.pytest_cache/
+
 # OS junk
 .DS_Store
 Thumbs.db
