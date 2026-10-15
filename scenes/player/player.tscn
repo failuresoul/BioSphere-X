@@ -1,0 +1,21 @@
+[gd_scene load_steps=3 format=3 uid="uid://bsxplayer"]
+
+[ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player"]
+radius = 11.0
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_player")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(2.5, 2.5)
+position_smoothing_enabled = true
+position_smoothing_speed = 5.0
+limit_left = -1520
+limit_top = -1520
+limit_right = 1520
+limit_bottom = 1520
