@@ -54,6 +54,10 @@ func _ready() -> void:
 	
 	var summary: Dictionary = map_data.call("get_obstacle_summary")
 	print("BioSphere-X: Complete alien planet map generated. Obstacles: ", summary)
+	
+	var nav_mgr = get_node_or_null("/root/NavigationManager")
+	if nav_mgr and nav_mgr.has_method("set_map_data"):
+		nav_mgr.call("set_map_data", map_data)
 
 
 func _build_hud() -> void:
@@ -471,3 +475,17 @@ func get_path_to_player(from_world_pos: Vector2) -> PackedVector2Array:
 	if not map_data or not _player_ref:
 		return PackedVector2Array()
 	return map_data.get_path_points(from_world_pos, _player_ref.global_position)
+
+
+func request_path_to_player(from_world_pos: Vector2, callback: Callable) -> void:
+	if not map_data or not _player_ref:
+		if callback.is_valid():
+			callback.call(PackedVector2Array(), {"success": false, "error": "MapData or Player missing"})
+		return
+	var nav_mgr = get_node_or_null("/root/NavigationManager")
+	if nav_mgr and nav_mgr.has_method("request_path"):
+		nav_mgr.call("request_path", from_world_pos, _player_ref.global_position, map_data, callback)
+	else:
+		var p = map_data.get_path_points(from_world_pos, _player_ref.global_position)
+		if callback.is_valid():
+			callback.call(p, {"success": p.size() > 0, "source": "[FALLBACK_ASTAR2D]"})

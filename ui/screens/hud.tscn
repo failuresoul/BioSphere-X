@@ -1,6 +1,7 @@
 [gd_scene load_steps=12 format=3 uid="uid://bsxhudscreen"]
 
 [ext_resource type="Script" path="res://ui/screens/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://ui/components/dev_navigation_menu.tscn" id="2_dev_menu"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 content_margin_left = 12.0
@@ -266,11 +267,23 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="TitleLabel" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox"]
+[node name="HeaderHBox" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox"]
 layout_mode = 2
+
+[node name="DevNavButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(86, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "AI NAV [F1]"
+
+[node name="TitleLabel" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.3, 0.85, 1, 0.9)
 theme_override_font_sizes/font_size = 11
-text = "HARVESTED RESOURCES"
+text = "RESOURCES"
 horizontal_alignment = 2
 
 [node name="ResourcesGrid" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox"]
@@ -612,4 +625,8 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_restart_btn")
 text = "REDEPLOY ASTRONAUT (RESTART)"
+
+[node name="DevNavigationMenu" parent="." instance=ExtResource("2_dev_menu")]
+unique_name_in_owner = true
+visible = false
 

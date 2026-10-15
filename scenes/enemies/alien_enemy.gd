@@ -49,6 +49,11 @@ var _attack_timer: float = 0.0
 var _cooldown_timer: float = 0.0
 var _target_player: Node2D = null
 
+# Navigation Path Execution State
+var _nav_path: PackedVector2Array = PackedVector2Array()
+var _nav_path_index: int = 0
+var _nav_refresh_timer: float = 0.0
+
 @onready var visual: Node2D = $Visual
 @onready var health_component: Node = $HealthComponent
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -166,8 +171,23 @@ func _process_chase(delta: float) -> void:
 		change_state(State.INVESTIGATE)
 		return
 	
-	# Chase movement
-	var target_vel := to_player.normalized() * chase_speed
+	# Chase movement with navigation waypoints
+	_nav_refresh_timer -= delta
+	if _nav_refresh_timer <= 0.0 or _nav_path.is_empty():
+		_nav_refresh_timer = 0.6
+		_request_navigation_path(_target_player.global_position)
+	
+	var steer_target := _target_player.global_position
+	if _nav_path.size() > 0 and _nav_path_index < _nav_path.size():
+		var waypoint := _nav_path[_nav_path_index]
+		if global_position.distance_to(waypoint) <= 24.0:
+			_nav_path_index += 1
+			if _nav_path_index < _nav_path.size():
+				waypoint = _nav_path[_nav_path_index]
+		steer_target = waypoint
+	
+	var target_dir := (steer_target - global_position).normalized()
+	var target_vel := target_dir * chase_speed
 	velocity = velocity.move_toward(target_vel, acceleration * delta)
 
 
@@ -243,6 +263,11 @@ func change_state(new_state: State) -> void:
 	var old_state := current_state
 	current_state = new_state
 	
+	# Clear active path on state departure
+	if old_state == State.CHASE and new_state != State.CHASE:
+		_nav_path.clear()
+		_nav_path_index = 0
+	
 	match new_state:
 		State.IDLE:
 			_idle_timer = randf_range(1.5, 3.0)
@@ -289,6 +314,16 @@ func _can_detect_player() -> bool:
 		return false
 	var dist := global_position.distance_to(_target_player.global_position)
 	return dist <= detection_range
+
+
+func _request_navigation_path(target_pos: Vector2) -> void:
+	var nav_mgr = get_node_or_null("/root/NavigationManager")
+	if nav_mgr and nav_mgr.has_method("request_path"):
+		nav_mgr.call("request_path", global_position, target_pos, null, func(path: PackedVector2Array, _metrics: Dictionary) -> void:
+			if is_instance_valid(self) and path.size() > 0:
+				_nav_path = path
+				_nav_path_index = 0
+		)
 
 
 # ---------------------------------------------------------------------------

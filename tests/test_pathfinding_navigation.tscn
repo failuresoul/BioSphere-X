@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c7tpathfindingnavtest"]
+
+[ext_resource type="Script" path="res://tests/test_pathfinding_navigation.gd" id="1_test_pathfinding"]
+
+[node name="TestPathfindingNavigation" type="Node"]
+script = ExtResource("1_test_pathfinding")

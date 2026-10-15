@@ -33,6 +33,9 @@ extends CanvasLayer
 @onready var tutorial_progress_label: Label = %TutorialProgressLabel
 @onready var tutorial_desc_label: Label = %TutorialDescLabel
 
+@onready var dev_nav_button: Button = %DevNavButton
+@onready var dev_nav_menu: PanelContainer = %DevNavigationMenu
+
 # Warning & Feedback State
 var _low_hp_alert: bool = false
 var _low_o2_alert: bool = false
@@ -52,6 +55,13 @@ func _ready() -> void:
 		resume_button.pressed.connect(_on_resume_pressed)
 	if restart_button:
 		restart_button.pressed.connect(_on_restart_pressed)
+	if dev_nav_button and dev_nav_menu:
+		dev_nav_button.pressed.connect(func():
+			if dev_nav_menu.has_method("toggle_visibility"):
+				dev_nav_menu.call("toggle_visibility")
+			else:
+				dev_nav_menu.visible = not dev_nav_menu.visible
+		)
 
 
 func _setup_procedural_audio() -> void:

@@ -1,0 +1,218 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/components/dev_navigation_menu.gd" id="1_dev_menu"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 18.0
+content_margin_top = 16.0
+content_margin_right = 18.0
+content_margin_bottom = 16.0
+bg_color = Color(0.0470588, 0.0705882, 0.117647, 0.941176)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.898039, 1, 0.627451)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.6)
+shadow_size = 12
+
+[node name="DevNavigationMenu" type="PanelContainer"]
+custom_minimum_size = Vector2(460, 480)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -230.0
+offset_top = -240.0
+offset_right = 230.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+script = ExtResource("1_dev_menu")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HeaderBar" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="VBox/HeaderBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0.941176, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "AI LAB // PATHFINDING CONFIGURATION"
+
+[node name="CloseButton" type="Button" parent="VBox/HeaderBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 24)
+layout_mode = 2
+text = "✕"
+
+[node name="StatusBadge" type="Label" parent="VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "● CONNECTING TO BACKEND..."
+
+[node name="ErrorBanner" type="Label" parent="VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.698039, 0.2, 1)
+theme_override_font_sizes/font_size = 11
+text = "FALLBACK NOTICE: Native Godot AStarGrid2D active."
+autowrap_mode = 2
+
+[node name="HSeparator1" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="AlgoRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="AlgoPrompt" type="Label" parent="VBox/AlgoRow"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Algorithm:"
+
+[node name="AlgoDropdown" type="OptionButton" parent="VBox/AlgoRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DepthRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="DepthPrompt" type="Label" parent="VBox/DepthRow"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "DLS Depth Limit:"
+
+[node name="DepthSpin" type="SpinBox" parent="VBox/DepthRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 5.0
+max_value = 500.0
+value = 100.0
+
+[node name="TogglesRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="DiagonalCheck" type="CheckBox" parent="VBox/TogglesRow"]
+unique_name_in_owner = true
+layout_mode = 2
+button_pressed = true
+text = "8-Way Diagonals"
+
+[node name="ForceFallbackCheck" type="CheckBox" parent="VBox/TogglesRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Force Fallback"
+
+[node name="ActionsRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PingButton" type="Button" parent="VBox/ActionsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "PING BACKEND"
+
+[node name="TestQueryButton" type="Button" parent="VBox/ActionsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "TEST NAV QUERY"
+
+[node name="HSeparator2" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="TelemetryTitle" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "LIVE TELEMETRY & PERFORMANCE METRICS"
+
+[node name="MetricsGrid" type="GridContainer" parent="VBox"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 4
+
+[node name="Lbl1" type="Label" parent="VBox/MetricsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Active Algorithm:"
+
+[node name="MetricsAlgo" type="Label" parent="VBox/MetricsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "AStar"
+
+[node name="Lbl2" type="Label" parent="VBox/MetricsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Execution Source:"
+
+[node name="MetricsSource" type="Label" parent="VBox/MetricsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "PYTHON_AI_BACKEND"
+
+[node name="Lbl3" type="Label" parent="VBox/MetricsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Nodes Expanded:"
+
+[node name="MetricsNodes" type="Label" parent="VBox/MetricsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "0"
+
+[node name="Lbl4" type="Label" parent="VBox/MetricsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Execution Time:"
+
+[node name="MetricsTime" type="Label" parent="VBox/MetricsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "0.000 ms"
+
+[node name="Lbl5" type="Label" parent="VBox/MetricsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Path Waypoints:"
+
+[node name="MetricsLength" type="Label" parent="VBox/MetricsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "0 points"
+
+[node name="HintLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.55, 0.7, 0.8)
+theme_override_font_sizes/font_size = 10
+text = "Press [F1] or click HUD button to show/hide this menu during gameplay."

@@ -131,6 +131,33 @@ func get_path_points(from_world: Vector2, to_world: Vector2) -> PackedVector2Arr
 	return _astar.get_point_path(start_grid, end_grid)
 
 
+func get_fallback_path_points(from_world: Vector2, to_world: Vector2) -> PackedVector2Array:
+	## Explicit fallback using Godot's built-in AStarGrid2D when Python backend is offline
+	return get_path_points(from_world, to_world)
+
+
+func get_blocked_cells() -> Array[Vector2i]:
+	var blocked: Array[Vector2i] = []
+	for y in range(grid_size.y):
+		for x in range(grid_size.x):
+			var idx: int = y * grid_size.x + x
+			if _cells[idx] != CellType.WALKABLE:
+				blocked.append(Vector2i(x, y))
+	return blocked
+
+
+func grid_to_world_path(grid_path: Array) -> PackedVector2Array:
+	var world_path := PackedVector2Array()
+	for pt in grid_path:
+		if pt is Array and pt.size() >= 2:
+			world_path.append(grid_to_world(Vector2i(int(pt[0]), int(pt[1]))))
+		elif pt is Vector2i:
+			world_path.append(grid_to_world(pt))
+		elif pt is Vector2:
+			world_path.append(pt)
+	return world_path
+
+
 func get_astar() -> AStarGrid2D:
 	return _astar
 

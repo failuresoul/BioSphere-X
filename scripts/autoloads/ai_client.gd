@@ -45,6 +45,20 @@ func send_test_echo(message: String, payload: Dictionary = {}, callback: Callabl
 
 
 func request_path(start_grid: Vector2i, goal_grid: Vector2i, blocked: Array[Vector2i] = [], callback: Callable = Callable()) -> void:
+	request_pathfinding(start_grid, goal_grid, "astar", blocked, 80, 80, true, 100, callback)
+
+
+func request_pathfinding(
+	start_grid: Vector2i,
+	goal_grid: Vector2i,
+	algorithm: String = "astar",
+	blocked: Array[Vector2i] = [],
+	grid_width: int = 80,
+	grid_height: int = 80,
+	allow_diagonal: bool = true,
+	depth_limit: int = 100,
+	callback: Callable = Callable()
+) -> void:
 	var blocked_list: Array = []
 	for b in blocked:
 		blocked_list.append([b.x, b.y])
@@ -52,8 +66,12 @@ func request_path(start_grid: Vector2i, goal_grid: Vector2i, blocked: Array[Vect
 	var body := {
 		"start": [start_grid.x, start_grid.y],
 		"goal": [goal_grid.x, goal_grid.y],
+		"algorithm": algorithm,
+		"grid_width": grid_width,
+		"grid_height": grid_height,
 		"blocked_cells": blocked_list,
-		"allow_diagonal": true
+		"allow_diagonal": allow_diagonal,
+		"depth_limit": depth_limit
 	}
 	send_request("/api/ai/pathfinding/find-path", HTTPClient.METHOD_POST, body, callback)
 
