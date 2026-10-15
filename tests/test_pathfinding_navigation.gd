@@ -17,6 +17,8 @@ func _ready() -> void:
 func _run_tests() -> void:
 	_test_map_data_helpers()
 	_test_multiple_map_topologies()
+	_test_modular_pathfinder_algorithms()
+	_test_line_of_sight_grid()
 	_test_navigation_manager_algorithm_switching()
 	_test_offline_fallback_failover()
 	_test_dev_navigation_menu_ui()
@@ -225,4 +227,106 @@ func _test_debug_visualizer() -> void:
 	
 	viz.queue_free()
 	print("  [PASS] NavigationDebugVisualizer registration, toggle, and path tracking verified")
+
+
+func _test_modular_pathfinder_algorithms() -> void:
+	var algos := ["astar", "bfs", "dfs", "dls", "iddfs", "bidirectional", "greedy"]
+	var start := Vector2i(1, 1)
+	var goal := Vector2i(8, 8)
+	var grid_size := Vector2i(15, 15)
+	
+	# Wall obstacle in the middle
+	var blocked: Array[Vector2i] = [
+		Vector2i(4, 2), Vector2i(4, 3), Vector2i(4, 4), Vector2i(4, 5), Vector2i(4, 6)
+	]
+	
+	for algo in algos:
+		var res: Dictionary = ModularPathfinder.search(
+			algo,
+			start,
+			goal,
+			blocked,
+			grid_size,
+			{"allow_diagonal": true, "depth_limit": 50, "max_depth": 100}
+		)
+		
+		# Consistent interface assertions
+		assert(res.has("success"), "%s response must have 'success'" % algo)
+		assert(res.has("found"), "%s response must have 'found'" % algo)
+		assert(res.has("path"), "%s response must have 'path'" % algo)
+		assert(res.has("length"), "%s response must have 'length'" % algo)
+		assert(res.has("nodes_expanded"), "%s response must have 'nodes_expanded'" % algo)
+		assert(res.has("execution_time_ms"), "%s response must have 'execution_time_ms'" % algo)
+		assert(res.has("algorithm"), "%s response must have 'algorithm'" % algo)
+		assert(res.has("message"), "%s response must have 'message'" % algo)
+		assert(res.has("suitability"), "%s response must have 'suitability'" % algo)
+		
+		assert(res["success"] == true, "%s must successfully find a path" % algo)
+		assert(res["path"].size() > 0, "%s path must not be empty" % algo)
+		assert(res["path"][0] == start, "%s path start must equal start node" % algo)
+		assert(res["path"][-1] == goal, "%s path end must equal goal node" % algo)
+		assert(res["nodes_expanded"] > 0, "%s must record expanded nodes" % algo)
+		assert(res["execution_time_ms"] >= 0.0, "%s must record non-negative execution time" % algo)
+		
+		# Ensure path does not cut through blocked wall
+		for pt in res["path"]:
+			assert(not blocked.has(pt), "%s path point %s cannot be on blocked cell" % [algo, pt])
+	
+	# Verify algorithm suitability profiles and trade-off documentation
+	var astar_prof := ModularPathfinder.get_algorithm_profile("astar")
+	assert(astar_prof["optimal"] == true, "A* must be documented as optimal")
+	assert(astar_prof["gameplay_suitable"] == true, "A* must be documented as gameplay suitable")
+	
+	var dfs_prof := ModularPathfinder.get_algorithm_profile("dfs")
+	assert(dfs_prof["optimal"] == false, "DFS must be documented as NOT optimal")
+	assert(dfs_prof["gameplay_suitable"] == false, "DFS must NOT be claimed as suitable for gameplay navigation")
+	
+	var dls_prof := ModularPathfinder.get_algorithm_profile("dls")
+	assert(dls_prof["complete"] == false, "DLS must be documented as incomplete when goal exceeds depth limit")
+	
+	# Test cycle prevention and unreachable goals (infinite loop prevention)
+	var enclosed_goal := Vector2i(10, 10)
+	var enclosing_wall: Array[Vector2i] = [
+		Vector2i(9, 9), Vector2i(10, 9), Vector2i(11, 9),
+		Vector2i(9, 10),                 Vector2i(11, 10),
+		Vector2i(9, 11), Vector2i(10, 11), Vector2i(11, 11)
+	]
+	
+	for algo in algos:
+		var unreach_res := ModularPathfinder.search(
+			algo,
+			start,
+			enclosed_goal,
+			enclosing_wall,
+			grid_size,
+			{"allow_diagonal": true, "depth_limit": 25, "max_depth": 50}
+		)
+		assert(unreach_res["success"] == false, "%s must safely return success=false on unreachable goal" % algo)
+		assert(unreach_res["path"].size() == 0, "%s must return empty path on unreachable goal" % algo)
+		assert(unreach_res["nodes_expanded"] > 0, "%s must record nodes expanded before termination" % algo)
+	
+	print("  [PASS] ModularPathfinder 7 algorithms, consistent interface, suitability profiles, and loop prevention verified")
+
+
+func _test_line_of_sight_grid() -> void:
+	var map := MapDataClass.new(Vector2i(20, 20), 32.0, Vector2.ZERO)
+	
+	# Clear corridor
+	assert(map.has_grid_line_of_sight(Vector2i(2, 2), Vector2i(2, 8)) == true, "Clear column must have line of sight")
+	assert(map.has_grid_line_of_sight(Vector2i(2, 2), Vector2i(8, 2)) == true, "Clear row must have line of sight")
+	assert(map.has_grid_line_of_sight(Vector2i(1, 1), Vector2i(5, 5)) == true, "Clear diagonal must have line of sight")
+	
+	# Place wall between (2, 2) and (2, 8) at (2, 5)
+	map.set_cell_blocked(Vector2i(2, 5), true, MapDataClass.CellType.WALL)
+	assert(map.has_grid_line_of_sight(Vector2i(2, 2), Vector2i(2, 8)) == false, "Wall at (2, 5) must block line of sight")
+	
+	# World position test
+	var p_start := map.grid_to_world(Vector2i(2, 2))
+	var p_blocked := map.grid_to_world(Vector2i(2, 8))
+	var p_clear := map.grid_to_world(Vector2i(2, 4))
+	
+	assert(map.has_line_of_sight(p_start, p_blocked) == false, "World position line of sight must be blocked by wall")
+	assert(map.has_line_of_sight(p_start, p_clear) == true, "World position line of sight must be clear before wall")
+	print("  [PASS] MapData grid line of sight detection and obstruction verified")
+
 

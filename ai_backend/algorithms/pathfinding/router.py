@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List, Tuple, Optional, Any, Set
 import time
 
+from .common import get_algorithm_profile, ALGORITHM_PROFILES
 from .bfs import bfs_search
 from .dfs import dfs_search
 from .dls import dls_search
@@ -35,6 +36,14 @@ class PathResponse(BaseModel):
     execution_time_ms: float
     algorithm: str
     message: str = ""
+    suitability: Optional[dict] = None
+
+
+@router.get("/profiles")
+def get_profiles():
+    """Returns suitability metadata, optimality, and caveats for all pathfinding algorithms."""
+    return ALGORITHM_PROFILES
+
 
 
 @router.post("/find-path", response_model=PathResponse)
@@ -101,5 +110,7 @@ def execute_pathfinding(req: PathRequest):
         nodes_expanded=int(raw_res.get("nodes_expanded", 0)),
         execution_time_ms=float(raw_res.get("execution_time_ms", 0.0)),
         algorithm=str(raw_res.get("algorithm", algo_key)),
-        message=str(raw_res.get("message", ""))
+        message=str(raw_res.get("message", "")),
+        suitability=get_algorithm_profile(algo_key)
     )
+

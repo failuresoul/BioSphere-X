@@ -226,5 +226,33 @@ def test_api_2d_matrix_grid_format():
     assert data["success"] is True
     assert data["path"][0] == [0, 0]
     assert data["path"][-1] == [3, 0]
-    # Verify path navigates around wall at x=2, y=0
     assert [2, 0] not in data["path"]
+
+
+def test_api_algorithm_profiles_and_suitability():
+    """Verify algorithm profiles endpoint and suitability payload in find-path."""
+    # Test GET /profiles
+    response = client.get("/api/ai/pathfinding/profiles")
+    assert response.status_code == 200
+    profiles = response.json()
+    assert "astar" in profiles
+    assert "dfs" in profiles
+    assert profiles["astar"]["optimal"] is True
+    assert profiles["astar"]["gameplay_suitable"] is True
+    assert profiles["dfs"]["gameplay_suitable"] is False
+
+    # Test that find-path includes suitability
+    req = {
+        "algorithm": "astar",
+        "start": [0, 0],
+        "goal": [2, 2],
+        "grid_width": 5,
+        "grid_height": 5,
+        "blocked_cells": []
+    }
+    res = client.post("/api/ai/pathfinding/find-path", json=req)
+    assert res.status_code == 200
+    data = res.json()
+    assert "suitability" in data
+    assert data["suitability"]["gameplay_suitable"] is True
+

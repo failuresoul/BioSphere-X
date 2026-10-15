@@ -100,3 +100,84 @@ def validate_coordinates(
         return False, f"Goal position {goal} is blocked by an obstacle"
         
     return True, ""
+
+
+ALGORITHM_PROFILES: Dict[str, Dict] = {
+    "astar": {
+        "name": "A* Search",
+        "optimal": True,
+        "complete": True,
+        "gameplay_suitable": True,
+        "description": "Heuristic-guided optimal search balancing exact path cost g(n) and estimated distance h(n).",
+        "suitability": "Ideal default choice for real-time game navigation and enemy tracking.",
+        "caveats": "Requires an admissible heuristic. Slight memory overhead for priority queue and tracking maps."
+    },
+    "bfs": {
+        "name": "Breadth-First Search (BFS)",
+        "optimal": True,
+        "complete": True,
+        "gameplay_suitable": False,
+        "description": "Exhaustive level-by-level frontier expansion. Guarantees fewest steps on uniform unweighted grids.",
+        "suitability": "Good for small grids or flood-fill queries.",
+        "caveats": "High memory consumption O(b^d). Expands blindly in all directions regardless of goal direction. Not suitable for large open worlds."
+    },
+    "dfs": {
+        "name": "Depth-First Search (DFS)",
+        "optimal": False,
+        "complete": True,
+        "gameplay_suitable": False,
+        "description": "Explores deeply down single branches before backtracking.",
+        "suitability": "Useful for maze generation and full connectivity audits.",
+        "caveats": "NOT SUITABLE for game navigation! Produces highly erratic, unnatural paths with excessive step counts."
+    },
+    "dls": {
+        "name": "Depth-Limited Search (DLS)",
+        "optimal": False,
+        "complete": False,
+        "gameplay_suitable": False,
+        "description": "DFS constrained by a maximum depth limit to prevent infinite runaway search.",
+        "suitability": "Useful for horizon-bounded queries (e.g. short-range dashes).",
+        "caveats": "Incomplete: Fails to find paths when the goal lies beyond the configured depth limit."
+    },
+    "iddfs": {
+        "name": "Iterative Deepening DFS (IDDFS)",
+        "optimal": True,
+        "complete": True,
+        "gameplay_suitable": False,
+        "description": "Combines DFS space efficiency O(bd) with BFS step-count optimality by successively deepening search.",
+        "suitability": "Useful when memory is severely constrained.",
+        "caveats": "Re-expands nodes repeatedly. High CPU overhead makes it unsuited for frequent 60 FPS enemy updates."
+    },
+    "bidirectional": {
+        "name": "Bidirectional Search",
+        "optimal": True,
+        "complete": True,
+        "gameplay_suitable": True,
+        "description": "Simultaneously expands frontiers forward from start and backward from goal until they intersect.",
+        "suitability": "Very fast for point-to-point pathfinding between two known stationary targets.",
+        "caveats": "Requires a known static goal point. Less practical if the target is rapidly moving or non-point."
+    },
+    "greedy": {
+        "name": "Greedy Best-First Search",
+        "optimal": False,
+        "complete": True,
+        "gameplay_suitable": False,
+        "description": "Prioritizes frontier nodes solely based on heuristic distance h(n) to the goal.",
+        "suitability": "Very fast approximations across open terrain.",
+        "caveats": "Not optimal. Easily trapped in concave obstacles / U-shaped walls, leading to large detours."
+    }
+}
+
+
+def get_algorithm_profile(algo_key: str) -> Dict:
+    key = algo_key.strip().lower()
+    return ALGORITHM_PROFILES.get(key, {
+        "name": algo_key,
+        "optimal": False,
+        "complete": False,
+        "gameplay_suitable": False,
+        "description": "Custom or unknown algorithm.",
+        "suitability": "Unknown",
+        "caveats": "No profile available."
+    })
+
