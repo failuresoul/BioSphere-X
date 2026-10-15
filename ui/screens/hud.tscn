@@ -347,6 +347,90 @@ theme_override_font_sizes/font_size = 13
 text = "0"
 
 
+[node name="PromptMargin" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -105.0
+offset_right = 220.0
+offset_bottom = -68.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ContextualPrompt" type="PanelContainer" parent="Root/PromptMargin"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+
+[node name="HBox" type="HBoxContainer" parent="Root/PromptMargin/ContextualPrompt"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="KeyBadge" type="Label" parent="Root/PromptMargin/ContextualPrompt/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "[E]"
+
+[node name="PromptLabel" type="Label" parent="Root/PromptMargin/ContextualPrompt/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Press E to Interact"
+
+[node name="TutorialMargin" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -260.0
+offset_top = 16.0
+offset_right = 260.0
+offset_bottom = 85.0
+grow_horizontal = 2
+
+[node name="TutorialBanner" type="PanelContainer" parent="Root/TutorialMargin"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+
+[node name="VBox" type="VBoxContainer" parent="Root/TutorialMargin/TutorialBanner"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="HBoxHeader" type="HBoxContainer" parent="Root/TutorialMargin/TutorialBanner/VBox"]
+layout_mode = 2
+
+[node name="TutorialStepLabel" type="Label" parent="Root/TutorialMargin/TutorialBanner/VBox/HBoxHeader"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.25, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "STEP 1/4: LOCOMOTION"
+
+[node name="TutorialProgressLabel" type="Label" parent="Root/TutorialMargin/TutorialBanner/VBox/HBoxHeader"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.15, 1)
+theme_override_font_sizes/font_size = 11
+text = "● ○ ○ ○"
+
+[node name="TutorialDescLabel" type="Label" parent="Root/TutorialMargin/TutorialBanner/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "Calibrate EVA suit thrusters: Use [W, A, S, D] or Arrow Keys to move."
+
+
 [node name="BottomObjectiveMargin" type="MarginContainer" parent="Root"]
 layout_mode = 1
 anchors_preset = 7

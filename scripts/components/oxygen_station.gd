@@ -81,6 +81,14 @@ func _on_body_exited(body: Node2D) -> void:
 			gs.call("set_oxygen_refilling", false)
 
 
+func get_interaction_prompt() -> String:
+	return "Press E to Refill Oxygen"
+
+
+func can_interact(_user: Node2D = null) -> bool:
+	return true
+
+
 ## Interactive component interface (E / Spacebar)
 func interact(_player: Node2D = null) -> bool:
 	if not instant_interact_refill:

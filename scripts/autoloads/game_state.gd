@@ -11,6 +11,8 @@ signal resource_changed(resource_id: String, count: int)
 signal objective_changed(text: String)
 signal game_paused(paused: bool)
 signal game_over_triggered()
+signal interaction_prompt_changed(prompt: String)
+signal tutorial_step_changed(step_index: int, title: String, description: String, is_complete: bool)
 
 # Player Vitality Stats
 var max_health: float = 100.0

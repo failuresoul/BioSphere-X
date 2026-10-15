@@ -6,6 +6,7 @@ class_name InteractionComponent
 signal interactable_focused(target: Node2D)
 signal interactable_unfocused(target: Node2D)
 signal interacted(target: Node2D)
+signal prompt_changed(prompt_text: String)
 
 @export var interaction_radius: float = 48.0:
 	set(val):
@@ -21,7 +22,7 @@ func _ready() -> void:
 	monitoring = true
 	monitorable = false
 	collision_layer = 0
-	collision_mask = 2 # Default interactable layer (layer 2)
+	collision_mask = 14 # Detect Layer 2 (Interactable), Layer 3 (Zones), Layer 4 (Stations)
 	
 	_ensure_shape()
 	area_entered.connect(_on_area_entered)
@@ -97,6 +98,22 @@ func _cleanup_invalid_targets() -> void:
 			_active_targets.remove_at(i)
 
 
+func get_current_prompt() -> String:
+	if not _closest_target or not is_instance_valid(_closest_target):
+		return ""
+	if _closest_target.has_method("get_interaction_prompt"):
+		return _closest_target.call("get_interaction_prompt")
+	elif _closest_target.has_method("get_display_name"):
+		return "Press E to Collect %s" % _closest_target.call("get_display_name")
+	elif "station_name" in _closest_target:
+		return "Press E to Refill Oxygen at %s" % _closest_target.get("station_name")
+	elif "terminal_name" in _closest_target:
+		return "Press E to Access %s" % _closest_target.get("terminal_name")
+	elif "door_name" in _closest_target:
+		return "Press E to Toggle %s" % _closest_target.get("door_name")
+	return "Press E to Interact"
+
+
 func _update_focused_target() -> void:
 	var best_target: Node2D = null
 	var min_dist_sq := INF
@@ -113,5 +130,13 @@ func _update_focused_target() -> void:
 		if _closest_target and is_instance_valid(_closest_target):
 			interactable_unfocused.emit(_closest_target)
 		_closest_target = best_target
+		var prompt_text := get_current_prompt()
+		prompt_changed.emit(prompt_text)
+		
+		var gs := get_node_or_null("/root/GameState")
+		if gs and gs.has_signal("interaction_prompt_changed"):
+			gs.emit_signal("interaction_prompt_changed", prompt_text)
+			
 		if _closest_target:
 			interactable_focused.emit(_closest_target)
+

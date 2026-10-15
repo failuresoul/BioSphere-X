@@ -47,6 +47,20 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+func get_interaction_prompt() -> String:
+	if remaining_units <= 0:
+		return "Depleted Deposit"
+	match resource_type:
+		ResourceType.ENERGY_CRYSTAL: return "Press E to Mine Energy Crystals"
+		ResourceType.TITANIUM_ORE: return "Press E to Mine Titanium Ore"
+		ResourceType.ALIEN_BIOMASS: return "Press E to Harvest Alien Biomass"
+	return "Press E to Harvest Deposit"
+
+
+func can_interact(_user: Node2D = null) -> bool:
+	return remaining_units > 0
+
+
 func interact(user: Node2D) -> void:
 	if remaining_units <= 0:
 		return

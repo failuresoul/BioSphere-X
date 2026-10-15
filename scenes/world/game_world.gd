@@ -23,8 +23,12 @@ var _rock_script := preload("res://scripts/components/alien_rock.gd")
 var _plant_script := preload("res://scripts/components/alien_plant.gd")
 var _oxygen_station_script := preload("res://scripts/components/oxygen_station.gd")
 var _collectable_scene := preload("res://scenes/items/collectable_resource.tscn")
+var _terminal_script := preload("res://scripts/components/research_terminal.gd")
+var _door_script := preload("res://scripts/components/airlock_door.gd")
+var _tutorial_script := preload("res://scripts/components/tutorial_manager.gd")
 
 var _player_ref: Node2D = null
+var _terminal_ref: Node2D = null
 
 
 func _ready() -> void:
@@ -41,7 +45,9 @@ func _ready() -> void:
 	_build_alien_flora()
 	_build_oxygen_stations()
 	_build_collectables()
+	_build_research_terminals()
 	_spawn_player()
+	_build_tutorial_system()
 	_build_hud()
 	
 	var summary: Dictionary = map_data.call("get_obstacle_summary")
@@ -367,6 +373,46 @@ func _build_collectables() -> void:
 		item.set("resource_type", data["type"])
 		item.set("quantity", data["qty"])
 		container.add_child(item)
+
+
+# ---------------------------------------------------------------------------
+# Research Terminals & Station Interactive Objects
+# ---------------------------------------------------------------------------
+func _build_research_terminals() -> void:
+	var container := Node2D.new()
+	container.name = "StationInteractiveObjects"
+	add_child(container)
+	
+	# 1. Research Terminal inside Outpost clearing
+	var terminal: Area2D = Area2D.new()
+	terminal.name = "ResearchTerminal"
+	terminal.set_script(_terminal_script)
+	terminal.position = Vector2(420, -450)
+	container.add_child(terminal)
+	_terminal_ref = terminal
+	
+	# 2. Airlock Door guarding the Habitat module
+	var door: StaticBody2D = StaticBody2D.new()
+	door.name = "AirlockDoor"
+	door.set_script(_door_script)
+	door.position = Vector2(540, -490)
+	container.add_child(door)
+
+
+# ---------------------------------------------------------------------------
+# Tutorial System
+# ---------------------------------------------------------------------------
+func _build_tutorial_system() -> void:
+	var tutorial: Node = Node.new()
+	tutorial.name = "TutorialManager"
+	tutorial.set_script(_tutorial_script)
+	add_child(tutorial)
+	if _player_ref:
+		tutorial.call("set_player", _player_ref)
+	if _terminal_ref and _terminal_ref.has_signal("terminal_scanned"):
+		_terminal_ref.connect("terminal_scanned", func(_user):
+			tutorial.call("notify_terminal_scanned")
+		)
 
 
 # ---------------------------------------------------------------------------

@@ -25,6 +25,14 @@ extends CanvasLayer
 
 @onready var oxygen_status_label: Label = %OxygenStatusLabel
 
+@onready var contextual_prompt: PanelContainer = %ContextualPrompt
+@onready var prompt_label: Label = %PromptLabel
+
+@onready var tutorial_banner: PanelContainer = %TutorialBanner
+@onready var tutorial_step_label: Label = %TutorialStepLabel
+@onready var tutorial_progress_label: Label = %TutorialProgressLabel
+@onready var tutorial_desc_label: Label = %TutorialDescLabel
+
 # Warning & Feedback State
 var _low_hp_alert: bool = false
 var _low_o2_alert: bool = false
@@ -117,6 +125,10 @@ func _connect_game_state_signals() -> void:
 		gs.connect("game_paused", _on_game_paused)
 	if gs.has_signal("game_over_triggered") and not gs.is_connected("game_over_triggered", _on_game_over):
 		gs.connect("game_over_triggered", _on_game_over)
+	if gs.has_signal("interaction_prompt_changed") and not gs.is_connected("interaction_prompt_changed", _on_interaction_prompt_changed):
+		gs.connect("interaction_prompt_changed", _on_interaction_prompt_changed)
+	if gs.has_signal("tutorial_step_changed") and not gs.is_connected("tutorial_step_changed", _on_tutorial_step_changed):
+		gs.connect("tutorial_step_changed", _on_tutorial_step_changed)
 
 
 func _initialize_hud_values() -> void:
@@ -223,6 +235,32 @@ func _on_resource_changed(resource_id: String, count: int) -> void:
 func _on_objective_changed(new_text: String) -> void:
 	if objective_label:
 		objective_label.text = new_text
+
+
+func _on_interaction_prompt_changed(prompt_text: String) -> void:
+	if not contextual_prompt:
+		return
+	if prompt_text.is_empty():
+		contextual_prompt.visible = false
+	else:
+		contextual_prompt.visible = true
+		if prompt_label:
+			prompt_label.text = prompt_text
+
+
+func _on_tutorial_step_changed(step: int, title: String, desc: String, is_complete: bool) -> void:
+	if tutorial_step_label:
+		tutorial_step_label.text = title
+	if tutorial_desc_label:
+		tutorial_desc_label.text = desc
+	if tutorial_progress_label:
+		var p_str := ""
+		for i in 4:
+			p_str += "● " if i <= step else "○ "
+		tutorial_progress_label.text = p_str.strip_edges()
+	
+	if is_complete and tutorial_banner:
+		tutorial_banner.modulate = Color(0.3, 1.0, 0.6)
 
 
 func _on_game_paused(paused: bool) -> void:

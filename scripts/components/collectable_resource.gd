@@ -131,6 +131,14 @@ func get_display_name() -> String:
 	return "Resource"
 
 
+func get_interaction_prompt() -> String:
+	return "Press E to Collect %s (+%d)" % [get_display_name(), quantity]
+
+
+func can_interact(_user: Node2D = null) -> bool:
+	return not is_collected
+
+
 func get_resource_id_name() -> String:
 	match resource_type:
 		ResourceType.OXYGEN_CELL: return "oxygen_cells"
