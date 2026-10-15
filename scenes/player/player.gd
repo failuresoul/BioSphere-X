@@ -163,6 +163,27 @@ func try_interact() -> bool:
 	return false
 
 
+func get_animation_state() -> String:
+	var vis := _get_visual()
+	if vis and vis.has_method("get_animation_state"):
+		return vis.call("get_animation_state")
+	return "idle"
+
+
+func get_facing_direction() -> String:
+	var vis := _get_visual()
+	if vis and vis.has_method("get_direction_name"):
+		return vis.call("get_direction_name")
+	return "down"
+
+
+func get_facing_vector() -> Vector2:
+	var vis := _get_visual()
+	if vis and "facing_vector" in vis:
+		return vis.get("facing_vector")
+	return Vector2.DOWN
+
+
 # ---------------------------------------------------------------------------
 # Component Event Callbacks
 # ---------------------------------------------------------------------------
