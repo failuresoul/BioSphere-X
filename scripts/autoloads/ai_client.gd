@@ -76,6 +76,26 @@ func request_pathfinding(
 	send_request("/api/ai/pathfinding/find-path", HTTPClient.METHOD_POST, body, callback)
 
 
+func request_boss_decision(
+	state_data: Dictionary,
+	algorithm: String = "alpha_beta",
+	options: Dictionary = {},
+	callback: Callable = Callable()
+) -> void:
+	var body := {
+		"state": state_data,
+		"algorithm": algorithm,
+		"max_depth": options.get("max_depth", 4),
+		"simulations": options.get("simulations", 150),
+		"exploration_c": options.get("exploration_c", 1.414)
+	}
+	send_request("/api/ai/boss/decision", HTTPClient.METHOD_POST, body, callback)
+
+
+func request_boss_algorithms(callback: Callable = Callable()) -> void:
+	send_request("/api/ai/boss/algorithms", HTTPClient.METHOD_GET, {}, callback)
+
+
 # ---------------------------------------------------------------------------
 # Core Asynchronous HTTP Request Pipeline
 # ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ from typing import Any, Dict
 import time
 
 from algorithms.pathfinding.router import router as pathfinding_router
+from algorithms.adversarial.router import router as adversarial_router
 
 app = FastAPI(
     title="BioSphere-X AI Backend",
@@ -28,6 +29,7 @@ app.add_middleware(
 
 # Attach algorithm routers
 app.include_router(pathfinding_router)
+app.include_router(adversarial_router)
 
 
 class EchoRequest(BaseModel):

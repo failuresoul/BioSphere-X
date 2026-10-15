@@ -12,6 +12,7 @@ signal phase_changed(new_phase: int)
 signal boss_damaged(amount: float, current_hp: float, max_hp: float)
 signal boss_attacked(attack_type: String, damage: float)
 signal boss_defeated()
+signal decision_received(algorithm: String, action: String, statistics: Dictionary)
 
 enum State {
 	GUARD,
@@ -72,6 +73,19 @@ const _boss_health_bar_script := preload("res://scenes/boss/boss_health_bar.gd")
 @export var recover_duration_enraged: float = 0.85
 @export var guard_damage_reduction: float = 0.20 # 20% reduction during guard
 @export var recover_damage_vulnerability: float = 1.25 # 25% extra damage taken during recover
+
+@export_group("AI Decision-Making Engine")
+@export var use_python_decision: bool = true
+@export var decision_algorithm: String = "alpha_beta" # "alpha_beta", "minimax", "mcts", "heuristic"
+@export var decision_poll_interval: float = 0.25 # Poll every 250ms during PURSUE
+@export var max_search_depth: int = 4
+@export var mcts_simulations: int = 150
+
+# AI Decision Tracking
+var _is_decision_pending: bool = false
+var _decision_poll_timer: float = 0.0
+var _last_received_action: String = ""
+var last_decision_stats: Dictionary = {}
 
 # FSM State Variables
 var current_state: State = State.GUARD
@@ -207,17 +221,140 @@ func _process_pursue(delta: float) -> void:
 	if current_state == State.ENRAGED_TRANSITION:
 		return
 	
-	# Select appropriate attack based on range and readiness
+	# Dispatch asynchronous AI decision request if enabled
+	if use_python_decision:
+		_process_ai_decision_pipeline(delta, dist)
+	
+	# Check if AI decision provided an actionable attack
+	if _try_execute_ai_action(dist):
+		return
+	
+	# Safe Fallback: select appropriate attack based on local rules
 	var chosen := _evaluate_attack_choice(dist)
 	if chosen != AttackType.NONE:
 		_chosen_attack = chosen
 		change_state(State.ATTACK)
 		return
 	
-	# Pursuit movement toward player
+	# Move toward player (or tactical repositioning if suggested by AI)
+	_process_pursue_movement(delta, to_player, dist)
+
+
+func _process_ai_decision_pipeline(delta: float, dist: float) -> void:
+	if _is_decision_pending:
+		return
+	
+	_decision_poll_timer -= delta
+	if _decision_poll_timer > 0.0:
+		return
+	
+	_decision_poll_timer = decision_poll_interval
+	
+	var ai_node = get_node_or_null("/root/AIClient")
+	if not ai_node or not ai_node.has_method("request_boss_decision"):
+		return
+	
+	var cur_hp := 500.0
+	var mx_hp := 500.0
+	if health_component:
+		cur_hp = float(health_component.get("current_health"))
+		mx_hp = float(health_component.get("max_health"))
+	
+	var p_hp := 100.0
+	var p_energy := 100.0
+	if is_instance_valid(_target_player):
+		if "current_health" in _target_player:
+			p_hp = float(_target_player.get("current_health"))
+		if "energy" in _target_player:
+			p_energy = float(_target_player.get("energy"))
+	
+	var state_data := {
+		"turn": "boss",
+		"boss_hp": cur_hp,
+		"boss_max_hp": mx_hp,
+		"boss_phase": current_phase,
+		"slam_cooldown": _slam_cooldown_timer,
+		"barrage_cooldown": _barrage_cooldown_timer,
+		"charge_cooldown": _charge_cooldown_timer,
+		"is_recovering": current_state == State.RECOVER,
+		"recover_timer": _state_timer if current_state == State.RECOVER else 0.0,
+		"is_guarding": current_state == State.GUARD,
+		"player_hp": p_hp,
+		"player_max_hp": 100.0,
+		"player_energy": p_energy,
+		"distance": dist
+	}
+	
+	var opts := {
+		"max_depth": max_search_depth,
+		"simulations": mcts_simulations
+	}
+	
+	_is_decision_pending = true
+	ai_node.call("request_boss_decision", state_data, decision_algorithm, opts, _on_ai_decision_result)
+
+
+func _on_ai_decision_result(res: Dictionary) -> void:
+	_is_decision_pending = false
+	if not res.get("success", false):
+		return # Graceful fallback; keep local state intact
+	
+	var data: Dictionary = res.get("data", {})
+	var act: String = String(data.get("action", ""))
+	if not act.is_empty():
+		_last_received_action = act
+		last_decision_stats = data.get("statistics", {})
+		decision_received.emit(decision_algorithm, _last_received_action, last_decision_stats)
+
+
+func _try_execute_ai_action(dist: float) -> bool:
+	if _last_received_action.is_empty():
+		return false
+	
+	var executed := false
+	match _last_received_action:
+		"TREMOR_SLAM":
+			if dist <= slam_radius * 1.1 and _slam_cooldown_timer <= 0.0:
+				_chosen_attack = AttackType.TREMOR_SLAM
+				executed = true
+		"PLASMA_BARRAGE":
+			if dist <= 360.0 and _barrage_cooldown_timer <= 0.0:
+				_chosen_attack = AttackType.PLASMA_BARRAGE
+				executed = true
+		"CHARGE_RUSH":
+			if (current_phase == 2 or dist >= 90.0) and _charge_cooldown_timer <= 0.0:
+				_chosen_attack = AttackType.CHARGE_RUSH
+				executed = true
+		"GUARD_STANCE":
+			if dist > 200.0:
+				change_state(State.GUARD)
+				_last_received_action = ""
+				return true
+	
+	if executed:
+		_last_received_action = ""
+		change_state(State.ATTACK)
+		return true
+	
+	return false
+
+
+func _process_pursue_movement(delta: float, to_player: Vector2, dist: float) -> void:
 	var move_speed := enraged_chase_speed if current_phase == 2 else normal_chase_speed
 	var target_vel := to_player.normalized() * move_speed
+	
+	if _last_received_action == "TACTICAL_RETREAT" and dist < 180.0:
+		target_vel = -to_player.normalized() * (normal_patrol_speed * 0.8)
+	
 	velocity = velocity.move_toward(target_vel, acceleration * delta)
+
+
+func set_decision_algorithm(algo: String) -> void:
+	decision_algorithm = algo
+
+
+func get_decision_algorithm() -> String:
+	return decision_algorithm
 
 
 func _evaluate_attack_choice(dist_to_player: float) -> AttackType:
