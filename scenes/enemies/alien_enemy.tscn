@@ -1,0 +1,23 @@
+[gd_scene load_steps=5 format=3 uid="uid://bsxalienstalker"]
+
+[ext_resource type="Script" path="res://scenes/enemies/alien_enemy.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scenes/enemies/alien_enemy_visual.gd" id="2_visual"]
+[ext_resource type="Script" path="res://scripts/components/health_component.gd" id="3_health"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_enemy"]
+radius = 14.0
+
+[node name="AlienEnemy" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("1_enemy")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_enemy")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_health")
+max_health = 60.0

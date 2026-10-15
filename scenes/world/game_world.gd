@@ -26,6 +26,7 @@ var _collectable_scene := preload("res://scenes/items/collectable_resource.tscn"
 var _terminal_script := preload("res://scripts/components/research_terminal.gd")
 var _door_script := preload("res://scripts/components/airlock_door.gd")
 var _tutorial_script := preload("res://scripts/components/tutorial_manager.gd")
+var _enemy_scene := preload("res://scenes/enemies/alien_enemy.tscn")
 
 var _player_ref: Node2D = null
 var _terminal_ref: Node2D = null
@@ -47,6 +48,7 @@ func _ready() -> void:
 	_build_collectables()
 	_build_research_terminals()
 	_spawn_player()
+	_spawn_enemies()
 	_build_tutorial_system()
 	_build_hud()
 	
@@ -424,6 +426,30 @@ func _spawn_player() -> void:
 	player.position = PLAYER_SPAWN_POS
 	add_child(player)
 	_player_ref = player
+
+
+# ---------------------------------------------------------------------------
+# Alien Enemy Spawning
+# ---------------------------------------------------------------------------
+func _spawn_enemies() -> void:
+	var container := Node2D.new()
+	container.name = "AlienEnemies"
+	add_child(container)
+	
+	var spawn_points: Array[Vector2] = [
+		Vector2(-650, 480), # South-West Crystal Valley
+		Vector2(180, -320), # North Canyon defile
+		Vector2(720, -50),  # Deep East Labyrinth
+		Vector2(680, -600), # North Ruins outer perimeter
+		Vector2(-420, -280) # North-West canyon gateway
+	]
+	
+	for i in spawn_points.size():
+		var enemy: CharacterBody2D = _enemy_scene.instantiate()
+		enemy.name = "AlienCrawler_%d" % i
+		enemy.position = spawn_points[i]
+		container.add_child(enemy)
+
 
 
 # ---------------------------------------------------------------------------
