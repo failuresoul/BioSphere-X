@@ -231,7 +231,7 @@ func _test_reusable_damage_data_interface() -> void:
 	enemy.position = Vector2(400, 400)
 	add_child(enemy)
 	
-	var hp_before := enemy.health_component.current_health
+	var hp_before: float = float(enemy.health_component.current_health)
 	var result: bool = enemy.apply_damage(damage_data)
 	assert(result == true, "apply_damage must return true")
 	assert(enemy.health_component.current_health == hp_before - 35.0, "apply_damage reduces enemy health by 35.0")
@@ -242,7 +242,7 @@ func _test_reusable_damage_data_interface() -> void:
 	player.position = Vector2(500, 500)
 	add_child(player)
 	
-	var player_hp_before := player.get_current_health()
+	var player_hp_before: float = float(player.get_current_health())
 	var player_hit: bool = player.health_component.apply_damage(damage_data)
 	assert(player_hit == true, "apply_damage must succeed on player HealthComponent")
 	assert(player.get_current_health() == player_hp_before - 35.0, "Player health reduced by 35.0")

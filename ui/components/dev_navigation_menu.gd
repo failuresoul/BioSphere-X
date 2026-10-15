@@ -6,6 +6,8 @@ extends PanelContainer
 signal algorithm_selected(algorithm: String)
 signal fallback_toggled(force_fallback: bool)
 
+const ModularPathfinderScript := preload("res://scripts/utils/modular_pathfinder.gd")
+
 @onready var algo_dropdown: OptionButton = %AlgoDropdown
 @onready var depth_spin: SpinBox = %DepthSpin
 @onready var diagonal_check: CheckBox = %DiagonalCheck
@@ -14,6 +16,7 @@ signal fallback_toggled(force_fallback: bool)
 @onready var ping_button: Button = %PingButton
 @onready var test_query_button: Button = %TestQueryButton
 @onready var close_button: Button = %CloseButton
+@onready var launch_ai_arena_button: Button = %LaunchAIArenaButton
 
 @onready var status_badge: Label = %StatusBadge
 @onready var error_banner: Label = %ErrorBanner
@@ -92,6 +95,11 @@ func _connect_signals() -> void:
 		test_query_button.pressed.connect(_on_test_query_pressed)
 	if close_button:
 		close_button.pressed.connect(func(): visible = false)
+	if launch_ai_arena_button:
+		launch_ai_arena_button.pressed.connect(func():
+			Engine.time_scale = 1.0
+			get_tree().change_scene_to_file("res://scenes/ai_vs_ai/ai_arena.tscn")
+		)
 		
 	var nav_mgr = get_node_or_null("/root/NavigationManager")
 	if nav_mgr:
@@ -147,7 +155,7 @@ func _on_algo_selected(index: int) -> void:
 		algorithm_selected.emit(chosen_key)
 		
 		# Update suitability profile notice
-		var profile := ModularPathfinder.get_algorithm_profile(chosen_key)
+		var profile: Dictionary = ModularPathfinderScript.get_algorithm_profile(chosen_key)
 		if error_banner:
 			if not profile.get("gameplay_suitable", true):
 				error_banner.visible = true

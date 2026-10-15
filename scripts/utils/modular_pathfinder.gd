@@ -534,7 +534,7 @@ static func _get_neighbors(
 	allow_diagonal: bool
 ) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var cardinal_dirs := [
+	var cardinal_dirs: Array[Vector2i] = [
 		Vector2i(1, 0),
 		Vector2i(-1, 0),
 		Vector2i(0, 1),
@@ -542,20 +542,20 @@ static func _get_neighbors(
 	]
 	
 	for dir in cardinal_dirs:
-		var n := current + dir
+		var n: Vector2i = current + dir
 		if n.x >= 0 and n.x < grid_size.x and n.y >= 0 and n.y < grid_size.y:
 			if not blocked.has(n):
 				result.append({"node": n, "cost": 1.0})
 	
 	if allow_diagonal:
-		var diagonal_dirs := [
+		var diagonal_dirs: Array[Vector2i] = [
 			Vector2i(1, 1),
 			Vector2i(-1, 1),
 			Vector2i(1, -1),
 			Vector2i(-1, -1)
 		]
 		for dir in diagonal_dirs:
-			var n := current + dir
+			var n: Vector2i = current + dir
 			if n.x >= 0 and n.x < grid_size.x and n.y >= 0 and n.y < grid_size.y:
 				if not blocked.has(n):
 					# Prevent corner cutting through adjacent solid diagonal walls

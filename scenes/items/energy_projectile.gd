@@ -101,6 +101,10 @@ func _handle_collision(target: Node) -> void:
 		return
 	if target.is_in_group("player") and source_node and source_node.is_in_group("player"):
 		return
+	if target.is_in_group("team_a") and source_node and source_node.is_in_group("team_a"):
+		return
+	if target.is_in_group("team_b") and source_node and source_node.is_in_group("team_b"):
+		return
 	
 	# Prevent damage from being applied multiple times by a single hit
 	var inst_id := target.get_instance_id()
@@ -127,11 +131,15 @@ func _handle_collision(target: Node) -> void:
 		_expire(global_position)
 
 
+const DamageDataScript := preload("res://scripts/components/damage_data.gd")
+const ImpactEffectScript := preload("res://scenes/items/impact_effect.gd")
+
+
 func _apply_damage_to_target(target: Node) -> void:
-	var damage_data := DamageData.create(
+	var damage_data = DamageDataScript.create(
 		damage,
 		source_node,
-		DamageData.DamageType.ENERGY,
+		DamageDataScript.DamageType.ENERGY,
 		direction,
 		knockback_force,
 		global_position
@@ -154,8 +162,8 @@ func _apply_damage_to_target(target: Node) -> void:
 func _spawn_impact_effect(pos: Vector2) -> void:
 	var parent := get_parent()
 	if parent:
-		var effect := ImpactEffect.new()
-		effect.color = glow_color
+		var effect: Node2D = ImpactEffectScript.new()
+		effect.set("color", glow_color)
 		effect.global_position = pos
 		parent.add_child(effect)
 

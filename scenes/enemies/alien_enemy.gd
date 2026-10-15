@@ -490,12 +490,14 @@ func _exit_tree() -> void:
 # ---------------------------------------------------------------------------
 # Combat & Public Health API
 # ---------------------------------------------------------------------------
-func apply_damage(damage_data: DamageData) -> bool:
+func apply_damage(damage_data: RefCounted) -> bool:
 	if not damage_data or current_state == State.DEAD:
 		return false
-	if damage_data.knockback_force > 0.0:
-		velocity += damage_data.knockback_direction * damage_data.knockback_force
-	return take_damage(damage_data.amount, damage_data.source)
+	var force: float = float(damage_data.get("knockback_force"))
+	if force > 0.0:
+		var dir: Vector2 = damage_data.get("knockback_direction")
+		velocity += dir * force
+	return take_damage(float(damage_data.get("amount")), damage_data.get("source"))
 
 
 func take_damage(amount: float, source: Node = null) -> bool:

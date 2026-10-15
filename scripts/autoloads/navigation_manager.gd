@@ -11,6 +11,8 @@ signal fallback_triggered(reason: String)
 signal debug_display_changed(enabled: bool)
 signal active_paths_changed()
 
+const ModularPathfinderScript := preload("res://scripts/utils/modular_pathfinder.gd")
+
 const ALGORITHMS: Array[String] = [
 	"astar",
 	"bfs",
@@ -182,7 +184,7 @@ func request_path(
 					"source": "PYTHON_AI_BACKEND",
 					"is_fallback": false,
 					"message": str(data.get("message", "OK")),
-					"suitability": ModularPathfinder.get_algorithm_profile(algo)
+					"suitability": ModularPathfinderScript.get_algorithm_profile(algo)
 				}
 				_finish_path_request(world_path, metrics, callback)
 			else:
@@ -217,7 +219,7 @@ func _execute_fallback(
 
 	if intended_algo != "astar":
 		# Execute selected algorithm locally via ModularPathfinder
-		var local_res := ModularPathfinder.search(
+		var local_res: Dictionary = ModularPathfinderScript.search(
 			intended_algo,
 			start_grid,
 			goal_grid,
@@ -257,7 +259,7 @@ func _execute_fallback(
 		"is_fallback": true,
 		"fallback_reason": reason,
 		"message": "Used %s (%s)" % [algo_display_name, reason],
-		"suitability": ModularPathfinder.get_algorithm_profile(intended_algo)
+		"suitability": ModularPathfinderScript.get_algorithm_profile(intended_algo)
 	}
 	_finish_path_request(fallback_path, metrics, callback)
 

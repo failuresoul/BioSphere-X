@@ -24,11 +24,20 @@ signal energy_insufficient(required: float, available: float)
 @export var muzzle_flash_color: Color = Color(0.5, 0.95, 1.0)
 @export var projectile_scene: PackedScene = preload("res://scenes/items/energy_projectile.tscn")
 
+@export_group("Energy Consumption")
+@export var use_global_energy: bool = true
+@export var local_energy: float = 100.0
+@export var max_local_energy: float = 100.0
+@export var local_energy_recharge_rate: float = 20.0
+
 var _cooldown_timer: float = 0.0
 var _was_on_cooldown: bool = false
 
 
 func _process(delta: float) -> void:
+	if not use_global_energy and local_energy < max_local_energy:
+		local_energy = minf(max_local_energy, local_energy + local_energy_recharge_rate * delta)
+		
 	if _cooldown_timer > 0.0:
 		_cooldown_timer = maxf(0.0, _cooldown_timer - delta)
 		if _cooldown_timer <= 0.0 and _was_on_cooldown:
@@ -41,31 +50,43 @@ func can_attack() -> bool:
 		return false
 	
 	if energy_cost > 0.0:
-		var gs := get_node_or_null("/root/GameState")
-		if gs and gs.has_method("get_energy"):
-			var cur_energy: float = gs.call("get_energy")
-			if cur_energy < energy_cost:
+		if use_global_energy:
+			var gs := get_node_or_null("/root/GameState")
+			if gs and gs.has_method("get_energy"):
+				var cur_energy: float = gs.call("get_energy")
+				if cur_energy < energy_cost:
+					return false
+		else:
+			if local_energy < energy_cost:
 				return false
 	
 	return true
 
 
-func attack(direction: Vector2, spawn_pos: Vector2 = Vector2.ZERO, attacker: Node = null) -> EnergyProjectile:
+func attack(direction: Vector2, spawn_pos: Vector2 = Vector2.ZERO, attacker: Node = null) -> Node2D:
 	if not can_attack():
 		# Trigger insufficient energy signal if cooldown is ready but energy is low
 		if _cooldown_timer <= 0.0 and energy_cost > 0.0:
-			var gs := get_node_or_null("/root/GameState")
-			if gs and gs.has_method("get_energy"):
-				energy_insufficient.emit(energy_cost, gs.call("get_energy"))
+			if use_global_energy:
+				var gs := get_node_or_null("/root/GameState")
+				if gs and gs.has_method("get_energy"):
+					energy_insufficient.emit(energy_cost, gs.call("get_energy"))
+			else:
+				energy_insufficient.emit(energy_cost, local_energy)
 		return null
 	
 	# Consume resource cost if appropriate
 	if energy_cost > 0.0:
-		var gs := get_node_or_null("/root/GameState")
-		if gs and gs.has_method("use_energy"):
-			var success: bool = gs.call("use_energy", energy_cost)
-			if not success:
+		if use_global_energy:
+			var gs := get_node_or_null("/root/GameState")
+			if gs and gs.has_method("use_energy"):
+				var success: bool = gs.call("use_energy", energy_cost)
+				if not success:
+					return null
+		else:
+			if local_energy < energy_cost:
 				return null
+			local_energy -= energy_cost
 	
 	var dir := direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
 	var fire_origin := spawn_pos if spawn_pos != Vector2.ZERO else global_position
@@ -75,12 +96,13 @@ func attack(direction: Vector2, spawn_pos: Vector2 = Vector2.ZERO, attacker: Nod
 	if projectile_scene:
 		proj_inst = projectile_scene.instantiate() as Node2D
 	else:
-		proj_inst = EnergyProjectile.new()
+		var proj_script: Script = load("res://scenes/items/energy_projectile.gd")
+		proj_inst = proj_script.new()
 	
-	if proj_inst is EnergyProjectile:
-		proj_inst.setup(dir, attacker, damage, projectile_speed, attack_range, projectile_color)
-		proj_inst.knockback_force = knockback_force
-		proj_inst.pierce_count = max_pierce
+	if proj_inst and proj_inst.has_method("setup"):
+		proj_inst.call("setup", dir, attacker, damage, projectile_speed, attack_range, projectile_color)
+		proj_inst.set("knockback_force", knockback_force)
+		proj_inst.set("pierce_count", max_pierce)
 	
 	proj_inst.global_position = fire_origin
 	
@@ -104,7 +126,7 @@ func attack(direction: Vector2, spawn_pos: Vector2 = Vector2.ZERO, attacker: Nod
 	cooldown_started.emit(attack_cooldown)
 	weapon_fired.emit(proj_inst, dir)
 	
-	return proj_inst as EnergyProjectile
+	return proj_inst
 
 
 func get_cooldown_ratio() -> float:

@@ -63,10 +63,16 @@ func damage(amount: float, source: Node = null) -> bool:
 	return true
 
 
-func apply_damage(damage_data: DamageData) -> bool:
+signal damage_received(damage_data: RefCounted)
+
+
+func apply_damage(damage_data: RefCounted) -> bool:
 	if not damage_data:
 		return false
-	return damage(damage_data.amount, damage_data.source)
+	var res: bool = damage(damage_data.get("amount"), damage_data.get("source"))
+	if res:
+		damage_received.emit(damage_data)
+	return res
 
 
 

@@ -5,6 +5,7 @@ extends Node
 
 const MapDataClass = preload("res://scripts/components/map_data.gd")
 const DevMenuClass = preload("res://ui/components/dev_navigation_menu.gd")
+const ModularPathfinderClass = preload("res://scripts/utils/modular_pathfinder.gd")
 
 
 func _ready() -> void:
@@ -241,7 +242,7 @@ func _test_modular_pathfinder_algorithms() -> void:
 	]
 	
 	for algo in algos:
-		var res: Dictionary = ModularPathfinder.search(
+		var res: Dictionary = ModularPathfinderClass.search(
 			algo,
 			start,
 			goal,
@@ -273,15 +274,15 @@ func _test_modular_pathfinder_algorithms() -> void:
 			assert(not blocked.has(pt), "%s path point %s cannot be on blocked cell" % [algo, pt])
 	
 	# Verify algorithm suitability profiles and trade-off documentation
-	var astar_prof := ModularPathfinder.get_algorithm_profile("astar")
+	var astar_prof := ModularPathfinderClass.get_algorithm_profile("astar")
 	assert(astar_prof["optimal"] == true, "A* must be documented as optimal")
 	assert(astar_prof["gameplay_suitable"] == true, "A* must be documented as gameplay suitable")
 	
-	var dfs_prof := ModularPathfinder.get_algorithm_profile("dfs")
+	var dfs_prof := ModularPathfinderClass.get_algorithm_profile("dfs")
 	assert(dfs_prof["optimal"] == false, "DFS must be documented as NOT optimal")
 	assert(dfs_prof["gameplay_suitable"] == false, "DFS must NOT be claimed as suitable for gameplay navigation")
 	
-	var dls_prof := ModularPathfinder.get_algorithm_profile("dls")
+	var dls_prof := ModularPathfinderClass.get_algorithm_profile("dls")
 	assert(dls_prof["complete"] == false, "DLS must be documented as incomplete when goal exceeds depth limit")
 	
 	# Test cycle prevention and unreachable goals (infinite loop prevention)
@@ -293,7 +294,7 @@ func _test_modular_pathfinder_algorithms() -> void:
 	]
 	
 	for algo in algos:
-		var unreach_res := ModularPathfinder.search(
+		var unreach_res := ModularPathfinderClass.search(
 			algo,
 			start,
 			enclosed_goal,

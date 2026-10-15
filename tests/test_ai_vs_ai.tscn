@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cih84r2k9x1ma"]
+
+[ext_resource type="Script" path="res://tests/test_ai_vs_ai.gd" id="1_test"]
+
+[node name="TestAIvsAI" type="Node2D"]
+script = ExtResource("1_test")

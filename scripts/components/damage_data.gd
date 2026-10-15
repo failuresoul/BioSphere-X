@@ -40,11 +40,12 @@ func _init(
 
 
 static func create(
-	amount: float,
-	source: Node = null,
-	damage_type: DamageType = DamageType.ENERGY,
-	knockback_dir: Vector2 = Vector2.ZERO,
-	knockback_force: float = 0.0,
-	hit_pos: Vector2 = Vector2.ZERO
-) -> DamageData:
-	return DamageData.new(amount, source, damage_type, knockback_dir, knockback_force, hit_pos)
+	p_amount: float,
+	p_source: Node = null,
+	p_type: DamageType = DamageType.ENERGY,
+	p_dir: Vector2 = Vector2.ZERO,
+	p_force: float = 0.0,
+	p_pos: Vector2 = Vector2.ZERO
+) -> RefCounted:
+	var s: Script = load("res://scripts/components/damage_data.gd")
+	return s.new(p_amount, p_source, p_type, p_dir, p_force, p_pos)

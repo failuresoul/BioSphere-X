@@ -25,7 +25,7 @@ signal player_attacked(projectile: Node2D, direction: Vector2)
 @onready var visual: Node2D = $Visual
 @onready var health_component: Node = $HealthComponent
 @onready var interaction_component: Area2D = $InteractionComponent
-@onready var weapon_component: WeaponComponent = $WeaponComponent
+@onready var weapon_component: Node2D = $WeaponComponent
 @onready var camera: Camera2D = $Camera2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
@@ -168,9 +168,9 @@ func _get_visual() -> Node2D:
 	return visual
 
 
-func _get_weapon_component() -> WeaponComponent:
+func _get_weapon_component() -> Node2D:
 	if not weapon_component:
-		weapon_component = get_node_or_null("WeaponComponent") as WeaponComponent
+		weapon_component = get_node_or_null("WeaponComponent") as Node2D
 	return weapon_component
 
 
@@ -190,12 +190,12 @@ func attack(direction: Vector2 = Vector2.ZERO) -> bool:
 		else:
 			aim_dir = get_facing_vector()
 	
-	var wc := _get_weapon_component()
+	var wc: Node2D = _get_weapon_component()
 	if not wc:
 		return false
 	
 	var spawn_pos := global_position + aim_dir * 14.0
-	var proj := wc.attack(aim_dir, spawn_pos, self)
+	var proj: Node2D = wc.attack(aim_dir, spawn_pos, self)
 	if proj:
 		var vis := _get_visual()
 		if vis and vis.has_method("play_attack_recoil"):

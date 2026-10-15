@@ -1,0 +1,361 @@
+[gd_scene load_steps=6 format=3 uid="uid://bvx24r8u12hda"]
+
+[ext_resource type="Script" path="res://scenes/ai_vs_ai/ai_arena.gd" id="1_arena"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.08, 0.1, 0.14, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.5, 0.8, 0.5)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_bg"]
+bg_color = Color(0.12, 0.12, 0.15, 0.8)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_a"]
+bg_color = Color(0.12, 0.88, 1, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_b"]
+bg_color = Color(1, 0.55, 0.15, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="AIArena" type="Node2D"]
+script = ExtResource("1_arena")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(0.8, 0.8)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="PanelContainer" parent="UI"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 54.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="HBox" type="HBoxContainer" parent="UI/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="UI/TopBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "  BIOSPHERE-X // AI vs AI ARENA"
+
+[node name="VSeparator" type="VSeparator" parent="UI/TopBar/HBox"]
+layout_mode = 2
+
+[node name="MatchStatusLabel" type="Label" parent="UI/TopBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "STATUS: READY"
+
+[node name="VSeparator2" type="VSeparator" parent="UI/TopBar/HBox"]
+layout_mode = 2
+
+[node name="TimerLabel" type="Label" parent="UI/TopBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+text = "Time: 0.0s / 120s"
+
+[node name="Spacer" type="Control" parent="UI/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SpeedLabelTitle" type="Label" parent="UI/TopBar/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Sim Speed:"
+
+[node name="SpeedSlider" type="HSlider" parent="UI/TopBar/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_vertical = 4
+min_value = 0.25
+max_value = 4.0
+step = 0.25
+value = 1.0
+
+[node name="SpeedLabel" type="Label" parent="UI/TopBar/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "1.00x"
+
+[node name="VSeparator3" type="VSeparator" parent="UI/TopBar/HBox"]
+layout_mode = 2
+
+[node name="ExitButton" type="Button" parent="UI/TopBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Main Menu "
+
+[node name="ControlPanel" type="PanelContainer" parent="UI"]
+offset_left = 16.0
+offset_top = 66.0
+offset_right = 320.0
+offset_bottom = 440.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/ControlPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="Label" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.8, 1)
+theme_override_font_sizes/font_size = 14
+text = "MATCH CONFIGURATION"
+
+[node name="HSeparator" type="HSeparator" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+
+[node name="ScenarioLabel" type="Label" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Scenario Mode:"
+
+[node name="ScenarioDropdown" type="OptionButton" parent="UI/ControlPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="AlgoALabel" type="Label" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.12, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Agent A Algorithm:"
+
+[node name="AlgoADropdown" type="OptionButton" parent="UI/ControlPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="AlgoBLabel" type="Label" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.55, 0.15, 1)
+theme_override_font_sizes/font_size = 12
+text = "Agent B Algorithm:"
+
+[node name="AlgoBDropdown" type="OptionButton" parent="UI/ControlPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HBoxOptions" type="HBoxContainer" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+
+[node name="SwapSpawnsToggle" type="CheckButton" parent="UI/ControlPanel/VBox/HBoxOptions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Swap Spawns"
+
+[node name="SeedLabel" type="Label" parent="UI/ControlPanel/VBox/HBoxOptions"]
+layout_mode = 2
+text = "Seed:"
+
+[node name="SeedSpin" type="SpinBox" parent="UI/ControlPanel/VBox/HBoxOptions"]
+unique_name_in_owner = true
+layout_mode = 2
+max_value = 999999.0
+value = 42.0
+
+[node name="HSeparator2" type="HSeparator" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+
+[node name="ActionRow" type="HBoxContainer" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="StartButton" type="Button" parent="UI/ControlPanel/VBox/ActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Start"
+
+[node name="PauseButton" type="Button" parent="UI/ControlPanel/VBox/ActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Pause"
+
+[node name="ResetButton" type="Button" parent="UI/ControlPanel/VBox/ActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Reset"
+
+[node name="TelemetryPanel" type="PanelContainer" parent="UI"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -68.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="HBox" type="HBoxContainer" parent="UI/TelemetryPanel"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="AgentABox" type="HBoxContainer" parent="UI/TelemetryPanel/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Tag" type="Label" parent="UI/TelemetryPanel/HBox/AgentABox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.12, 0.88, 1, 1)
+text = "AGENT A:"
+
+[node name="A_HpBar" type="ProgressBar" parent="UI/TelemetryPanel/HBox/AgentABox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 16)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp_a")
+value = 100.0
+show_percentage = false
+
+[node name="A_HpLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentABox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "100 HP"
+
+[node name="A_NodesLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentABox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Nodes: 0"
+
+[node name="A_TimeLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentABox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Time: 0.0ms"
+
+[node name="VSep" type="VSeparator" parent="UI/TelemetryPanel/HBox"]
+layout_mode = 2
+
+[node name="AgentBBox" type="HBoxContainer" parent="UI/TelemetryPanel/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Tag" type="Label" parent="UI/TelemetryPanel/HBox/AgentBBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.55, 0.15, 1)
+text = "AGENT B:"
+
+[node name="B_HpBar" type="ProgressBar" parent="UI/TelemetryPanel/HBox/AgentBBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 16)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp_b")
+value = 100.0
+show_percentage = false
+
+[node name="B_HpLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentBBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "100 HP"
+
+[node name="B_NodesLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentBBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Nodes: 0"
+
+[node name="B_TimeLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentBBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Time: 0.0ms"
+
+[node name="ResultsPanel" type="PanelContainer" parent="UI"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -140.0
+offset_right = 220.0
+offset_bottom = 140.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/ResultsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="UI/ResultsPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 16
+text = "MATCH COMPLETED"
+horizontal_alignment = 1
+
+[node name="WinnerBanner" type="Label" parent="UI/ResultsPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
+theme_override_font_sizes/font_size = 18
+text = "★ AGENT A WON ★"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UI/ResultsPanel/VBox"]
+layout_mode = 2
+
+[node name="ExportRow" type="HBoxContainer" parent="UI/ResultsPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ExportJSONButton" type="Button" parent="UI/ResultsPanel/VBox/ExportRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Export JSON"
+
+[node name="ExportCSVButton" type="Button" parent="UI/ResultsPanel/VBox/ExportRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Export CSV"
+
+[node name="ExportStatusLabel" type="Label" parent="UI/ResultsPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 11
+autowrap_mode = 3
