@@ -1,0 +1,7 @@
+<svg height="128" width="128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="16" fill="#1a1a2e"/>
+  <circle cx="64" cy="64" r="40" fill="none" stroke="#16213e" stroke-width="4"/>
+  <circle cx="64" cy="64" r="28" fill="none" stroke="#0f3460" stroke-width="3"/>
+  <circle cx="64" cy="64" r="12" fill="#e94560"/>
+  <text x="64" y="118" text-anchor="middle" fill="#e94560" font-size="14" font-family="monospace">BSX</text>
+</svg>
