@@ -149,11 +149,29 @@ func _connect_signals() -> void:
 			nav_mgr.connect("backend_status_changed", _on_backend_status_changed)
 		if nav_mgr.has_signal("fallback_triggered"):
 			nav_mgr.connect("fallback_triggered", _on_fallback_triggered)
-		if nav_mgr.has_signal("debug_display_changed"):
-			nav_mgr.connect("debug_display_changed", func(enabled):
-				if debug_display_check:
-					debug_display_check.button_pressed = enabled
-			)
+		if nav_mgr.has_signal("debug_display_changed") and not nav_mgr.debug_display_changed.is_connected(_on_debug_display_changed):
+			nav_mgr.debug_display_changed.connect(_on_debug_display_changed)
+
+
+func _exit_tree() -> void:
+	var nav_mgr = get_node_or_null("/root/NavigationManager")
+	if nav_mgr:
+		if nav_mgr.has_signal("debug_display_changed") and nav_mgr.debug_display_changed.is_connected(_on_debug_display_changed):
+			nav_mgr.debug_display_changed.disconnect(_on_debug_display_changed)
+		if nav_mgr.has_signal("metrics_updated") and nav_mgr.metrics_updated.is_connected(_on_metrics_updated):
+			nav_mgr.metrics_updated.disconnect(_on_metrics_updated)
+		if nav_mgr.has_signal("backend_status_changed") and nav_mgr.backend_status_changed.is_connected(_on_backend_status_changed):
+			nav_mgr.backend_status_changed.disconnect(_on_backend_status_changed)
+		if nav_mgr.has_signal("fallback_triggered") and nav_mgr.fallback_triggered.is_connected(_on_fallback_triggered):
+			nav_mgr.fallback_triggered.disconnect(_on_fallback_triggered)
+	var dc = get_node_or_null("/root/DifficultyController")
+	if dc and dc.has_signal("difficulty_updated") and dc.difficulty_updated.is_connected(_on_difficulty_updated):
+		dc.difficulty_updated.disconnect(_on_difficulty_updated)
+
+
+func _on_debug_display_changed(enabled: bool) -> void:
+	if is_instance_valid(self) and debug_display_check:
+		debug_display_check.button_pressed = enabled
 
 
 func _refresh_display() -> void:

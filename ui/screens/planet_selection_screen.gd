@@ -41,19 +41,32 @@ func _ready() -> void:
 			
 	var ppm = get_node_or_null("/root/PlanetProgressionManager")
 	if ppm:
-		if ppm.has_signal("planet_unlocked"):
-			ppm.planet_unlocked.connect(func(_pid, _pname):
-				if visible:
-					refresh_screen()
-			)
-		if ppm.has_signal("transition_rejected"):
-			ppm.transition_rejected.connect(func(_pid, reason):
-				if feedback_label:
-					feedback_label.text = reason
-					feedback_label.modulate = Color(1.0, 0.35, 0.35)
-			)
+		if ppm.has_signal("planet_unlocked") and not ppm.planet_unlocked.is_connected(_on_planet_unlocked):
+			ppm.planet_unlocked.connect(_on_planet_unlocked)
+		if ppm.has_signal("transition_rejected") and not ppm.transition_rejected.is_connected(_on_transition_rejected):
+			ppm.transition_rejected.connect(_on_transition_rejected)
 			
 	refresh_screen()
+
+
+func _exit_tree() -> void:
+	var ppm = get_node_or_null("/root/PlanetProgressionManager")
+	if ppm:
+		if ppm.has_signal("planet_unlocked") and ppm.planet_unlocked.is_connected(_on_planet_unlocked):
+			ppm.planet_unlocked.disconnect(_on_planet_unlocked)
+		if ppm.has_signal("transition_rejected") and ppm.transition_rejected.is_connected(_on_transition_rejected):
+			ppm.transition_rejected.disconnect(_on_transition_rejected)
+
+
+func _on_planet_unlocked(_pid: String, _pname: String) -> void:
+	if is_instance_valid(self) and visible:
+		refresh_screen()
+
+
+func _on_transition_rejected(_pid: String, reason: String) -> void:
+	if is_instance_valid(self) and feedback_label:
+		feedback_label.text = reason
+		feedback_label.modulate = Color(1.0, 0.35, 0.35)
 
 
 func _unhandled_input(event: InputEvent) -> void:

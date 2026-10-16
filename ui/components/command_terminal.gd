@@ -114,14 +114,16 @@ func _display_welcome_banner() -> void:
 func _check_backend_status() -> void:
 	var client = get_node_or_null("/root/AIClient")
 	if client and client.has_method("check_health"):
-		client.call("check_health", func(res: Dictionary):
-			if not is_instance_valid(self):
-				return
-			var online: bool = bool(res.get("success", false))
-			_update_backend_badge(online)
-		)
+		client.call("check_health", _on_health_check_result)
 	else:
 		_update_backend_badge(false)
+
+
+func _on_health_check_result(res: Dictionary) -> void:
+	if not is_instance_valid(self):
+		return
+	var online: bool = bool(res.get("success", false))
+	_update_backend_badge(online)
 
 
 func _on_backend_availability_changed(online: bool) -> void:
@@ -561,8 +563,10 @@ func _execute_collect_oxygen(params: Dictionary, gs: Node, inv: Node, player: No
 			
 	# Fallback to direct GameState resource storage
 	if gs.get_resource("oxygen_cells") > 0:
-		gs.add_resource("oxygen_cells", -1)
+		gs.resources["oxygen_cells"] -= 1
 		gs.refill_oxygen(30.0)
+		if gs.has_signal("resource_changed"):
+			gs.resource_changed.emit("oxygen_cells", gs.resources["oxygen_cells"])
 		var reason := "Vented 1 Oxygen Cell canister from suit cargo (+30% O2)."
 		action_validated.emit("collect_oxygen", true, "Used oxygen cell from cargo")
 		action_executed.emit("collect_oxygen", {"restored": 30.0, "source": "oxygen_cells"})
@@ -618,7 +622,18 @@ func _execute_return_to_base(params: Dictionary, gs: Node, gre: Node, nav: Node,
 		var direct_path := PackedVector2Array([p_pos, base_target])
 		nav.call("register_active_path", 9999, direct_path, Color(0.2, 0.9, 0.4, 0.9))
 		
-	var reason := "Return trajectory plotted to Bio-Base Habitat (0, 0). Range: %.1fm. Follow HUD navigation waypoint to return safely." % dist
+	var mm = get_node_or_null("/root/MissionManager")
+	var mission_note := ""
+	if mm and mm.has_method("get_active_mission"):
+		var active = mm.call("get_active_mission")
+		if active and str(active.get("id")) != "mission_06_extraction":
+			var t_val = active.get("title")
+			var title_str: String = str(t_val) if t_val != null else ""
+			mission_note = " (Active Directive '%s' remains in progress)" % title_str
+		
+	var reason := "Return trajectory plotted to Bio-Base Habitat (0, 0). Range: %.1fm. Follow HUD navigation waypoint to return safely.%s" % [
+		dist, (" " + mission_note if not mission_note.is_empty() else "")
+	]
 	action_validated.emit("return_to_base", true, "Waypoint locked")
 	action_executed.emit("return_to_base", {"status": "waypoint_set", "distance": dist, "target": base_target})
 	return {"success": true, "reason": reason}

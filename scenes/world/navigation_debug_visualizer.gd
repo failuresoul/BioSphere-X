@@ -7,10 +7,24 @@ func _ready() -> void:
 	z_index = 10 # Draw on top of world terrain and obstacles
 	var nav_mgr = get_node_or_null("/root/NavigationManager")
 	if nav_mgr:
-		if nav_mgr.has_signal("debug_display_changed"):
-			nav_mgr.connect("debug_display_changed", func(_enabled): queue_redraw())
-		if nav_mgr.has_signal("active_paths_changed"):
-			nav_mgr.connect("active_paths_changed", func(): queue_redraw())
+		if nav_mgr.has_signal("debug_display_changed") and not nav_mgr.debug_display_changed.is_connected(_on_nav_display_updated):
+			nav_mgr.debug_display_changed.connect(_on_nav_display_updated)
+		if nav_mgr.has_signal("active_paths_changed") and not nav_mgr.active_paths_changed.is_connected(_on_nav_display_updated):
+			nav_mgr.active_paths_changed.connect(_on_nav_display_updated)
+
+
+func _exit_tree() -> void:
+	var nav_mgr = get_node_or_null("/root/NavigationManager")
+	if nav_mgr:
+		if nav_mgr.has_signal("debug_display_changed") and nav_mgr.debug_display_changed.is_connected(_on_nav_display_updated):
+			nav_mgr.debug_display_changed.disconnect(_on_nav_display_updated)
+		if nav_mgr.has_signal("active_paths_changed") and nav_mgr.active_paths_changed.is_connected(_on_nav_display_updated):
+			nav_mgr.active_paths_changed.disconnect(_on_nav_display_updated)
+
+
+func _on_nav_display_updated(_param = null) -> void:
+	if is_instance_valid(self):
+		queue_redraw()
 
 
 func _process(_delta: float) -> void:

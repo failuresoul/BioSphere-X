@@ -182,29 +182,22 @@ func send_request(endpoint: String, method: int = HTTPClient.METHOD_GET, json_da
 	var headers := PackedStringArray(["Content-Type: application/json"])
 	var body_str := JSON.stringify(json_data) if method != HTTPClient.METHOD_GET and not json_data.is_empty() else ""
 	
-	var is_done := false
-	
-	http.request_completed.connect(func(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-		if not is_done:
-			is_done = true
-			_on_request_finished(http, endpoint, result, response_code, body, callback)
-	)
+	http.set_meta("_is_done", false)
+	http.request_completed.connect(_on_http_request_completed.bind(http, endpoint, callback))
 	
 	# Explicit timeout timer safeguard to avoid hanging on OS socket SYN timeouts
 	if timeout_seconds > 0.0:
-		var tree := get_tree()
-		if tree:
-			var watchdog := tree.create_timer(timeout_seconds)
-			watchdog.timeout.connect(func() -> void:
-				if not is_done and is_instance_valid(http):
-					is_done = true
-					http.cancel_request()
-					_on_request_finished(http, endpoint, HTTPRequest.RESULT_TIMEOUT, 0, PackedByteArray(), callback)
-			)
+		var watchdog := Timer.new()
+		watchdog.name = "TimeoutWatchdog"
+		watchdog.one_shot = true
+		watchdog.wait_time = timeout_seconds
+		http.add_child(watchdog)
+		watchdog.timeout.connect(_on_watchdog_timeout.bind(http, endpoint, callback))
+		watchdog.start()
 	
 	var err := http.request(url, headers, method, body_str)
 	if err != OK:
-		is_done = true
+		http.set_meta("_is_done", true)
 		_cleanup_http(http)
 		var fail_res := {
 			"success": false,
@@ -213,6 +206,21 @@ func send_request(endpoint: String, method: int = HTTPClient.METHOD_GET, json_da
 			"data": {}
 		}
 		_notify_result(endpoint, fail_res, callback)
+
+
+func _on_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, http: HTTPRequest, endpoint: String, callback: Callable) -> void:
+	if not is_instance_valid(http) or http.get_meta("_is_done", false):
+		return
+	http.set_meta("_is_done", true)
+	_on_request_finished(http, endpoint, result, response_code, body, callback)
+
+
+func _on_watchdog_timeout(http: HTTPRequest, endpoint: String, callback: Callable) -> void:
+	if not is_instance_valid(http) or http.get_meta("_is_done", false):
+		return
+	http.set_meta("_is_done", true)
+	http.cancel_request()
+	_on_request_finished(http, endpoint, HTTPRequest.RESULT_TIMEOUT, 0, PackedByteArray(), callback)
 
 
 func _on_request_finished(http: HTTPRequest, endpoint: String, result: int, response_code: int, body: PackedByteArray, callback: Callable) -> void:
@@ -254,6 +262,12 @@ func _notify_result(endpoint: String, res: Dictionary, callback: Callable) -> vo
 
 func _cleanup_http(http: HTTPRequest) -> void:
 	if is_instance_valid(http):
+		if http.has_node("TimeoutWatchdog"):
+			var watchdog = http.get_node("TimeoutWatchdog")
+			if is_instance_valid(watchdog) and watchdog is Timer:
+				watchdog.stop()
+		if http.is_inside_tree():
+			http.get_parent().remove_child(http)
 		http.queue_free()
 
 

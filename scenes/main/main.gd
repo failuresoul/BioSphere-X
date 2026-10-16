@@ -32,20 +32,22 @@ func _check_backend_status() -> void:
 
 	var ai_client = get_node_or_null("/root/AIClient")
 	if ai_client and ai_client.has_method("check_health"):
-		ai_client.call("check_health", func(res: Dictionary):
-			if not is_instance_valid(self):
-				return
-			var online := bool(res.get("success", false))
-			if backend_status_label:
-				if online:
-					backend_status_label.text = "● PYTHON AI BACKEND: ONLINE (127.0.0.1:8000)"
-					backend_status_label.modulate = Color(0.2, 1.0, 0.5)
-				else:
-					backend_status_label.text = "○ PYTHON AI BACKEND: OFFLINE (Fallback Mode Active)"
-					backend_status_label.modulate = Color(1.0, 0.6, 0.2)
-		)
+		ai_client.call("check_health", _on_backend_health_checked)
 	elif backend_status_label:
 		backend_status_label.text = "○ AIClient Autoload not detected"
+
+
+func _on_backend_health_checked(res: Dictionary) -> void:
+	if not is_instance_valid(self):
+		return
+	var online := bool(res.get("success", false))
+	if backend_status_label:
+		if online:
+			backend_status_label.text = "● PYTHON AI BACKEND: ONLINE (127.0.0.1:8000)"
+			backend_status_label.modulate = Color(0.2, 1.0, 0.5)
+		else:
+			backend_status_label.text = "○ PYTHON AI BACKEND: OFFLINE (Fallback Mode Active)"
+			backend_status_label.modulate = Color(1.0, 0.6, 0.2)
 
 
 func _on_survival_pressed() -> void:
