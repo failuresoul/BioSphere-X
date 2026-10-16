@@ -8,12 +8,18 @@ signal placement_preview_updated(grid_pos: Vector2i, is_valid: bool, reason: Str
 signal placement_preview_ended()
 signal structure_placed(structure_id: String, grid_pos: Vector2i, structure_node: Node2D)
 signal placement_rejected(structure_id: String, grid_pos: Vector2i, reason: String)
+signal structure_removed(structure_id: String, grid_pos: Vector2i, refund: Dictionary)
+signal demolish_mode_changed(is_active: bool)
 
 const BaseStructureDataScript := preload("res://scripts/components/base_structure_data.gd")
 const PlacedStructureScript := preload("res://scripts/components/placed_structure.gd")
+const PlacementConstraintValidatorScript := preload("res://scripts/components/placement_constraint_validator.gd")
 
 # Structure Catalog
 var _catalog: Dictionary = {}
+
+# Constraint Validator Engine (Pluggable Rules Module)
+var _validator: RefCounted = null
 
 # Active Construction State
 var is_preview_active: bool = false
@@ -21,6 +27,10 @@ var active_preview_structure_id: String = ""
 var preview_grid_position: Vector2i = Vector2i.ZERO
 var preview_is_valid: bool = false
 var preview_reason: String = ""
+
+# Demolish Mode State
+var is_demolish_active: bool = false
+var hovered_demolish_structure: Dictionary = {}
 
 # Build Zone: authorized region for base structures [min_x, min_y, max_x, max_y]
 # Defaults to central base quadrant (approx 20 to 60 in an 80x80 map)
@@ -41,6 +51,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	z_index = 20
 	_catalog = BaseStructureDataScript.get_default_catalog()
+	_validator = PlacementConstraintValidatorScript.new()
 	_setup_preview_canvas()
 
 
@@ -87,12 +98,130 @@ func get_structure_data(structure_id: String) -> RefCounted:
 	return _catalog.get(structure_id, null)
 
 
+func get_validator() -> RefCounted:
+	return _validator
+
+
+func set_validator(v: RefCounted) -> void:
+	_validator = v
+
+
 func get_placed_structures() -> Array[Dictionary]:
 	return _placed_structures.duplicate()
 
 
+func get_structure_at(grid_pos: Vector2i) -> Dictionary:
+	for st in _placed_structures:
+		var pos: Vector2i = st.get("position", Vector2i.ZERO)
+		var sz: Vector2i = st.get("size", Vector2i.ONE)
+		var r := Rect2i(pos, sz)
+		if r.has_point(grid_pos):
+			return st
+	return {}
+
+
+## Safely remove and dismantle a structure at grid position with resource refund and unblocking
+func remove_structure_at(grid_pos: Vector2i, refund_ratio: float = 0.5) -> bool:
+	var st := get_structure_at(grid_pos)
+	if st.is_empty():
+		return false
+	return remove_structure_by_id(str(st.get("instance_id")), refund_ratio)
+
+
+## Safely remove and dismantle a structure by unique instance ID
+func remove_structure_by_id(instance_id: String, refund_ratio: float = 0.5) -> bool:
+	var index := -1
+	for i in _placed_structures.size():
+		if str(_placed_structures[i].get("instance_id")) == instance_id:
+			index = i
+			break
+	
+	if index == -1:
+		return false
+		
+	var st: Dictionary = _placed_structures[index]
+	var s_id: String = str(st.get("id"))
+	var s_pos: Vector2i = st.get("position", Vector2i.ZERO)
+	var s_sz: Vector2i = st.get("size", Vector2i.ONE)
+	var s_node: Node = st.get("node")
+	
+	# Compute refund materials
+	var s_data: RefCounted = _catalog.get(s_id, null)
+	var cost: Dictionary = s_data.get("cost") if s_data else {}
+	var refund: Dictionary = {}
+	for k in cost:
+		var refunded_amt := int(floor(float(cost[k]) * refund_ratio))
+		if refunded_amt > 0:
+			refund[k] = refunded_amt
+			
+	# Refund to InventoryManager / GameState
+	var inv = get_node_or_null("/root/InventoryManager")
+	var gs = get_node_or_null("/root/GameState")
+	for k in refund:
+		var amt: int = int(refund[k])
+		if inv and inv.has_method("add_item"):
+			inv.call("add_item", k, amt)
+		elif gs and "resources" in gs and gs.resources.has(k):
+			gs.resources[k] += amt
+			if gs.has_signal("resource_changed"):
+				gs.resource_changed.emit(k, gs.resources[k])
+	
+	# Safely unblock MapData navigation cells
+	if _map_data and _map_data.has_method("set_cell_blocked"):
+		for dy in s_sz.y:
+			for dx in s_sz.x:
+				_map_data.call("set_cell_blocked", Vector2i(s_pos.x + dx, s_pos.y + dy), false, 0)
+	
+	# Free in-world node
+	if is_instance_valid(s_node):
+		s_node.queue_free()
+		
+	_placed_structures.remove_at(index)
+	print("[ConstructionManager] REMOVED: '%s' (%s) at (%d, %d). Refunded: %s" % [
+		st.get("name"), instance_id, s_pos.x, s_pos.y, str(refund)
+	])
+	structure_removed.emit(s_id, s_pos, refund)
+	return true
+
+
+# ---------------------------------------------------------------------------
+# Demolish Mode API
+# ---------------------------------------------------------------------------
+func start_demolish_mode() -> void:
+	if is_preview_active:
+		cancel_placement_preview()
+	is_demolish_active = true
+	hovered_demolish_structure.clear()
+	if _feedback_label:
+		_feedback_label.visible = true
+		_feedback_label.text = "DEMOLISH MODE: Click structure to dismantle (ESC/RMB to cancel)"
+		_feedback_label.modulate = Color(1.0, 0.5, 0.2)
+	demolish_mode_changed.emit(true)
+
+
+func cancel_demolish_mode() -> void:
+	if not is_demolish_active:
+		return
+	is_demolish_active = false
+	hovered_demolish_structure.clear()
+	if _feedback_label:
+		_feedback_label.visible = false
+	if _preview_canvas:
+		_preview_canvas.visible = false
+		_preview_canvas.queue_redraw()
+	demolish_mode_changed.emit(false)
+
+
+func toggle_demolish_mode() -> void:
+	if is_demolish_active:
+		cancel_demolish_mode()
+	else:
+		start_demolish_mode()
+
+
 func reset_construction() -> void:
 	cancel_placement_preview()
+	cancel_demolish_mode()
 	for s in _placed_structures:
 		var node: Node = s.get("node")
 		if is_instance_valid(node):
@@ -107,6 +236,9 @@ func start_placement_preview(structure_id: String) -> bool:
 	if not _catalog.has(structure_id):
 		push_warning("[ConstructionManager] Unknown structure ID: %s" % structure_id)
 		return false
+	
+	if is_demolish_active:
+		cancel_demolish_mode()
 	
 	is_preview_active = true
 	active_preview_structure_id = structure_id
@@ -170,6 +302,22 @@ func update_preview_position(grid_pos: Vector2i) -> void:
 
 
 func _on_preview_draw() -> void:
+	if is_demolish_active:
+		if not hovered_demolish_structure.is_empty():
+			var s_sz: Vector2i = hovered_demolish_structure.get("size", Vector2i.ONE)
+			var cell_sz: float = 32.0
+			if _map_data and "cell_size" in _map_data:
+				cell_sz = float(_map_data.cell_size)
+			var w_px := float(s_sz.x) * cell_sz
+			var h_px := float(s_sz.y) * cell_sz
+			var rect := Rect2(0, 0, w_px, h_px)
+			# Hazard red demolition highlight
+			_preview_canvas.draw_rect(rect, Color(0.95, 0.15, 0.15, 0.35), true)
+			_preview_canvas.draw_rect(rect, Color(1.0, 0.2, 0.2, 0.95), false, 2.5)
+			_preview_canvas.draw_line(Vector2(0, 0), Vector2(w_px, h_px), Color(1.0, 0.3, 0.3, 0.7), 2.0)
+			_preview_canvas.draw_line(Vector2(0, h_px), Vector2(w_px, 0), Color(1.0, 0.3, 0.3, 0.7), 2.0)
+		return
+		
 	if not is_preview_active or not _catalog.has(active_preview_structure_id):
 		return
 	
@@ -201,6 +349,54 @@ func _on_preview_draw() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_demolish_active:
+		if event is InputEventMouseMotion:
+			var m_pos := get_global_mouse_position()
+			var g_pos := Vector2i(int(floor(m_pos.x / 32.0)), int(floor(m_pos.y / 32.0)))
+			if _map_data and _map_data.has_method("world_to_grid"):
+				g_pos = _map_data.call("world_to_grid", m_pos)
+			var found := get_structure_at(g_pos)
+			if found != hovered_demolish_structure:
+				hovered_demolish_structure = found
+				if not hovered_demolish_structure.is_empty():
+					var s_pos: Vector2i = hovered_demolish_structure.get("position", Vector2i.ZERO)
+					var cell_sz: float = 32.0
+					if _map_data and "cell_size" in _map_data:
+						cell_sz = float(_map_data.cell_size)
+					var world_pos := Vector2(float(s_pos.x) * cell_sz, float(s_pos.y) * cell_sz)
+					if _map_data and _map_data.has_method("grid_to_world"):
+						world_pos = _map_data.call("grid_to_world", s_pos) - Vector2(cell_sz * 0.5, cell_sz * 0.5)
+					if _preview_canvas:
+						_preview_canvas.position = world_pos
+						_preview_canvas.visible = true
+						_preview_canvas.queue_redraw()
+					if _feedback_label:
+						_feedback_label.position = world_pos + Vector2(0, -22)
+						_feedback_label.text = "DEMOLISH: %s [Click to dismantle (50%% refund)]" % hovered_demolish_structure.get("name")
+						_feedback_label.modulate = Color(1.0, 0.3, 0.3)
+				else:
+					if _preview_canvas:
+						_preview_canvas.visible = false
+					if _feedback_label:
+						_feedback_label.text = "DEMOLISH MODE: Hover over structure to dismantle (ESC/RMB to cancel)"
+						_feedback_label.modulate = Color(1.0, 0.5, 0.2)
+		elif event is InputEventMouseButton and event.pressed:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				if not hovered_demolish_structure.is_empty():
+					remove_structure_by_id(str(hovered_demolish_structure.get("instance_id")), 0.5)
+					hovered_demolish_structure.clear()
+					if _preview_canvas:
+						_preview_canvas.visible = false
+					get_viewport().set_input_as_handled()
+			elif event.button_index == MOUSE_BUTTON_RIGHT:
+				cancel_demolish_mode()
+				get_viewport().set_input_as_handled()
+		elif event is InputEventKey and event.pressed and not event.echo:
+			if event.keycode == KEY_ESCAPE:
+				cancel_demolish_mode()
+				get_viewport().set_input_as_handled()
+		return
+		
 	if not is_preview_active:
 		return
 	
@@ -325,128 +521,39 @@ func validate_placement_locally(structure_id: String, grid_pos: Vector2i) -> Dic
 		for dx in w:
 			footprint.append(Vector2i(grid_pos.x + dx, grid_pos.y + dy))
 	
-	var violated: Array[String] = []
-	var reasons: Array[String] = []
+	if not _validator:
+		_validator = PlacementConstraintValidatorScript.new()
 	
-	# 1. Economic: Available Resources
-	var avail := get_available_resources()
-	var missing: Array[String] = []
-	for res_k in cost:
-		var needed: int = int(cost[res_k])
-		var has_qty: int = int(avail.get(res_k, 0))
-		if has_qty < needed:
-			missing.append("%s (need %d, have %d)" % [res_k, needed, has_qty])
-			
-	if not missing.is_empty():
-		violated.append("RESOURCES")
-		reasons.append("Insufficient resources: %s" % (", ".join(missing)))
-	
-	# 2. Domain: Grid Boundaries
 	var gw := 80
 	var gh := 80
 	if _map_data and "grid_size" in _map_data:
 		gw = int(_map_data.grid_size.x)
 		gh = int(_map_data.grid_size.y)
-		
-	var out_bounds := false
-	for c in footprint:
-		if c.x < 0 or c.x >= gw or c.y < 0 or c.y >= gh:
-			out_bounds = true
-			break
-	if out_bounds:
-		violated.append("BOUNDS")
-		reasons.append("Structure footprint extends outside world grid boundaries.")
 	
-	# 3. Territorial: Authorized Build Zone
-	var out_zone := false
-	for c in footprint:
-		if c.x < build_zone_bounds.position.x or c.x > build_zone_bounds.end.x or \
-		   c.y < build_zone_bounds.position.y or c.y > build_zone_bounds.end.y:
-			out_zone = true
-			break
-	if out_zone:
-		violated.append("BUILD_ZONE")
-		reasons.append("Structure footprint is outside authorized base build zone.")
-	
-	# 4. Collision: Blocked Natural Terrain
-	var blocked_collision := false
-	var blocked_at := Vector2i.ZERO
-	if _map_data and _map_data.has_method("is_cell_blocked"):
-		for c in footprint:
-			if bool(_map_data.call("is_cell_blocked", c)):
-				blocked_collision = true
-				blocked_at = c
-				break
-	if blocked_collision:
-		violated.append("BLOCKED")
-		reasons.append("Structure collides with natural terrain obstacle at (%d, %d)." % [blocked_at.x, blocked_at.y])
-	
-	# 5. Overlap: Existing Placed Structures
-	var overlap_collision := false
-	var overlapped_name := ""
-	var overlapped_pos := Vector2i.ZERO
-	for st in _placed_structures:
-		var s_pos: Vector2i = st.get("position")
-		var s_sz: Vector2i = st.get("size")
-		var s_name: String = str(st.get("name"))
-		
-		# Check rectangle intersection
-		var rect_candidate := Rect2i(grid_pos, Vector2i(w, h))
-		var rect_existing := Rect2i(s_pos, s_sz)
-		if rect_candidate.intersects(rect_existing):
-			overlap_collision = true
-			overlapped_name = s_name
-			overlapped_pos = s_pos
-			break
-			
-	if overlap_collision:
-		violated.append("OCCUPIED")
-		reasons.append("Structure overlaps existing '%s' at (%d, %d)." % [overlapped_name, overlapped_pos.x, overlapped_pos.y])
-	
-	# 6. Proximity: Minimum Spacing Clearance
-	var spacing_violation := false
-	var spacing_reason := ""
-	for st in _placed_structures:
-		var s_pos: Vector2i = st.get("position")
-		var s_sz: Vector2i = st.get("size")
-		var s_spacing: int = int(st.get("min_spacing", 1))
-		var effective_spacing: int = maxi(min_spacing, s_spacing)
-		
-		if effective_spacing <= 0:
-			continue
-			
-		for c in footprint:
-			for dy in s_sz.y:
-				for dx in s_sz.x:
-					var s_cell := Vector2i(s_pos.x + dx, s_pos.y + dy)
-					var dist := maxi(absi(c.x - s_cell.x), absi(c.y - s_cell.y))
-					if dist > 0 and dist <= effective_spacing:
-						spacing_violation = true
-						spacing_reason = "Too close to '%s' (clearance: %d cells, required: %d cells)." % [st.get("name"), dist, effective_spacing + 1]
-						break
-				if spacing_violation:
-					break
-			if spacing_violation:
-				break
-		if spacing_violation:
-			break
-			
-	if spacing_violation:
-		violated.append("MIN_SPACING")
-		reasons.append(spacing_reason)
-	
-	var is_valid: bool = violated.is_empty()
-	var primary_reason: String = reasons[0] if not reasons.is_empty() else ""
-	
-	return {
-		"valid": is_valid,
-		"reason": primary_reason,
-		"violated_constraints": violated,
+	var candidate := {
 		"structure_id": structure_id,
-		"structure_name": str(s_data.get("name")),
+		"position": grid_pos,
+		"size": Vector2i(w, h),
 		"cost": cost,
+		"min_spacing": min_spacing,
 		"footprint": footprint
 	}
+	
+	var context := {
+		"map_data": _map_data,
+		"grid_size": Vector2i(gw, gh),
+		"build_zones": [build_zone_bounds],
+		"build_zone_bounds": build_zone_bounds,
+		"placed_structures": _placed_structures,
+		"available_resources": get_available_resources()
+	}
+	
+	var val_res: Dictionary = _validator.validate(candidate, context)
+	val_res["structure_id"] = structure_id
+	val_res["structure_name"] = str(s_data.get("name"))
+	val_res["cost"] = cost
+	val_res["footprint"] = footprint
+	return val_res
 
 
 # ---------------------------------------------------------------------------

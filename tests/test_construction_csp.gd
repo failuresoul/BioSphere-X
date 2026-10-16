@@ -39,6 +39,9 @@ func _ready() -> void:
 	test_placement_commit_failure_prevents_deduction()
 	test_placement_preview_lifecycle()
 	test_construction_menu_and_hud_integration()
+	test_safe_structure_removal_and_refund()
+	test_demolish_mode_controls()
+	test_modular_validator_extensibility()
 	
 	print("==================================================")
 	print("  ALL BASE STRUCTURE CSP PLACEMENT TESTS PASSED! [%d/%d]" % [_pass_count, _test_count])
@@ -63,13 +66,20 @@ func test_structure_catalog() -> void:
 	var cm = get_node("/root/ConstructionManager")
 	var catalog: Dictionary = cm.get_catalog()
 	
-	_assert_test(catalog.size() >= 6, "Catalog has at least 6 structures", "Catalog size was %d" % catalog.size())
+	_assert_test(catalog.size() >= 7, "Catalog has at least 7 structures", "Catalog size was %d" % catalog.size())
 	_assert_test(catalog.has("oxygen_generator"), "Catalog contains oxygen_generator", "Missing oxygen_generator")
 	_assert_test(catalog.has("defense_turret"), "Catalog contains defense_turret", "Missing defense_turret")
 	_assert_test(catalog.has("solar_array"), "Catalog contains solar_array", "Missing solar_array")
 	_assert_test(catalog.has("storage_depot"), "Catalog contains storage_depot", "Missing storage_depot")
 	_assert_test(catalog.has("bio_dome"), "Catalog contains bio_dome", "Missing bio_dome")
 	_assert_test(catalog.has("radar_beacon"), "Catalog contains radar_beacon", "Missing radar_beacon")
+	_assert_test(catalog.has("light_tower"), "Catalog contains light_tower", "Missing light_tower")
+	
+	var light_tower = catalog["light_tower"]
+	_assert_test(light_tower.width == 1 and light_tower.height == 1, "Light tower is 1x1", "Dimensions mismatch")
+	_assert_test(light_tower.cost.get("titanium") == 2, "Light tower costs 2 titanium", "Cost mismatch")
+	_assert_test(light_tower.cost.get("crystals") == 1, "Light tower costs 1 crystal", "Cost mismatch")
+	_assert_test(light_tower.light_radius > 0.0, "Light tower has light radius", "Missing light_radius")
 	
 	var o2_gen = catalog["oxygen_generator"]
 	_assert_test(o2_gen.width == 2 and o2_gen.height == 2, "Oxygen generator is 2x2", "Dimensions mismatch")
@@ -426,3 +436,154 @@ func test_construction_menu_and_hud_integration() -> void:
 	hud.free()
 	remove_child(menu)
 	menu.free()
+
+
+# ---------------------------------------------------------------------------
+# Test 12: Safe Structure Removal & Material Refund
+# ---------------------------------------------------------------------------
+func test_safe_structure_removal_and_refund() -> void:
+	print("[TEST 12/14] Testing Safe Structure Removal and Resource Refund...")
+	var cm = get_node("/root/ConstructionManager")
+	var inv = get_node("/root/InventoryManager")
+	cm.reset_construction()
+	inv.reset_inventory()
+	inv.add_item("titanium", 10)
+	inv.add_item("crystals", 10)
+	
+	var map := MapDataScript.new(Vector2i(80, 80))
+	cm.set_map_data(map)
+	cm.set_build_zone(Rect2i(10, 10, 40, 40))
+	
+	# Oxygen Generator: costs 4 titanium, 2 crystals, 2x2 footprint
+	cm.commit_placement("oxygen_generator", Vector2i(20, 20))
+	_assert_test(cm.get_placed_structures().size() == 1, "Structure placed successfully", "Placed count mismatch")
+	_assert_test(inv.get_item_count("titanium") == 6, "Titanium deducted to 6", "Titanium count was %d" % inv.get_item_count("titanium"))
+	_assert_test(inv.get_item_count("crystals") == 8, "Crystals deducted to 8", "Crystals count was %d" % inv.get_item_count("crystals"))
+	_assert_test(map.is_cell_blocked(Vector2i(20, 20)), "Cell (20, 20) is blocked in map", "Cell should be blocked")
+	_assert_test(map.is_cell_blocked(Vector2i(21, 21)), "Cell (21, 21) is blocked in map", "Cell should be blocked")
+	
+	# Verify removal signal
+	var signal_received := {"removed": false, "refund": {}}
+	cm.structure_removed.connect(func(_id, _pos, refund):
+		signal_received["removed"] = true
+		signal_received["refund"] = refund
+	, CONNECT_ONE_SHOT)
+	
+	# Remove structure with 50% refund (floor(4*0.5)=2 titanium, floor(2*0.5)=1 crystal)
+	var removed_ok: bool = cm.remove_structure_at(Vector2i(20, 20), 0.5)
+	_assert_test(removed_ok, "remove_structure_at returned true", "Removal failed")
+	_assert_test(signal_received["removed"], "structure_removed signal emitted", "Missing removal signal")
+	_assert_test(cm.get_placed_structures().size() == 0, "Placed structures list is now empty", "Structures not cleared")
+	_assert_test(inv.get_item_count("titanium") == 8, "Titanium refunded to 8 (6 + 2)", "Titanium was %d" % inv.get_item_count("titanium"))
+	_assert_test(inv.get_item_count("crystals") == 9, "Crystals refunded to 9 (8 + 1)", "Crystals was %d" % inv.get_item_count("crystals"))
+	
+	# Crucial: Map navigation cells must be safely unblocked
+	_assert_test(not map.is_cell_blocked(Vector2i(20, 20)), "Cell (20, 20) unblocked after removal", "Cell still blocked")
+	_assert_test(not map.is_cell_blocked(Vector2i(21, 21)), "Cell (21, 21) unblocked after removal", "Cell still blocked")
+	
+	# Removing non-existent structure at (20, 20) returns false
+	var double_remove: bool = cm.remove_structure_at(Vector2i(20, 20), 0.5)
+	_assert_test(not double_remove, "Removing already removed structure returns false", "Should return false")
+
+
+# ---------------------------------------------------------------------------
+# Test 13: Demolish Mode State and Dismantle Interactions
+# ---------------------------------------------------------------------------
+func test_demolish_mode_controls() -> void:
+	print("[TEST 13/14] Testing Demolish Mode State and Dismantle Interactions...")
+	var cm = get_node("/root/ConstructionManager")
+	var inv = get_node("/root/InventoryManager")
+	cm.reset_construction()
+	inv.reset_inventory()
+	inv.add_item("titanium", 10)
+	inv.add_item("crystals", 10)
+	
+	var map := MapDataScript.new(Vector2i(80, 80))
+	cm.set_map_data(map)
+	cm.set_build_zone(Rect2i(10, 10, 40, 40))
+	
+	cm.commit_placement("light_tower", Vector2i(22, 22))
+	_assert_test(cm.get_placed_structures().size() == 1, "Light tower placed", "Placement failed")
+	
+	# Test demolish toggle
+	_assert_test(not cm.is_demolish_active, "Demolish mode initially inactive", "Demolish active")
+	cm.start_demolish_mode()
+	_assert_test(cm.is_demolish_active, "Demolish mode active after start_demolish_mode", "Failed to activate")
+	
+	# Starting placement preview cancels demolish mode
+	cm.start_placement_preview("solar_array")
+	_assert_test(not cm.is_demolish_active, "start_placement_preview cancels demolish mode", "Demolish still active")
+	_assert_test(cm.is_preview_active, "Placement preview active", "Preview not active")
+	
+	# Starting demolish mode cancels placement preview
+	cm.start_demolish_mode()
+	_assert_test(not cm.is_preview_active, "start_demolish_mode cancels placement preview", "Preview still active")
+	_assert_test(cm.is_demolish_active, "Demolish mode active again", "Failed to activate")
+	
+	# Query structure at (22, 22)
+	var found: Dictionary = cm.get_structure_at(Vector2i(22, 22))
+	_assert_test(not found.is_empty(), "get_structure_at found placed light tower", "Structure not found")
+	_assert_test(str(found.get("id")) == "light_tower", "Found structure is light_tower", "Type mismatch")
+	
+	# Cancel demolish mode
+	cm.cancel_demolish_mode()
+	_assert_test(not cm.is_demolish_active, "Demolish mode cancelled", "Demolish still active")
+
+
+# ---------------------------------------------------------------------------
+# Test 14: Modular Validator Extensibility (Dynamic Custom Rules)
+# ---------------------------------------------------------------------------
+class CustomProhibitedZoneRule extends RefCounted:
+	var rule_id: String = "NO_EAST_ZONE"
+	var description: String = "Disallows placement east of X=30"
+	
+	func evaluate(candidate: Dictionary, _context: Dictionary) -> Dictionary:
+		var pos: Vector2i = candidate.get("position", Vector2i.ZERO)
+		if pos.x > 30:
+			return {
+				"valid": false,
+				"reason": "Structures cannot be placed east of X=30 due to extreme seismic tremors.",
+				"constraint_id": rule_id
+			}
+		return {"valid": true, "reason": "", "constraint_id": rule_id}
+
+
+func test_modular_validator_extensibility() -> void:
+	print("[TEST 14/14] Testing Modular PlacementConstraintValidator Extensibility...")
+	var cm = get_node("/root/ConstructionManager")
+	var inv = get_node("/root/InventoryManager")
+	cm.reset_construction()
+	inv.reset_inventory()
+	inv.add_item("titanium", 10)
+	inv.add_item("crystals", 10)
+	
+	var map := MapDataScript.new(Vector2i(80, 80))
+	cm.set_map_data(map)
+	cm.set_build_zone(Rect2i(10, 10, 40, 40))
+	
+	var validator: RefCounted = cm.get_validator()
+	_assert_test(validator != null, "ConstructionManager has validator instance", "Validator was null")
+	
+	# Before custom rule: position (35, 20) is inside build zone and valid
+	var res_before: Dictionary = cm.validate_placement_locally("light_tower", Vector2i(35, 20))
+	_assert_test(res_before.get("valid", false), "Placement at (35, 20) is valid before custom rule", "Expected valid: %s" % res_before.get("reason"))
+	
+	# Add custom rule
+	var custom_rule := CustomProhibitedZoneRule.new()
+	validator.add_rule(custom_rule)
+	
+	# Now position (35, 20) violates NO_EAST_ZONE
+	var res_after: Dictionary = cm.validate_placement_locally("light_tower", Vector2i(35, 20))
+	_assert_test(not res_after.get("valid", true), "Placement at (35, 20) is rejected by custom rule", "Expected failure")
+	_assert_test(res_after.get("violated_constraints", []).has("NO_EAST_ZONE"), "violated_constraints contains NO_EAST_ZONE", "Constraint flag missing")
+	_assert_test(str(res_after.get("reason")).contains("seismic tremors"), "Reason contains custom message", "Reason: %s" % res_after.get("reason"))
+	
+	# Position (25, 20) is still valid
+	var res_west: Dictionary = cm.validate_placement_locally("light_tower", Vector2i(25, 20))
+	_assert_test(res_west.get("valid", false), "Placement at (25, 20) is valid with custom rule", "West placement failed")
+	
+	# Remove custom rule
+	validator.remove_rule_by_id("NO_EAST_ZONE")
+	var res_restored: Dictionary = cm.validate_placement_locally("light_tower", Vector2i(35, 20))
+	_assert_test(res_restored.get("valid", false), "Placement at (35, 20) is restored valid after removing rule", "Expected restored")
+

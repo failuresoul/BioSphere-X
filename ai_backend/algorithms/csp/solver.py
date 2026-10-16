@@ -64,6 +64,14 @@ STRUCTURE_CATALOG: Dict[str, Dict[str, Any]] = {
         "cost": {"titanium": 2, "crystals": 1},
         "min_spacing": 1,
         "description": "Tactical scanning radar revealing map hazards and specimens."
+    },
+    "light_tower": {
+        "id": "light_tower",
+        "name": "Area Illuminator Tower",
+        "size": [1, 1],
+        "cost": {"titanium": 2, "crystals": 1},
+        "min_spacing": 1,
+        "description": "High-powered floodlight illuminating dark nocturnal sectors."
     }
 }
 

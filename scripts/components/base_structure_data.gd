@@ -12,6 +12,7 @@ var height: int = 1
 var cost: Dictionary = {} # res_name: String -> amount: int
 var min_spacing: int = 1
 var color: Color = Color(0.2, 0.8, 1.0)
+var light_radius: float = 0.0
 
 
 func _init(
@@ -23,7 +24,8 @@ func _init(
 	p_height: int = 1,
 	p_cost: Dictionary = {},
 	p_min_spacing: int = 1,
-	p_color: Color = Color(0.2, 0.8, 1.0)
+	p_color: Color = Color(0.2, 0.8, 1.0),
+	p_light_radius: float = 0.0
 ) -> void:
 	id = p_id
 	name = p_name
@@ -34,6 +36,7 @@ func _init(
 	cost = p_cost.duplicate(true)
 	min_spacing = maxi(0, p_min_spacing)
 	color = p_color
+	light_radius = p_light_radius
 
 
 static func create(
@@ -45,10 +48,11 @@ static func create(
 	p_height: int,
 	p_cost: Dictionary,
 	p_min_spacing: int = 1,
-	p_color: Color = Color(0.2, 0.8, 1.0)
+	p_color: Color = Color(0.2, 0.8, 1.0),
+	p_light_radius: float = 0.0
 ) -> RefCounted:
 	var script: GDScript = load("res://scripts/components/base_structure_data.gd")
-	return script.new(p_id, p_name, p_desc, p_icon, p_width, p_height, p_cost, p_min_spacing, p_color)
+	return script.new(p_id, p_name, p_desc, p_icon, p_width, p_height, p_cost, p_min_spacing, p_color, p_light_radius)
 
 
 static func get_default_catalog() -> Dictionary:
@@ -58,6 +62,14 @@ static func get_default_catalog() -> Dictionary:
 		"oxygen_generator", "Life-Support Pod", "Atmospheric oxygen generator establishing safe zone.",
 		"🫧", 2, 2, {"titanium": 4, "crystals": 2}, 1, Color(0.15, 0.9, 1.0)
 	)
+	cat["light_tower"] = create(
+		"light_tower", "Area Illuminator Tower", "High-intensity luminescent beacon piercing alien darkness.",
+		"💡", 1, 1, {"titanium": 2, "crystals": 1}, 1, Color(1.0, 0.92, 0.35), 200.0
+	)
+	cat["storage_depot"] = create(
+		"storage_depot", "Resource Depot", "Reinforced field vault for securing surface harvest specimens.",
+		"📦", 2, 2, {"titanium": 5, "biomass": 2}, 1, Color(0.95, 0.65, 0.2)
+	)
 	cat["defense_turret"] = create(
 		"defense_turret", "Automated Sentry", "Automated perimeter defense turret targeting predators.",
 		"🛡️", 1, 1, {"titanium": 3, "crystals": 3}, 2, Color(1.0, 0.35, 0.35)
@@ -65,10 +77,6 @@ static func get_default_catalog() -> Dictionary:
 	cat["solar_array"] = create(
 		"solar_array", "Photovoltaic Array", "Auxiliary solar array recharging suit combat energy.",
 		"⚡", 2, 1, {"titanium": 2, "crystals": 2}, 1, Color(1.0, 0.85, 0.2)
-	)
-	cat["storage_depot"] = create(
-		"storage_depot", "Resource Depot", "Reinforced field vault for securing surface harvest specimens.",
-		"📦", 2, 2, {"titanium": 5, "biomass": 2}, 1, Color(0.95, 0.65, 0.2)
 	)
 	cat["bio_dome"] = create(
 		"bio_dome", "Biosphere Hab Dome", "Controlled atmospheric habitat module for long-term survival.",
