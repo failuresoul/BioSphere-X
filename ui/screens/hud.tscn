@@ -1,10 +1,11 @@
-[gd_scene load_steps=14 format=3 uid="uid://bsxhudscreen"]
+[gd_scene load_steps=15 format=3 uid="uid://bsxhudscreen"]
 
 [ext_resource type="Script" path="res://ui/screens/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://ui/components/dev_navigation_menu.tscn" id="2_dev_menu"]
 [ext_resource type="PackedScene" path="res://ui/components/inventory_crafting_dialog.tscn" id="3_inv_dialog"]
 [ext_resource type="PackedScene" path="res://ui/components/construction_menu.tscn" id="4_build_menu"]
 [ext_resource type="PackedScene" path="res://ui/screens/planet_selection_screen.tscn" id="5_planet_screen"]
+[ext_resource type="PackedScene" path="res://ui/components/command_terminal.tscn" id="6_cmd_terminal"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 content_margin_left = 12.0
@@ -375,6 +376,14 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.9, 0.6, 1)
 theme_override_font_sizes/font_size = 10
 text = "🔨 BUILD [B]"
+
+[node name="TerminalButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(82, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "💻 CMD [~]"
 
 [node name="TitleLabel" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
 layout_mode = 2
@@ -925,6 +934,10 @@ unique_name_in_owner = true
 visible = false
 
 [node name="PlanetSelectionScreen" parent="." instance=ExtResource("5_planet_screen")]
+unique_name_in_owner = true
+visible = false
+
+[node name="CommandTerminal" parent="." instance=ExtResource("6_cmd_terminal")]
 unique_name_in_owner = true
 visible = false
 

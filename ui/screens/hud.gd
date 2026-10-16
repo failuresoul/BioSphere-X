@@ -41,6 +41,8 @@ extends CanvasLayer
 @onready var inventory_dialog: PanelContainer = %InventoryCraftingDialog
 @onready var build_menu_button: Button = %BuildMenuButton
 @onready var construction_menu: PanelContainer = %ConstructionMenu
+@onready var terminal_button: Button = %TerminalButton
+@onready var command_terminal: PanelContainer = %CommandTerminal
 @onready var planet_selection_screen: Control = %PlanetSelectionScreen
 
 # Mission Telemetry & Feedback UI
@@ -114,6 +116,13 @@ func _ready() -> void:
 				construction_menu.call("toggle_menu")
 			else:
 				construction_menu.visible = not construction_menu.visible
+		)
+	if terminal_button and command_terminal:
+		terminal_button.pressed.connect(func():
+			if command_terminal.has_method("toggle_terminal"):
+				command_terminal.call("toggle_terminal")
+			else:
+				command_terminal.visible = not command_terminal.visible
 		)
 
 
@@ -630,6 +639,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			if construction_menu.has_method("toggle_menu"):
 				construction_menu.call("toggle_menu")
 				get_viewport().set_input_as_handled()
+		elif (event.keycode == KEY_QUOTELEFT or event.keycode == KEY_SLASH) and command_terminal:
+			if command_terminal.has_method("toggle_terminal"):
+				command_terminal.call("toggle_terminal")
+			else:
+				command_terminal.visible = not command_terminal.visible
+			get_viewport().set_input_as_handled()
 
 
 func _on_storage_changed(_res_id: String, _stored: int, _carried: int) -> void:

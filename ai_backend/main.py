@@ -14,6 +14,7 @@ from algorithms.adversarial.router import router as adversarial_router
 from algorithms.fuzzy.router import router as fuzzy_router
 from algorithms.csp.router import router as csp_router
 from algorithms.logic.router import router as logic_router
+from algorithms.nlp.router import router as nlp_router
 
 app = FastAPI(
     title="BioSphere-X AI Backend",
@@ -36,6 +37,7 @@ app.include_router(adversarial_router)
 app.include_router(fuzzy_router)
 app.include_router(csp_router)
 app.include_router(logic_router)
+app.include_router(nlp_router)
 
 
 class EchoRequest(BaseModel):

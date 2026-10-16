@@ -146,6 +146,19 @@ func request_rule_explanation(target: String, facts: Dictionary = {}, callback: 
 	send_request("/api/ai/logic/explain", HTTPClient.METHOD_POST, body, callback)
 
 
+func request_command_parse(query: String, context: Dictionary = {}, callback: Callable = Callable()) -> void:
+	var body := {
+		"query": query,
+		"context": (context if not context.is_empty() else null)
+	}
+	send_request("/api/ai/nlp/parse", HTTPClient.METHOD_POST, body, callback)
+
+
+func request_command_catalog(callback: Callable = Callable()) -> void:
+	send_request("/api/ai/nlp/commands", HTTPClient.METHOD_GET, {}, callback)
+
+
+
 
 # ---------------------------------------------------------------------------
 # Core Asynchronous HTTP Request Pipeline
