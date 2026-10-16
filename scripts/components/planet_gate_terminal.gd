@@ -77,8 +77,11 @@ func on_station_interacted(user: Node2D) -> bool:
 	sector_selected.emit(sector["id"], sector["coords"])
 	
 	var hud = get_tree().get_first_node_in_group("hud")
-	if hud and hud.has_method("open_planet_gate_modal"):
-		hud.call("open_planet_gate_modal")
+	if hud:
+		if hud.has_method("open_planet_selection_screen"):
+			hud.call("open_planet_selection_screen")
+		elif hud.has_method("open_planet_gate_modal"):
+			hud.call("open_planet_gate_modal")
 		
 	return true
 

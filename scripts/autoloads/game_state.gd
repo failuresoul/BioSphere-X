@@ -65,6 +65,10 @@ var is_paused: bool = false
 var is_game_over: bool = false
 var failure_count: int = 0
 
+# Exoplanet Expedition Destination
+var selected_planet: String = "TRAPPIST-1 e"
+var selected_planet_data: Dictionary = {}
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS

@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://ui/components/dev_navigation_menu.tscn" id="2_dev_menu"]
 [ext_resource type="PackedScene" path="res://ui/components/inventory_crafting_dialog.tscn" id="3_inv_dialog"]
 [ext_resource type="PackedScene" path="res://ui/components/construction_menu.tscn" id="4_build_menu"]
+[ext_resource type="PackedScene" path="res://ui/screens/planet_selection_screen.tscn" id="5_planet_screen"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 content_margin_left = 12.0
@@ -922,4 +923,9 @@ visible = false
 [node name="ConstructionMenu" parent="." instance=ExtResource("4_build_menu")]
 unique_name_in_owner = true
 visible = false
+
+[node name="PlanetSelectionScreen" parent="." instance=ExtResource("5_planet_screen")]
+unique_name_in_owner = true
+visible = false
+
 

@@ -1,0 +1,129 @@
+{
+  "_metadata": {
+    "source": "NASA Exoplanet Archive (Planetary Systems Composite Parameters table)",
+    "source_url": "https://exoplanetarchive.ipac.caltech.edu/",
+    "retrieval_date": "2026-10-17",
+    "description": "Curated selection of publicly verified exoplanet observations for BioSphere-X scientific expedition modeling. Uses only authentic published fields, preserves original source units, and documents scientific constraints.",
+    "scientific_caveats": [
+      "Theoretical Equilibrium Temperature (pl_eqt) is a calculated blackbody temperature assuming an idealized Bond albedo; it does NOT represent confirmed surface temperature, which requires atmospheric modeling and greenhouse gas analysis.",
+      "Planet radius alone is insufficient to calculate surface gravity; true surface gravity strictly requires a confirmed mass measurement from radial velocity or transit timing variations (TTV).",
+      "Orbital eccentricity (pl_orbeccen) quantifies orbital ellipse elongation and annual stellar flux variations; it is NOT a direct measurement of diurnal day/night cycle or rotation period."
+    ],
+    "units": {
+      "sy_dist": "parsecs (pc)",
+      "pl_orbper": "days",
+      "pl_rade": "Earth Radii (R_earth)",
+      "pl_bmasse": "Earth Mass (M_earth)",
+      "pl_eqt": "Kelvin (K)",
+      "pl_orbeccen": "dimensionless (0.0 to 1.0)",
+      "st_teff": "Kelvin (K)"
+    }
+  },
+  "exoplanets": [
+    {
+      "pl_name": "TRAPPIST-1 e",
+      "hostname": "TRAPPIST-1",
+      "discoverymethod": "Transit",
+      "disc_year": 2017,
+      "sy_dist": 12.47,
+      "pl_orbper": 6.099615,
+      "pl_rade": 0.920,
+      "pl_bmasse": 0.692,
+      "pl_eqt": 251.0,
+      "pl_orbeccen": 0.0051,
+      "st_teff": 2566.0,
+      "st_spectype": "M8 V",
+      "notes": "Earth-sized planet in the habitable zone of an ultra-cool red dwarf. High bulk density indicates rocky composition."
+    },
+    {
+      "pl_name": "Kepler-186 f",
+      "hostname": "Kepler-186",
+      "discoverymethod": "Transit",
+      "disc_year": 2014,
+      "sy_dist": 177.6,
+      "pl_orbper": 129.9441,
+      "pl_rade": 1.170,
+      "pl_bmasse": null,
+      "pl_eqt": 188.0,
+      "pl_orbeccen": 0.04,
+      "st_teff": 3755.0,
+      "st_spectype": "M1 V",
+      "notes": "First validated Earth-sized planet in habitable zone. Mass unmeasured by radial velocity or TTV; surface gravity remains unconfirmed."
+    },
+    {
+      "pl_name": "Proxima Centauri b",
+      "hostname": "Proxima Centauri",
+      "discoverymethod": "Radial Velocity",
+      "disc_year": 2016,
+      "sy_dist": 1.301,
+      "pl_orbper": 11.1868,
+      "pl_rade": null,
+      "pl_bmasse": 1.07,
+      "pl_eqt": 234.0,
+      "pl_orbeccen": 0.109,
+      "st_teff": 3042.0,
+      "st_spectype": "M5.5 V",
+      "notes": "Closest known exoplanet to Earth. Detected via Doppler radial velocity; non-transiting so geometric radius is unmeasured."
+    },
+    {
+      "pl_name": "TOI-700 d",
+      "hostname": "TOI-700",
+      "discoverymethod": "Transit",
+      "disc_year": 2020,
+      "sy_dist": 31.13,
+      "pl_orbper": 37.426,
+      "pl_rade": 1.144,
+      "pl_bmasse": null,
+      "pl_eqt": 269.0,
+      "pl_orbeccen": 0.042,
+      "st_teff": 3480.0,
+      "st_spectype": "M2 V",
+      "notes": "Discovered by TESS. Earth-sized candidate receiving 86% of Earth's solar insolation. Mass currently unmeasured."
+    },
+    {
+      "pl_name": "LHS 1140 b",
+      "hostname": "LHS 1140",
+      "discoverymethod": "Transit",
+      "disc_year": 2017,
+      "sy_dist": 15.0,
+      "pl_orbper": 24.737,
+      "pl_rade": 1.730,
+      "pl_bmasse": 5.60,
+      "pl_eqt": 226.0,
+      "pl_orbeccen": 0.043,
+      "st_teff": 3216.0,
+      "st_spectype": "M4.5 V",
+      "notes": "Super-Earth with high-precision transit and Doppler radial velocity measurements. Dense rocky interior."
+    },
+    {
+      "pl_name": "K2-18 b",
+      "hostname": "K2-18",
+      "discoverymethod": "Transit",
+      "disc_year": 2015,
+      "sy_dist": 38.0,
+      "pl_orbper": 32.9396,
+      "pl_rade": 2.610,
+      "pl_bmasse": 8.63,
+      "pl_eqt": 255.0,
+      "pl_orbeccen": 0.20,
+      "st_teff": 3457.0,
+      "st_spectype": "M2.5 V",
+      "notes": "Sub-Neptune / Hycean candidate with detected atmospheric water vapor absorption. Significant orbital eccentricity."
+    },
+    {
+      "pl_name": "WASP-12 b",
+      "hostname": "WASP-12",
+      "discoverymethod": "Transit",
+      "disc_year": 2008,
+      "sy_dist": 432.5,
+      "pl_orbper": 1.09142,
+      "pl_rade": 21.3,
+      "pl_bmasse": 467.2,
+      "pl_eqt": 2575.0,
+      "pl_orbeccen": 0.0447,
+      "st_teff": 6300.0,
+      "st_spectype": "F6 V",
+      "notes": "Extreme ultra-hot Jupiter orbiting an F-type star in approximately 1.1 days. Subject to extreme stellar tidal forces and hyperthermal radiation."
+    }
+  ]
+}

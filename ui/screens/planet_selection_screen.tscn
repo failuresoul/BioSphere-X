@@ -1,0 +1,196 @@
+[gd_scene format=3 uid="uid://c6exoplanet_screen_001"]
+
+[ext_resource type="Script" path="res://ui/screens/planet_selection_screen.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.06, 0.09, 0.14, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.18, 0.55, 0.85, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.6)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sidebar"]
+bg_color = Color(0.04, 0.06, 0.1, 0.8)
+border_width_right = 1
+border_color = Color(0.2, 0.4, 0.6, 0.4)
+corner_radius_top_left = 4
+corner_radius_bottom_left = 4
+
+[node name="PlanetSelectionScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.06, 0.78)
+
+[node name="CenterPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 50.0
+offset_top = 35.0
+offset_right = -50.0
+offset_bottom = -35.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="MainLayout" type="VBoxContainer" parent="CenterPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeaderBar" type="HBoxContainer" parent="CenterPanel/MainLayout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleBox" type="VBoxContainer" parent="CenterPanel/MainLayout/HeaderBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="CenterPanel/MainLayout/HeaderBar/TitleBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "// EXOPLANET EXPEDITION ARCHIVE //"
+
+[node name="SourceBadge" type="Label" parent="CenterPanel/MainLayout/HeaderBar/TitleBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 0.6, 1)
+theme_override_font_sizes/font_size = 11
+text = "DATA SOURCE: NASA Exoplanet Archive (Composite Parameters)"
+
+[node name="CloseButton" type="Button" parent="CenterPanel/MainLayout/HeaderBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 32)
+layout_mode = 2
+text = "✕ CLOSE [ESC]"
+
+[node name="HSeparator1" type="HSeparator" parent="CenterPanel/MainLayout"]
+layout_mode = 2
+
+[node name="ContentSplit" type="HBoxContainer" parent="CenterPanel/MainLayout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="LeftSidebar" type="PanelContainer" parent="CenterPanel/MainLayout/ContentSplit"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_sidebar")
+
+[node name="ListLayout" type="VBoxContainer" parent="CenterPanel/MainLayout/ContentSplit/LeftSidebar"]
+layout_mode = 2
+
+[node name="CatalogHeader" type="Label" parent="CenterPanel/MainLayout/ContentSplit/LeftSidebar/ListLayout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "DISCOVERED EXOPLANETS:"
+
+[node name="ScrollList" type="ScrollContainer" parent="CenterPanel/MainLayout/ContentSplit/LeftSidebar/ListLayout"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PlanetListContainer" type="VBoxContainer" parent="CenterPanel/MainLayout/ContentSplit/LeftSidebar/ListLayout/ScrollList"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="RightDetail" type="VBoxContainer" parent="CenterPanel/MainLayout/ContentSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="PlanetNameLabel" type="Label" parent="CenterPanel/MainLayout/ContentSplit/RightDetail"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "TRAPPIST-1 e"
+
+[node name="HostStarLabel" type="Label" parent="CenterPanel/MainLayout/ContentSplit/RightDetail"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.75, 0.4, 1)
+theme_override_font_sizes/font_size = 12
+text = "Host Star: TRAPPIST-1 | Spectral Type: M8 V | T_eff: 2566 K"
+
+[node name="DetailScroll" type="ScrollContainer" parent="CenterPanel/MainLayout/ContentSplit/RightDetail"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailContent" type="VBoxContainer" parent="CenterPanel/MainLayout/ContentSplit/RightDetail/DetailScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="ScientificParamsLabel" type="RichTextLabel" parent="CenterPanel/MainLayout/ContentSplit/RightDetail/DetailScroll/DetailContent"]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+text = "[b]OBSERVED SCIENTIFIC PARAMETERS[/b]"
+fit_content = true
+
+[node name="HSeparatorA" type="HSeparator" parent="CenterPanel/MainLayout/ContentSplit/RightDetail/DetailScroll/DetailContent"]
+layout_mode = 2
+
+[node name="ScientificCaveatsLabel" type="RichTextLabel" parent="CenterPanel/MainLayout/ContentSplit/RightDetail/DetailScroll/DetailContent"]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+text = "[b]SCIENTIFIC INTERPRETATION SAFEGUARDS[/b]"
+fit_content = true
+
+[node name="HSeparatorB" type="HSeparator" parent="CenterPanel/MainLayout/ContentSplit/RightDetail/DetailScroll/DetailContent"]
+layout_mode = 2
+
+[node name="GameplayPropsLabel" type="RichTextLabel" parent="CenterPanel/MainLayout/ContentSplit/RightDetail/DetailScroll/DetailContent"]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+text = "[b]FICTIONAL GAMEPLAY PROPERTIES[/b]"
+fit_content = true
+
+[node name="HSeparator2" type="HSeparator" parent="CenterPanel/MainLayout"]
+layout_mode = 2
+
+[node name="FooterBar" type="HBoxContainer" parent="CenterPanel/MainLayout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="FeedbackLabel" type="Label" parent="CenterPanel/MainLayout/FooterBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 12
+text = "Click 'Set as Destination' to lock planetary coordinates."
+
+[node name="DeployButton" type="Button" parent="CenterPanel/MainLayout/FooterBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "🚀 SET AS EXPEDITION DESTINATION"

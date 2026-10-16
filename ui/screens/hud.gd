@@ -41,6 +41,7 @@ extends CanvasLayer
 @onready var inventory_dialog: PanelContainer = %InventoryCraftingDialog
 @onready var build_menu_button: Button = %BuildMenuButton
 @onready var construction_menu: PanelContainer = %ConstructionMenu
+@onready var planet_selection_screen: Control = %PlanetSelectionScreen
 
 # Mission Telemetry & Feedback UI
 @onready var mission_title_tag: Label = %MissionTitleTag
@@ -679,7 +680,7 @@ func open_planet_gate_modal() -> void:
 	if terminal_sub_header:
 		terminal_sub_header.text = "PLANETARY SECTOR SELECTION & AIRLOCK"
 	if terminal_action_btn1:
-		terminal_action_btn1.text = "CYCLE NEXT SECTOR"
+		terminal_action_btn1.text = "EXOPLANET ARCHIVE [P]"
 		terminal_action_btn1.visible = true
 	if terminal_action_btn2:
 		terminal_action_btn2.text = "TOGGLE AIRLOCK DOOR"
@@ -687,6 +688,14 @@ func open_planet_gate_modal() -> void:
 	_refresh_planet_gate_modal_content()
 	if terminal_modal_overlay:
 		terminal_modal_overlay.visible = true
+
+
+func open_planet_selection_screen() -> void:
+	if planet_selection_screen:
+		if planet_selection_screen.has_method("open_screen"):
+			planet_selection_screen.call("open_screen")
+		else:
+			planet_selection_screen.visible = true
 
 
 func _refresh_planet_gate_modal_content() -> void:
@@ -727,6 +736,8 @@ func _on_terminal_action1_pressed() -> void:
 					_refresh_mission_modal_content()
 					_play_mission_success_sound()
 		"planet_gate":
+			close_terminal_modal()
+			open_planet_selection_screen()
 			_play_mission_success_sound()
 
 
