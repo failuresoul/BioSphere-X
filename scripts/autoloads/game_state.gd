@@ -10,6 +10,7 @@ signal oxygen_refill_status_changed(is_refilling: bool)
 signal energy_changed(current: float, max_energy: float)
 signal energy_depleted()
 signal resource_changed(resource_id: String, count: int)
+signal storage_changed(resource_id: String, stored_count: int, carried_count: int)
 signal objective_changed(text: String)
 signal game_paused(paused: bool)
 signal game_over_triggered()
@@ -40,8 +41,16 @@ var is_oxygen_depleted: bool = false
 var is_low_oxygen: bool = false
 var is_oxygen_refilling: bool = false
 
-# Resource Inventory
+# Resource Inventory (Suit-Carried Cargo)
 var resources: Dictionary = {
+	"crystals": 0,
+	"titanium": 0,
+	"biomass": 0,
+	"oxygen_cells": 0
+}
+
+# Base Vault Storage (Secure Research Base Depot)
+var base_storage: Dictionary = {
 	"crystals": 0,
 	"titanium": 0,
 	"biomass": 0,
@@ -239,6 +248,54 @@ func add_resource(resource_id: String, amount: int = 1) -> void:
 
 func get_resource(resource_id: String) -> int:
 	return resources.get(resource_id, 0)
+
+
+# ---------------------------------------------------------------------------
+# Base Vault Storage API (Research Base Depot)
+# ---------------------------------------------------------------------------
+func deposit_resource(resource_id: String, amount: int = -1) -> int:
+	var carried: int = resources.get(resource_id, 0)
+	if carried <= 0:
+		return 0
+	var transfer: int = carried if amount < 0 else mini(amount, carried)
+	resources[resource_id] = carried - transfer
+	if not base_storage.has(resource_id):
+		base_storage[resource_id] = 0
+	base_storage[resource_id] += transfer
+	
+	resource_changed.emit(resource_id, resources[resource_id])
+	storage_changed.emit(resource_id, base_storage[resource_id], resources[resource_id])
+	return transfer
+
+
+func deposit_all_resources() -> Dictionary:
+	var deposited := {}
+	for k in ["crystals", "titanium", "biomass", "oxygen_cells"]:
+		var transfer := deposit_resource(k, -1)
+		if transfer > 0:
+			deposited[k] = transfer
+	return deposited
+
+
+func withdraw_resource(resource_id: String, amount: int = 1) -> int:
+	var stored: int = base_storage.get(resource_id, 0)
+	if stored <= 0 or amount <= 0:
+		return 0
+	var transfer: int = mini(amount, stored)
+	base_storage[resource_id] = stored - transfer
+	resources[resource_id] = resources.get(resource_id, 0) + transfer
+	
+	resource_changed.emit(resource_id, resources[resource_id])
+	storage_changed.emit(resource_id, base_storage[resource_id], resources[resource_id])
+	return transfer
+
+
+func get_stored_resource(resource_id: String) -> int:
+	return base_storage.get(resource_id, 0)
+
+
+func get_all_stored_resources() -> Dictionary:
+	return base_storage.duplicate()
 
 
 func _check_objective_progress() -> void:

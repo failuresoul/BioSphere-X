@@ -50,6 +50,16 @@ extends CanvasLayer
 @onready var feedback_desc_label: Label = %FeedbackDescLabel
 @onready var feedback_rewards_label: Label = %FeedbackRewardsLabel
 
+# Research Base Terminal Modal UI
+@onready var terminal_modal_overlay: Control = %TerminalModalOverlay
+@onready var terminal_header: Label = %TerminalHeader
+@onready var terminal_sub_header: Label = %TerminalSubHeader
+@onready var terminal_content_label: RichTextLabel = %TerminalContentLabel
+@onready var terminal_action_btn1: Button = %TerminalActionBtn1
+@onready var terminal_action_btn2: Button = %TerminalActionBtn2
+@onready var terminal_close_btn: Button = %TerminalCloseBtn
+var _current_terminal_mode: String = ""
+
 # Warning & Feedback State
 var _low_hp_alert: bool = false
 var _low_o2_alert: bool = false
@@ -62,6 +72,7 @@ var _feedback_banner_timer: float = 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group("hud")
 	_setup_procedural_audio()
 	_connect_game_state_signals()
 	_connect_mission_manager_signals()
@@ -71,6 +82,12 @@ func _ready() -> void:
 		resume_button.pressed.connect(_on_resume_pressed)
 	if restart_button:
 		restart_button.pressed.connect(_on_restart_pressed)
+	if terminal_close_btn:
+		terminal_close_btn.pressed.connect(close_terminal_modal)
+	if terminal_action_btn1:
+		terminal_action_btn1.pressed.connect(_on_terminal_action1_pressed)
+	if terminal_action_btn2:
+		terminal_action_btn2.pressed.connect(_on_terminal_action2_pressed)
 	if dev_nav_button and dev_nav_menu:
 		dev_nav_button.pressed.connect(func():
 			if dev_nav_menu.has_method("toggle_visibility"):
@@ -158,6 +175,8 @@ func _connect_game_state_signals() -> void:
 		gs.connect("oxygen_refill_status_changed", _on_oxygen_refill_status_changed)
 	if gs.has_signal("resource_changed") and not gs.is_connected("resource_changed", _on_resource_changed):
 		gs.connect("resource_changed", _on_resource_changed)
+	if gs.has_signal("storage_changed") and not gs.is_connected("storage_changed", _on_storage_changed):
+		gs.connect("storage_changed", _on_storage_changed)
 	if gs.has_signal("objective_changed") and not gs.is_connected("objective_changed", _on_objective_changed):
 		gs.connect("objective_changed", _on_objective_changed)
 	if gs.has_signal("game_paused") and not gs.is_connected("game_paused", _on_game_paused):
@@ -523,3 +542,180 @@ func _play_mission_fail_sound() -> void:
 			var env := 1.0 - (float(i) / float(n))
 			var s := sin(float(i) * freq) * 0.22 * env
 			pb.push_frame(Vector2(s, s))
+
+
+# ---------------------------------------------------------------------------
+# Research Base Terminal Modals (Storage, Mission Ops, Planet Gate)
+# ---------------------------------------------------------------------------
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if terminal_modal_overlay and terminal_modal_overlay.visible:
+			if event.keycode == KEY_ESCAPE or event.keycode == KEY_E:
+				close_terminal_modal()
+				get_viewport().set_input_as_handled()
+
+
+func _on_storage_changed(_res_id: String, _stored: int, _carried: int) -> void:
+	if terminal_modal_overlay and terminal_modal_overlay.visible and _current_terminal_mode == "storage":
+		_refresh_storage_modal_content()
+
+
+func open_storage_modal() -> void:
+	_current_terminal_mode = "storage"
+	if terminal_header:
+		terminal_header.text = "// CARGO STORAGE & BASE VAULT //"
+	if terminal_sub_header:
+		terminal_sub_header.text = "SECURE SPECIMENS & PERMANENT RESOURCE DEPOT"
+	if terminal_action_btn1:
+		terminal_action_btn1.text = "DEPOSIT ALL CARGO"
+		terminal_action_btn1.visible = true
+	if terminal_action_btn2:
+		terminal_action_btn2.text = "WITHDRAW 1 O2 CELL"
+		terminal_action_btn2.visible = true
+	_refresh_storage_modal_content()
+	if terminal_modal_overlay:
+		terminal_modal_overlay.visible = true
+
+
+func _refresh_storage_modal_content() -> void:
+	var gs := get_node_or_null("/root/GameState")
+	if not gs or not terminal_content_label:
+		return
+	
+	var res: Dictionary = gs.get("resources")
+	var st: Dictionary = gs.get("base_storage") if "base_storage" in gs else {}
+	
+	var text := "[b]SUIT-CARRIED FIELD INVENTORY:[/b]\n"
+	text += "  ⚡ Energy Crystals: %d\n" % res.get("crystals", 0)
+	text += "  ⛏ Titanium Metal: %d\n" % res.get("titanium", 0)
+	text += "  🧬 Alien Biomass: %d\n" % res.get("biomass", 0)
+	text += "  🫧 Oxygen Cells: %d\n\n" % res.get("oxygen_cells", 0)
+	
+	text += "[b]SECURE BASE VAULT INVENTORY:[/b]\n"
+	text += "  ⚡ Stored Crystals: %d\n" % st.get("crystals", 0)
+	text += "  ⛏ Stored Titanium: %d\n" % st.get("titanium", 0)
+	text += "  🧬 Stored Biomass: %d\n" % st.get("biomass", 0)
+	text += "  🫧 Stored O2 Cells: %d" % st.get("oxygen_cells", 0)
+	
+	terminal_content_label.text = text
+
+
+func open_mission_modal() -> void:
+	_current_terminal_mode = "mission"
+	if terminal_header:
+		terminal_header.text = "// MISSION OPERATIONS //"
+	if terminal_sub_header:
+		terminal_sub_header.text = "EXPEDITION CAMPAIGN DIRECTIVES & TELEMETRY"
+	if terminal_action_btn1:
+		terminal_action_btn1.text = "REBOOT / RETRY DIRECTIVE"
+		terminal_action_btn1.visible = true
+	if terminal_action_btn2:
+		terminal_action_btn2.visible = false
+	_refresh_mission_modal_content()
+	if terminal_modal_overlay:
+		terminal_modal_overlay.visible = true
+
+
+func _refresh_mission_modal_content() -> void:
+	var mm := get_node_or_null("/root/MissionManager")
+	if not mm or not terminal_content_label:
+		return
+	var active = mm.call("get_active_mission")
+	var text := ""
+	if active:
+		var st_str := "ACTIVE"
+		if active.call("is_completed"): st_str = "COMPLETED"
+		elif active.call("is_failed"): st_str = "FAILED"
+		
+		text += "[b]CURRENT ACTIVE DIRECTIVE:[/b]\n"
+		text += "  [b]%s[/b] [%s]\n" % [active.get("title"), st_str]
+		text += "  %s\n\n" % active.get("description")
+		text += "  Target Progress: %s\n\n" % active.call("get_progress_text")
+	else:
+		text += "[b]ALL EXPEDITION DIRECTIVES ACCOMPLISHED![/b]\n\n"
+	
+	text += "[b]CAMPAIGN DIRECTIVES ROSTER:[/b]\n"
+	var all_m = mm.call("get_all_missions")
+	for m in all_m:
+		var tag := "○ LOCKED"
+		if m.call("is_completed"): tag = "● COMPLETED"
+		elif m.call("is_active"): tag = "▶ ACTIVE"
+		elif m.call("is_failed"): tag = "✕ FAILED"
+		text += "  [%s] %s\n" % [tag, m.get("title")]
+	
+	terminal_content_label.text = text
+
+
+func open_planet_gate_modal() -> void:
+	_current_terminal_mode = "planet_gate"
+	if terminal_header:
+		terminal_header.text = "// EXPEDITION GATE //"
+	if terminal_sub_header:
+		terminal_sub_header.text = "PLANETARY SECTOR SELECTION & AIRLOCK"
+	if terminal_action_btn1:
+		terminal_action_btn1.text = "CYCLE NEXT SECTOR"
+		terminal_action_btn1.visible = true
+	if terminal_action_btn2:
+		terminal_action_btn2.text = "TOGGLE AIRLOCK DOOR"
+		terminal_action_btn2.visible = true
+	_refresh_planet_gate_modal_content()
+	if terminal_modal_overlay:
+		terminal_modal_overlay.visible = true
+
+
+func _refresh_planet_gate_modal_content() -> void:
+	if not terminal_content_label:
+		return
+	var text := "[b]AVAILABLE EXPEDITION SECTORS:[/b]\n\n"
+	text += "  1. [b]BioSphere-X Surface Clearing[/b] [Threat: MODERATE]\n"
+	text += "     Primary drop zone. Abundant mineral and oxygen deposits.\n\n"
+	text += "  2. [b]South-West Crystal Valleys[/b] [Threat: ELEVATED]\n"
+	text += "     High crystal density guarded by armored brutes.\n\n"
+	text += "  3. [b]Ancient Crater Basin[/b] [Threat: EXTREME]\n"
+	text += "     Colossal alien nesting basin. Goliath Prime encounter.\n\n"
+	text += "  4. [b]Base Habitat Sanctuary[/b] [Threat: SAFE]\n"
+	text += "     Atmospheric safe zone and cargo storage vault."
+	terminal_content_label.text = text
+
+
+func close_terminal_modal() -> void:
+	if terminal_modal_overlay:
+		terminal_modal_overlay.visible = false
+	_current_terminal_mode = ""
+
+
+func _on_terminal_action1_pressed() -> void:
+	match _current_terminal_mode:
+		"storage":
+			var gs := get_node_or_null("/root/GameState")
+			if gs:
+				gs.call("deposit_all_resources")
+				_refresh_storage_modal_content()
+				_play_mission_success_sound()
+		"mission":
+			var mm := get_node_or_null("/root/MissionManager")
+			if mm:
+				var active = mm.call("get_active_mission")
+				if active:
+					mm.call("restart_mission", active.get("id"))
+					_refresh_mission_modal_content()
+					_play_mission_success_sound()
+		"planet_gate":
+			_play_mission_success_sound()
+
+
+func _on_terminal_action2_pressed() -> void:
+	match _current_terminal_mode:
+		"storage":
+			var gs := get_node_or_null("/root/GameState")
+			if gs:
+				gs.call("withdraw_resource", "oxygen_cells", 1)
+				_refresh_storage_modal_content()
+				_play_mission_success_sound()
+		"planet_gate":
+			var base = get_tree().get_first_node_in_group("research_base")
+			if base and base.has_method("get_airlock_door"):
+				var door = base.call("get_airlock_door")
+				if door and door.has_method("interact"):
+					door.call("interact")
+					_play_mission_success_sound()

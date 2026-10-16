@@ -31,9 +31,11 @@ var _enemy_scout_scene := preload("res://scenes/enemies/enemy_scout.tscn")
 var _enemy_brute_scene := preload("res://scenes/enemies/enemy_brute.tscn")
 var _enemy_spitter_scene := preload("res://scenes/enemies/enemy_spitter.tscn")
 var _boss_scene := preload("res://scenes/boss/boss_enemy.tscn")
+var _research_base_script := preload("res://scenes/world/research_base.gd")
 
 var _player_ref: Node2D = null
 var _terminal_ref: Node2D = null
+var _research_base_ref: Node2D = null
 
 
 func _ready() -> void:
@@ -44,6 +46,7 @@ func _ready() -> void:
 	_build_ground()
 	_build_boundaries()
 	_build_canyon_ridges()
+	_build_research_base()
 	_build_research_outpost()
 	_build_resource_fields()
 	_build_scattered_rocks()
@@ -296,6 +299,17 @@ func _build_alien_flora() -> void:
 
 
 # ---------------------------------------------------------------------------
+# Research Base Compound (Spawn Habitat & Safe Sanctuary)
+# ---------------------------------------------------------------------------
+func _build_research_base() -> void:
+	var base := _research_base_script.new()
+	base.name = "ResearchBase"
+	base.position = PLAYER_SPAWN_POS
+	add_child(base)
+	_research_base_ref = base
+
+
+# ---------------------------------------------------------------------------
 # Oxygen Stations & Atmospheric Safe Zones
 # ---------------------------------------------------------------------------
 func _build_oxygen_stations() -> void:
@@ -304,15 +318,6 @@ func _build_oxygen_stations() -> void:
 	add_child(container)
 	
 	var station_specs: Array[Dictionary] = [
-		# 1. Base Camp Atmospheric Safe Zone Dome (At Player Spawn)
-		{
-			"pos": Vector2.ZERO,
-			"name": "BaseCampAtmosphericDome",
-			"display_name": "EVA Base Camp Atmospheric Dome",
-			"type": "safe_zone_dome",
-			"radius": 115.0,
-			"refill_rate": 35.0
-		},
 		# 2. North-East Research Outpost Life-Support Station
 		{
 			"pos": Vector2(360, -440),

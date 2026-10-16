@@ -799,6 +799,100 @@ theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_restart_btn")
 text = "REDEPLOY ASTRONAUT (RESTART)"
 
+[node name="TerminalModalOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="TerminalModalOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.04, 0.08, 0.8)
+
+[node name="CenterContainer" type="CenterContainer" parent="TerminalModalOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TerminalPanel" type="PanelContainer" parent="TerminalModalOverlay/CenterContainer"]
+custom_minimum_size = Vector2(500, 310)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_pause_panel")
+
+[node name="VBox" type="VBoxContainer" parent="TerminalModalOverlay/CenterContainer/TerminalPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TerminalHeader" type="Label" parent="TerminalModalOverlay/CenterContainer/TerminalPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "// BIO-HAB ALPHA // RESEARCH BASE TERMINAL //"
+horizontal_alignment = 1
+
+[node name="TerminalSubHeader" type="Label" parent="TerminalModalOverlay/CenterContainer/TerminalPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 11
+text = "STATION OPERATIONS & FACILITY TELEMETRY"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="TerminalModalOverlay/CenterContainer/TerminalPanel/VBox"]
+layout_mode = 2
+
+[node name="TerminalContentLabel" type="RichTextLabel" parent="TerminalModalOverlay/CenterContainer/TerminalPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "Terminal Ready."
+
+[node name="HBoxActions" type="HBoxContainer" parent="TerminalModalOverlay/CenterContainer/TerminalPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TerminalActionBtn1" type="Button" parent="TerminalModalOverlay/CenterContainer/TerminalPanel/VBox/HBoxActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(170, 30)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "DEPOSIT ALL CARGO"
+
+[node name="TerminalActionBtn2" type="Button" parent="TerminalModalOverlay/CenterContainer/TerminalPanel/VBox/HBoxActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 30)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "WITHDRAW O2"
+
+[node name="TerminalCloseBtn" type="Button" parent="TerminalModalOverlay/CenterContainer/TerminalPanel/VBox/HBoxActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 30)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "CLOSE (ESC)"
+
 [node name="DevNavigationMenu" parent="." instance=ExtResource("2_dev_menu")]
 unique_name_in_owner = true
 visible = false
