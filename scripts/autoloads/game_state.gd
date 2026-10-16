@@ -180,13 +180,16 @@ func set_oxygen_refilling(refilling: bool, rate: float = -1.0) -> void:
 func use_energy(amount: float) -> bool:
 	if amount <= 0.0:
 		return true
-	if energy < amount:
+	if energy <= 0.0:
 		energy_depleted.emit()
 		return false
 	
-	energy = maxf(0.0, energy - amount)
+	var actual_use: float = minf(energy, amount)
+	energy = maxf(0.0, energy - actual_use)
 	_energy_recharge_timer = energy_recharge_delay
 	energy_changed.emit(energy, max_energy)
+	if energy <= 0.0:
+		energy_depleted.emit()
 	return true
 
 

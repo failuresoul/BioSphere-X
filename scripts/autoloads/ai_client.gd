@@ -96,6 +96,20 @@ func request_boss_algorithms(callback: Callable = Callable()) -> void:
 	send_request("/api/ai/boss/algorithms", HTTPClient.METHOD_GET, {}, callback)
 
 
+func request_adaptive_difficulty(inputs: Dictionary, fixed_mode: String = "", callback: Callable = Callable()) -> void:
+	var body := {
+		"player_health": float(inputs.get("player_health", 100.0)),
+		"recent_damage": float(inputs.get("recent_damage", 0.0)),
+		"enemy_distance": float(inputs.get("enemy_distance", 200.0)),
+		"fixed_mode": (fixed_mode if not fixed_mode.is_empty() and fixed_mode != "adaptive" else null)
+	}
+	send_request("/api/ai/fuzzy/difficulty", HTTPClient.METHOD_POST, body, callback)
+
+
+func request_fuzzy_profiles(callback: Callable = Callable()) -> void:
+	send_request("/api/ai/fuzzy/profiles", HTTPClient.METHOD_GET, {}, callback)
+
+
 # ---------------------------------------------------------------------------
 # Core Asynchronous HTTP Request Pipeline
 # ---------------------------------------------------------------------------

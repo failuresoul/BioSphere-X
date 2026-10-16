@@ -34,6 +34,7 @@ enum AttackStyle {
 }
 
 const DamageDataScript := preload("res://scripts/components/damage_data.gd")
+const AdaptiveDifficultyManagerScript := preload("res://scripts/components/adaptive_difficulty_manager.gd")
 const _projectile_scene := preload("res://scenes/items/energy_projectile.tscn")
 const _collectable_scene := preload("res://scenes/items/collectable_resource.tscn")
 
@@ -84,6 +85,26 @@ var _is_applying_preset: bool = false
 @export var disappear_on_death: bool = true
 @export var corpse_linger_time: float = 2.0
 
+@export_group("Adaptive Difficulty")
+@export var enable_adaptive_difficulty: bool = true:
+	set(val):
+		enable_adaptive_difficulty = val
+		if not val and _difficulty_mgr:
+			apply_difficulty_multipliers({
+				"speed_multiplier": 1.0,
+				"attack_damage_multiplier": 1.0,
+				"attack_cooldown_multiplier": 1.0,
+				"detection_range_multiplier": 1.0
+			})
+@export var difficulty_mode: String = "adaptive":
+	set(val):
+		difficulty_mode = val
+		if _difficulty_mgr:
+			_difficulty_mgr.set("difficulty_mode", val)
+			if is_inside_tree() and _target_player:
+				_difficulty_mgr.call("evaluate_difficulty", self, _target_player, _on_difficulty_updated)
+@export var difficulty_poll_interval: float = 1.0
+
 @export_group("Determinism & Seeding")
 @export var use_custom_seed: bool = false:
 	set(val):
@@ -107,6 +128,14 @@ var _cooldown_timer: float = 0.0
 var _reaction_timer: float = 0.0
 var _is_reacting: bool = false
 var _target_player: Node2D = null
+
+# Adaptive Difficulty Management
+var _difficulty_mgr: RefCounted = null
+var _difficulty_timer: float = 0.0
+var _base_chase_speed: float = 160.0
+var _base_attack_damage: float = 15.0
+var _base_attack_cooldown: float = 1.2
+var _base_detection_range: float = 240.0
 
 # Navigation Path Execution State
 var _nav_path: PackedVector2Array = PackedVector2Array()
@@ -136,8 +165,15 @@ func _ready() -> void:
 	
 	_connect_health_signals()
 	
+	_base_chase_speed = chase_speed
+	_base_attack_damage = attack_damage
+	_base_attack_cooldown = attack_cooldown
+	_base_detection_range = detection_range
+	
 	if enemy_type != EnemyType.CUSTOM:
 		apply_enemy_preset(enemy_type)
+	
+	_init_adaptive_difficulty()
 
 
 func apply_enemy_preset(type: EnemyType) -> void:
@@ -224,6 +260,14 @@ func apply_enemy_preset(type: EnemyType) -> void:
 			_set_max_health(65.0)
 			_update_collision_radius(13.0)
 			_update_visual_type(2)
+	
+	_base_chase_speed = chase_speed
+	_base_attack_damage = attack_damage
+	_base_attack_cooldown = attack_cooldown
+	_base_detection_range = detection_range
+	
+	if _difficulty_mgr:
+		apply_difficulty_multipliers(_difficulty_mgr.get("current_parameters"))
 
 
 func _set_max_health(val: float) -> void:
@@ -294,6 +338,15 @@ func _physics_process(delta: float) -> void:
 	
 	# Locate / validate target player
 	_update_target_player()
+	
+	# Update adaptive difficulty parameters
+	if enable_adaptive_difficulty and _difficulty_mgr:
+		_difficulty_mgr.call("update", delta)
+		_difficulty_timer -= delta
+		if _difficulty_timer <= 0.0:
+			_difficulty_timer = difficulty_poll_interval
+			if _is_target_valid():
+				_difficulty_mgr.call("evaluate_difficulty", self, _target_player, _on_difficulty_updated)
 	
 	# Execute state machine behavior
 	match current_state:
@@ -443,6 +496,13 @@ func _process_investigate(delta: float) -> void:
 		change_state(State.CHASE)
 		return
 	
+	_investigate_timer -= delta
+	if _investigate_timer <= 0.0:
+		patrol_target = spawn_position
+		_idle_timer = _randf_range(1.0, 2.5)
+		change_state(State.PATROL)
+		return
+	
 	var to_last_known := last_known_player_pos - global_position
 	var dist := to_last_known.length()
 	
@@ -451,11 +511,6 @@ func _process_investigate(delta: float) -> void:
 		velocity = velocity.move_toward(target_vel, acceleration * delta)
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
-		_investigate_timer -= delta
-		if _investigate_timer <= 0.0:
-			patrol_target = spawn_position
-			_idle_timer = _randf_range(1.0, 2.5)
-			change_state(State.PATROL)
 
 
 func _process_attack(delta: float) -> void:
@@ -515,6 +570,8 @@ func _execute_attack_strike() -> void:
 					_target_player.get_node("HealthComponent").call("damage", attack_damage, self)
 				
 				enemy_attacked.emit(_target_player, attack_damage)
+				if _difficulty_mgr:
+					_difficulty_mgr.call("record_player_damage", attack_damage)
 				
 		AttackStyle.MELEE_SWIPE:
 			if dist <= attack_range * 1.4:
@@ -535,6 +592,8 @@ func _execute_attack_strike() -> void:
 					_target_player.get_node("HealthComponent").call("damage", attack_damage, self)
 				
 				enemy_attacked.emit(_target_player, attack_damage)
+				if _difficulty_mgr:
+					_difficulty_mgr.call("record_player_damage", attack_damage)
 
 
 func _spawn_ranged_projectile(shoot_dir: Vector2) -> void:
@@ -596,6 +655,8 @@ func has_line_of_sight_to(target_pos: Vector2) -> bool:
 
 
 func _can_detect_player() -> bool:
+	if not _is_target_valid():
+		_update_target_player()
 	if not _is_target_valid():
 		return false
 	var dist := global_position.distance_to(_target_player.global_position)
@@ -665,16 +726,18 @@ func get_target_player() -> Node2D:
 
 
 func _update_target_player() -> void:
-	if not is_instance_valid(_target_player) or not _target_player.is_inside_tree():
+	if not _is_target_valid():
 		var players := get_tree().get_nodes_in_group("player")
-		if not players.is_empty():
-			_target_player = players[0] as Node2D
-		else:
-			_target_player = null
+		for p in players:
+			if is_instance_valid(p) and p.is_inside_tree() and not p.is_queued_for_deletion():
+				if not ("is_dead" in p and p.get("is_dead")):
+					_target_player = p as Node2D
+					return
+		_target_player = null
 
 
 func _is_target_valid() -> bool:
-	if not is_instance_valid(_target_player) or not _target_player.is_inside_tree():
+	if not is_instance_valid(_target_player) or not _target_player.is_inside_tree() or _target_player.is_queued_for_deletion():
 		return false
 	if "is_dead" in _target_player and _target_player.get("is_dead"):
 		return false
@@ -769,10 +832,11 @@ func apply_damage(damage_data: RefCounted) -> bool:
 	if not damage_data or current_state == State.DEAD:
 		return false
 	var force: float = float(damage_data.get("knockback_force"))
+	var dir: Vector2 = damage_data.get("knockback_direction")
+	var result: bool = take_damage(float(damage_data.get("amount")), damage_data.get("source"))
 	if force > 0.0:
-		var dir: Vector2 = damage_data.get("knockback_direction")
 		velocity += dir * force
-	return take_damage(float(damage_data.get("amount")), damage_data.get("source"))
+	return result
 
 
 func take_damage(amount: float, source: Node = null) -> bool:
@@ -790,9 +854,7 @@ func take_damage(amount: float, source: Node = null) -> bool:
 		if current_state == State.IDLE or current_state == State.PATROL:
 			if source and source is Node2D:
 				last_known_player_pos = source.global_position
-				change_state(State.CHASE)
-			else:
-				change_state(State.INVESTIGATE)
+			change_state(State.CHASE)
 				
 	return result
 
@@ -828,3 +890,63 @@ func get_state_name() -> String:
 		State.ATTACK: return "ATTACK"
 		State.DEAD: return "DEAD"
 	return "UNKNOWN"
+
+
+# ---------------------------------------------------------------------------
+# Adaptive Difficulty API
+# ---------------------------------------------------------------------------
+func _init_adaptive_difficulty() -> void:
+	if not enable_adaptive_difficulty:
+		return
+	if not _difficulty_mgr and AdaptiveDifficultyManagerScript:
+		_difficulty_mgr = AdaptiveDifficultyManagerScript.new()
+		_difficulty_mgr.set("difficulty_mode", difficulty_mode)
+
+
+func _on_difficulty_updated(params: Dictionary) -> void:
+	apply_difficulty_multipliers(params)
+
+
+func apply_difficulty_multipliers(multipliers: Dictionary) -> void:
+	if multipliers == null or multipliers.is_empty():
+		return
+	var spd_mult: float = float(multipliers.get("speed_multiplier", 1.0))
+	var dmg_mult: float = float(multipliers.get("attack_damage_multiplier", 1.0))
+	var cd_mult: float = float(multipliers.get("attack_cooldown_multiplier", 1.0))
+	var det_mult: float = float(multipliers.get("detection_range_multiplier", 1.0))
+	
+	if _difficulty_mgr:
+		var curr: Dictionary = _difficulty_mgr.get("current_parameters")
+		curr["speed_multiplier"] = spd_mult
+		curr["attack_damage_multiplier"] = dmg_mult
+		curr["attack_cooldown_multiplier"] = cd_mult
+		curr["detection_range_multiplier"] = det_mult
+	
+	chase_speed = _base_chase_speed * spd_mult
+	attack_damage = _base_attack_damage * dmg_mult
+	attack_cooldown = _base_attack_cooldown * cd_mult
+	detection_range = _base_detection_range * det_mult
+
+
+func get_difficulty_manager() -> RefCounted:
+	return _difficulty_mgr
+
+
+func set_difficulty_mode(mode: String) -> void:
+	difficulty_mode = mode
+	if _difficulty_mgr:
+		_difficulty_mgr.set("difficulty_mode", mode)
+		if is_inside_tree() and _target_player:
+			_difficulty_mgr.call("evaluate_difficulty", self, _target_player, _on_difficulty_updated)
+
+
+func get_current_multipliers() -> Dictionary:
+	if _difficulty_mgr:
+		return _difficulty_mgr.get("current_parameters")
+	return {
+		"speed_multiplier": 1.0,
+		"attack_damage_multiplier": 1.0,
+		"attack_cooldown_multiplier": 1.0,
+		"detection_range_multiplier": 1.0
+	}
+

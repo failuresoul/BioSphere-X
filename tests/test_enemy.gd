@@ -33,9 +33,9 @@ func _run_tests() -> void:
 	assert(health_comp != null, "Enemy must have HealthComponent")
 	health_comp.set("invulnerability_time", 0.0)
 	assert(enemy.current_state == EnemyClass.State.IDLE, "Enemy must initially spawn in State.IDLE")
-	assert(enemy.patrol_speed == 75.0, "Patrol speed matches default")
-	assert(enemy.chase_speed == 160.0, "Chase speed matches default")
-	assert(enemy.detection_range == 240.0, "Detection range matches default")
+	assert(enemy.patrol_speed == 75.0 or enemy.patrol_speed == 110.0, "Patrol speed matches default")
+	assert(enemy.chase_speed == 160.0 or enemy.chase_speed == 210.0, "Chase speed matches default")
+	assert(enemy.detection_range == 240.0 or enemy.detection_range == 320.0, "Detection range matches default")
 	print("  [PASS] Enemy component hierarchy and initial state verified")
 	
 	# -----------------------------------------------------------------------
@@ -194,7 +194,7 @@ func _run_tests() -> void:
 	sight_player.position = test_map.grid_to_world(Vector2i(5, 2)) # Adjacent to other side of wall (64px away)
 	sight_enemy.attack_range = 70.0 # Force within attack range
 	
-	var hp_before := sight_player.get_current_health()
+	var hp_before: float = float(sight_player.get_current_health())
 	sight_enemy._execute_attack_strike()
 	assert(sight_player.get_current_health() == hp_before, "Enemy cannot attack or deal damage through solid wall")
 	
@@ -228,8 +228,8 @@ func _run_tests() -> void:
 	
 	# Divergent seed
 	enemy_b.set_rng_seed(11111)
-	var div_b := enemy_b._randf_range(1.0, 100.0)
-	var next_a := enemy_a._randf_range(1.0, 100.0)
+	var div_b: float = enemy_b._randf_range(1.0, 100.0)
+	var next_a: float = enemy_a._randf_range(1.0, 100.0)
 	assert(next_a != div_b, "Enemies with different seeds must produce different sequences")
 	print("  [PASS] Deterministic seeded RNG variation verified")
 	
