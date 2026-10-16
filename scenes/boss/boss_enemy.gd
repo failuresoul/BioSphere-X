@@ -34,6 +34,10 @@ const DamageDataScript := preload("res://scripts/components/damage_data.gd")
 const _projectile_scene := preload("res://scenes/items/energy_projectile.tscn")
 const _collectable_scene := preload("res://scenes/items/collectable_resource.tscn")
 const _boss_health_bar_script := preload("res://scenes/boss/boss_health_bar.gd")
+const BossDecisionModuleScript := preload("res://scenes/boss/decision/boss_decision_module.gd")
+const BossCombatStateScript := preload("res://scenes/boss/decision/boss_combat_state.gd")
+const BossAlphaBetaDecisionScript := preload("res://scenes/boss/decision/boss_alpha_beta_decision.gd")
+const BossActionAdapterScript := preload("res://scenes/boss/decision/boss_action_adapter.gd")
 
 @export_group("Boss Identity & Phases")
 @export var boss_name: String = "GOLIATH PRIME — EXOPLANET MATRIARCH"
@@ -75,13 +79,16 @@ const _boss_health_bar_script := preload("res://scenes/boss/boss_health_bar.gd")
 @export var recover_damage_vulnerability: float = 1.25 # 25% extra damage taken during recover
 
 @export_group("AI Decision-Making Engine")
+@export var decision_module_enabled: bool = true
+@export var in_engine_search_depth: int = 3
 @export var use_python_decision: bool = true
 @export var decision_algorithm: String = "alpha_beta" # "alpha_beta", "minimax", "mcts", "heuristic"
 @export var decision_poll_interval: float = 0.25 # Poll every 250ms during PURSUE
 @export var max_search_depth: int = 4
 @export var mcts_simulations: int = 150
 
-# AI Decision Tracking
+# In-Engine & Remote AI Decision Tracking
+var decision_module: RefCounted = null
 var _is_decision_pending: bool = false
 var _decision_poll_timer: float = 0.0
 var _last_received_action: String = ""
@@ -127,6 +134,7 @@ func _ready() -> void:
 	
 	_setup_health_component()
 	_setup_health_bar()
+	_init_decision_module()
 	
 	change_state(State.GUARD)
 
@@ -221,7 +229,33 @@ func _process_pursue(delta: float) -> void:
 	if current_state == State.ENRAGED_TRANSITION:
 		return
 	
-	# Dispatch asynchronous AI decision request if enabled
+	# 1. In-Engine Decision Module (Minimax Alpha-Beta via Safe Action Adapter)
+	if decision_module_enabled and decision_module:
+		_decision_poll_timer -= delta
+		if _decision_poll_timer <= 0.0:
+			_decision_poll_timer = decision_poll_interval
+			var ctx := _build_combat_context(dist)
+			var decision: Dictionary = decision_module.choose_action(ctx)
+			_last_received_action = String(decision.get("action", ""))
+			last_decision_stats = decision.get("statistics", {})
+			decision_received.emit(decision_module.get_module_name(), _last_received_action, last_decision_stats)
+		
+		# Apply through safe action adapter
+		var decision_dict := {"action": _last_received_action}
+		var applied: bool = BossActionAdapterScript.apply_decision(
+			self,
+			decision_dict,
+			dist,
+			delta,
+			to_player,
+			decision_module_enabled
+		)
+		if applied and current_state == State.ATTACK:
+			_last_received_action = ""
+			return
+		return
+	
+	# 2. Dispatch asynchronous AI decision request if enabled
 	if use_python_decision:
 		_process_ai_decision_pipeline(delta, dist)
 	
@@ -238,6 +272,54 @@ func _process_pursue(delta: float) -> void:
 	
 	# Move toward player (or tactical repositioning if suggested by AI)
 	_process_pursue_movement(delta, to_player, dist)
+
+
+func _init_decision_module() -> void:
+	if decision_module_enabled and not decision_module:
+		var ab = BossAlphaBetaDecisionScript.new()
+		ab.max_depth = in_engine_search_depth
+		decision_module = ab
+
+
+func set_decision_module(module: RefCounted) -> void:
+	decision_module = module
+
+
+func get_decision_module() -> RefCounted:
+	return decision_module
+
+
+func _build_combat_context(dist: float) -> Dictionary:
+	var cur_hp := 500.0
+	var mx_hp := 500.0
+	if health_component:
+		cur_hp = float(health_component.get("current_health"))
+		mx_hp = float(health_component.get("max_health"))
+	
+	var p_hp := 100.0
+	var p_energy := 100.0
+	if is_instance_valid(_target_player):
+		if "current_health" in _target_player:
+			p_hp = float(_target_player.get("current_health"))
+		if "energy" in _target_player:
+			p_energy = float(_target_player.get("energy"))
+			
+	return {
+		"turn": "boss",
+		"boss_hp": cur_hp,
+		"boss_max_hp": mx_hp,
+		"boss_phase": current_phase,
+		"slam_cooldown": _slam_cooldown_timer,
+		"barrage_cooldown": _barrage_cooldown_timer,
+		"charge_cooldown": _charge_cooldown_timer,
+		"is_recovering": current_state == State.RECOVER,
+		"recover_timer": _state_timer if current_state == State.RECOVER else 0.0,
+		"is_guarding": current_state == State.GUARD,
+		"player_hp": p_hp,
+		"player_max_hp": 100.0,
+		"player_energy": p_energy,
+		"distance": dist
+	}
 
 
 func _process_ai_decision_pipeline(delta: float, dist: float) -> void:

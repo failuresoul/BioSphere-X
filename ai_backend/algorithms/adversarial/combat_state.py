@@ -205,7 +205,7 @@ class CombatState:
                 self.player_hp -= dmg
             self.slam_cooldown = 3.5
             self.is_recovering = True
-            self.recover_timer = 1.0 if self.boss_phase == 1 else 0.6
+            self.recover_timer = 0.8 if self.boss_phase == 1 else 0.5
 
         elif action == ACTION_PLASMA_BARRAGE:
             dmg = 24.0 if self.boss_phase == 1 else 36.0
