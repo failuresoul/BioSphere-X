@@ -46,6 +46,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if get_tree().paused:
+		return
 	# Tick survive encounter objectives if active
 	var active = get_active_mission()
 	if active and active.get("objective_type") == MissionDataScript.ObjectiveType.SURVIVE_ENCOUNTER:
@@ -357,6 +359,80 @@ func get_active_mission_dict() -> Dictionary:
 
 func reset_campaign() -> void:
 	_setup_default_campaign()
+
+
+# ---------------------------------------------------------------------------
+# Save & Load Persistence Integration
+# ---------------------------------------------------------------------------
+func get_missions_save_data() -> Dictionary:
+	var m_states := {}
+	for mid in _missions:
+		var m: RefCounted = _missions[mid]
+		m_states[mid] = {
+			"state": int(m.get("state")),
+			"current_progress": float(m.get("current_progress")),
+			"fail_reason": str(m.get("fail_reason"))
+		}
+	return {
+		"active_mission_id": _active_mission_id,
+		"mission_order": _mission_order.duplicate(),
+		"missions": m_states
+	}
+
+
+func restore_missions_save_data(data: Dictionary) -> void:
+	var m_states: Dictionary = {}
+	if data.has("missions") and data["missions"] is Dictionary:
+		m_states = data["missions"]
+	else:
+		if data.has("active_mission_id"):
+			var act_id: String = str(data.get("active_mission_id"))
+			m_states[act_id] = {
+				"state": int(data.get("active_mission_state", 1)),
+				"current_progress": float(data.get("active_mission_progress", 0.0)),
+				"fail_reason": ""
+			}
+		if data.has("completed_mission_ids") and data["completed_mission_ids"] is Array:
+			for c_id in data["completed_mission_ids"]:
+				m_states[str(c_id)] = {
+					"state": int(MissionDataScript.MissionState.COMPLETED),
+					"current_progress": 1.0,
+					"fail_reason": ""
+				}
+
+	for mid in m_states:
+		if not _missions.has(mid):
+			# Dynamically register if missing
+			var placeholder = MissionDataScript.create(
+				mid, mid.capitalize(), "Restored mission objective",
+				MissionDataScript.ObjectiveType.COLLECT_OXYGEN, 1.0
+			)
+			register_mission(placeholder)
+			
+		var m: RefCounted = _missions[mid]
+		var st_dict: Dictionary = m_states[mid]
+		m.set("state", int(st_dict.get("state", 0)))
+		m.set("current_progress", float(st_dict.get("current_progress", 0.0)))
+		m.set("fail_reason", str(st_dict.get("fail_reason", "")))
+	
+	var new_active: String = str(data.get("active_mission_id", ""))
+	if _missions.has(new_active):
+		_active_mission_id = new_active
+		var active_m: RefCounted = _missions[_active_mission_id]
+		var gs := get_node_or_null("/root/GameState")
+		if gs:
+			gs.call("set_objective", "%s // %s" % [active_m.get("title"), active_m.get("description")])
+		mission_progress_updated.emit(active_m)
+
+
+func get_completed_mission_ids() -> Array[String]:
+	var completed: Array[String] = []
+	for mid in _mission_order:
+		if _missions.has(mid):
+			var m = _missions[mid]
+			if int(m.get("state")) == int(MissionDataScript.MissionState.COMPLETED):
+				completed.append(mid)
+	return completed
 
 
 func reset_missions() -> void:

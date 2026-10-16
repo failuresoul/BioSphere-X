@@ -753,6 +753,39 @@ theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "RESUME MISSION (ESC / P)"
 
+[node name="SaveGameButton" type="Button" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 0.6, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "💾 SAVE MISSION PROGRESS"
+
+[node name="PauseRestartButton" type="Button" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.25, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "↺ RESTART CAMPAIGN"
+
+[node name="ReturnMenuButton" type="Button" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "⌂ RETURN TO MAIN MENU"
+
+[node name="SaveFeedbackLabel" type="Label" parent="PauseOverlay/CenterContainer/PausePanel/VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 1, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+text = "✔ Mission state saved successfully!"
+horizontal_alignment = 1
+
 [node name="AudioPlayer" type="AudioStreamPlayer" parent="."]
 unique_name_in_owner = true
 
@@ -826,6 +859,14 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_restart_btn")
 text = "REDEPLOY ASTRONAUT (RESTART)"
+
+[node name="GameOverMenuButton" type="Button" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_restart_btn")
+text = "⌂ RETURN TO MAIN MENU"
 
 [node name="TerminalModalOverlay" type="Control" parent="."]
 unique_name_in_owner = true

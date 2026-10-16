@@ -677,3 +677,73 @@ func _deduct_resources(cost: Dictionary) -> bool:
 			if gs.has_signal("resource_changed"):
 				gs.resource_changed.emit(k, gs.resources[k])
 	return true
+
+
+# ---------------------------------------------------------------------------
+# Save & Load Persistence Integration
+# ---------------------------------------------------------------------------
+func get_placed_structures_save_data() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for entry in _placed_structures:
+		var pos: Vector2i = entry.get("position", Vector2i.ZERO)
+		list.append({
+			"id": str(entry.get("id")),
+			"instance_id": str(entry.get("instance_id")),
+			"grid_pos": [pos.x, pos.y]
+		})
+	return list
+
+
+func clear_all_structures() -> void:
+	for entry in _placed_structures:
+		var node = entry.get("node")
+		if is_instance_valid(node):
+			node.queue_free()
+	_placed_structures.clear()
+
+
+func restore_placed_structures(structures_data: Array) -> void:
+	clear_all_structures()
+	for item in structures_data:
+		if not (item is Dictionary):
+			continue
+		var s_id: String = ""
+		if item.has("structure_id") and _catalog.has(str(item["structure_id"])):
+			s_id = str(item["structure_id"])
+		elif item.has("id") and _catalog.has(str(item["id"])):
+			s_id = str(item["id"])
+		elif item.has("structure_id"):
+			s_id = str(item["structure_id"])
+		elif item.has("id"):
+			s_id = str(item["id"])
+			
+		# Compatibility aliases
+		if s_id == "area_light":
+			s_id = "light_tower"
+			
+		var g_pos := Vector2i.ZERO
+		if item.has("grid_pos") and item["grid_pos"] is Array:
+			var pos_arr: Array = item["grid_pos"]
+			if pos_arr.size() >= 2:
+				g_pos = Vector2i(int(pos_arr[0]), int(pos_arr[1]))
+		elif item.has("grid_x") and item.has("grid_y"):
+			g_pos = Vector2i(int(item["grid_x"]), int(item["grid_y"]))
+
+		var s_data: RefCounted = _catalog.get(s_id, null)
+		if s_data:
+			var node := _spawn_structure_instance(s_data, g_pos)
+			var entry := {
+				"id": s_id,
+				"instance_id": str(item.get("instance_id", item.get("id", "%s_%d" % [s_id, _placed_structures.size() + 1]))),
+				"name": str(s_data.get("name")),
+				"position": g_pos,
+				"size": Vector2i(int(s_data.get("width")), int(s_data.get("height"))),
+				"min_spacing": int(s_data.get("min_spacing")),
+				"node": node
+			}
+			_placed_structures.append(entry)
+			
+			if _map_data and _map_data.has_method("set_cell_blocked"):
+				for dy in int(s_data.get("height")):
+					for dx in int(s_data.get("width")):
+						_map_data.call("set_cell_blocked", Vector2i(g_pos.x + dx, g_pos.y + dy), true, 2)

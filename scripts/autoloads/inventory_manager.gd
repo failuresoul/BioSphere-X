@@ -334,3 +334,17 @@ func _sync_raw_resource_to_game_state(item_id: String, count: int) -> void:
 			gs.resources[item_id] = count
 			if gs.has_signal("resource_changed"):
 				gs.resource_changed.emit(item_id, count)
+
+
+# ---------------------------------------------------------------------------
+# Save & Load Persistence Integration
+# ---------------------------------------------------------------------------
+func restore_inventory_data(items_data: Dictionary, upgrades: Array = []) -> void:
+	_items.clear()
+	for k in items_data:
+		_items[str(k)] = int(items_data[k])
+		_sync_raw_resource_to_game_state(str(k), _items[str(k)])
+	_installed_upgrades.clear()
+	for u in upgrades:
+		_installed_upgrades.append(str(u))
+	inventory_changed.emit()

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://test_save_load_pause_scene"]
+
+[ext_resource type="Script" path="res://tests/test_save_load_pause.gd" id="1_test"]
+
+[node name="TestSaveLoadPause" type="Node"]
+script = ExtResource("1_test")

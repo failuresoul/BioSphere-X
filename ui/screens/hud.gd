@@ -19,9 +19,14 @@ extends CanvasLayer
 @onready var objective_label: Label = %ObjectiveLabel
 @onready var pause_overlay: Control = %PauseOverlay
 @onready var resume_button: Button = %ResumeButton
+@onready var save_game_button: Button = %SaveGameButton
+@onready var pause_restart_button: Button = %PauseRestartButton
+@onready var return_menu_button: Button = %ReturnMenuButton
+@onready var save_feedback_label: Label = %SaveFeedbackLabel
 
 @onready var game_over_overlay: Control = %GameOverOverlay
 @onready var restart_button: Button = %RestartButton
+@onready var game_over_menu_button: Button = %GameOverMenuButton
 @onready var damage_vignette: ColorRect = %DamageVignette
 @onready var audio_player: AudioStreamPlayer = %AudioPlayer
 
@@ -88,8 +93,16 @@ func _ready() -> void:
 	
 	if resume_button:
 		resume_button.pressed.connect(_on_resume_pressed)
+	if save_game_button:
+		save_game_button.pressed.connect(_on_save_game_pressed)
+	if pause_restart_button:
+		pause_restart_button.pressed.connect(_on_restart_pressed)
+	if return_menu_button:
+		return_menu_button.pressed.connect(_on_return_menu_pressed)
 	if restart_button:
 		restart_button.pressed.connect(_on_restart_pressed)
+	if game_over_menu_button:
+		game_over_menu_button.pressed.connect(_on_return_menu_pressed)
 	if terminal_close_btn:
 		terminal_close_btn.pressed.connect(close_terminal_modal)
 	if terminal_action_btn1:
@@ -432,14 +445,56 @@ func _on_resume_pressed() -> void:
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_method("set_paused"):
 		gs.call("set_paused", false)
+	else:
+		get_tree().paused = false
+		if pause_overlay:
+			pause_overlay.visible = false
+
+
+func _on_save_game_pressed() -> void:
+	var sm = get_node_or_null("/root/SaveManager")
+	if not sm:
+		if save_feedback_label:
+			save_feedback_label.text = "✕ SAVE SYSTEM UNAVAILABLE"
+			save_feedback_label.modulate = Color(1.0, 0.4, 0.4)
+			save_feedback_label.visible = true
+		return
+	
+	var ok: bool = sm.call("save_game")
+	if save_feedback_label:
+		if ok:
+			save_feedback_label.text = "✓ MISSION STATE SAVED AT %s" % Time.get_time_string_from_system()
+			save_feedback_label.modulate = Color(0.3, 1.0, 0.6)
+		else:
+			save_feedback_label.text = "✕ SAVE FAILED: %s" % sm.call("get_last_error")
+			save_feedback_label.modulate = Color(1.0, 0.4, 0.4)
+		save_feedback_label.visible = true
 
 
 func _on_restart_pressed() -> void:
+	if pause_overlay:
+		pause_overlay.visible = false
 	if game_over_overlay:
 		game_over_overlay.visible = false
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_method("restart_game"):
 		gs.call("restart_game")
+	else:
+		get_tree().paused = false
+	get_tree().reload_current_scene()
+
+
+func _on_return_menu_pressed() -> void:
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.has_method("set_paused"):
+		gs.call("set_paused", false)
+	else:
+		get_tree().paused = false
+	if pause_overlay:
+		pause_overlay.visible = false
+	if game_over_overlay:
+		game_over_overlay.visible = false
+	get_tree().change_scene_to_file("res://scenes/main/main.tscn")
 
 
 # ---------------------------------------------------------------------------

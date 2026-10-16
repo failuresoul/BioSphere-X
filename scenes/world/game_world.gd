@@ -51,6 +51,11 @@ func _ready() -> void:
 		
 	load_planet_level(initial_cfg)
 	
+	# Restore saved game state if continuing from save
+	var sm = get_node_or_null("/root/SaveManager")
+	if sm and sm.has_method("apply_pending_save_if_any"):
+		sm.call("apply_pending_save_if_any")
+	
 	# Navigation & Grid Debug Visualizer (only if not already added)
 	if not has_node("NavigationDebugVisualizer"):
 		var debug_viz := preload("res://scenes/world/navigation_debug_visualizer.gd").new()

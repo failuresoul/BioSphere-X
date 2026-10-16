@@ -1,45 +1,93 @@
-[gd_scene load_steps=5 format=3 uid="uid://main_menu_scene"]
+[gd_scene load_steps=8 format=3 uid="uid://main_menu_scene"]
 
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="1_main"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
-bg_color = Color(0.04, 0.05, 0.08, 1)
+bg_color = Color(0.03, 0.04, 0.07, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
-content_margin_left = 20.0
-content_margin_top = 20.0
-content_margin_right = 20.0
-content_margin_bottom = 20.0
-bg_color = Color(0.07, 0.09, 0.14, 0.95)
+content_margin_left = 28.0
+content_margin_top = 24.0
+content_margin_right = 28.0
+content_margin_bottom = 24.0
+bg_color = Color(0.06, 0.08, 0.13, 0.95)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.15, 0.5, 0.8, 0.5)
+border_color = Color(0.15, 0.55, 0.85, 0.5)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-shadow_color = Color(0, 0, 0, 0.5)
-shadow_size = 8
+shadow_color = Color(0, 0, 0, 0.6)
+shadow_size = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_highlight"]
-content_margin_left = 20.0
-content_margin_top = 20.0
-content_margin_right = 20.0
-content_margin_bottom = 20.0
-bg_color = Color(0.08, 0.12, 0.18, 0.95)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
+content_margin_left = 32.0
+content_margin_top = 28.0
+content_margin_right = 32.0
+content_margin_bottom = 28.0
+bg_color = Color(0.05, 0.07, 0.12, 0.98)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.1, 0.9, 0.7, 0.7)
+border_color = Color(0.2, 0.75, 1, 0.8)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-shadow_color = Color(0, 0, 0, 0.5)
-shadow_size = 8
+shadow_color = Color(0, 0, 0, 0.8)
+shadow_size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_primary"]
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+bg_color = Color(0.1, 0.5, 0.75, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.85, 1, 0.9)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_secondary"]
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+bg_color = Color(0.1, 0.14, 0.22, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.4, 0.6, 0.7)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_danger"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.45, 0.1, 0.15, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9, 0.25, 0.3, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -68,105 +116,261 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="CenterContainer"]
-custom_minimum_size = Vector2(800, 0)
+custom_minimum_size = Vector2(560, 0)
 layout_mode = 2
-theme_override_constants/separation = 28
+theme_override_constants/separation = 20
 
 [node name="HeaderBox" type="VBoxContainer" parent="CenterContainer/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Title" type="Label" parent="CenterContainer/VBox/HeaderBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.12, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 38
+theme_override_colors/font_color = Color(0.15, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 40
 text = "BIOSPHERE-X"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="CenterContainer/VBox/HeaderBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.8, 0.95, 0.85)
-theme_override_font_sizes/font_size = 14
-text = "EXOPLANET SURVIVAL & AUTONOMOUS AI SIMULATION"
+theme_override_font_sizes/font_size = 13
+text = "EXOPLANET SURVIVAL // AUTONOMOUS INFERENCE ENGINE"
 horizontal_alignment = 1
 
-[node name="CardsHBox" type="HBoxContainer" parent="CenterContainer/VBox"]
+[node name="MenuPanel" type="PanelContainer" parent="CenterContainer/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="SurvivalCard" type="PanelContainer" parent="CenterContainer/VBox/CardsHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="VBox" type="VBoxContainer" parent="CenterContainer/VBox/CardsHBox/SurvivalCard"]
+[node name="MenuButtonsVBox" type="VBoxContainer" parent="CenterContainer/VBox/MenuPanel"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="CardTitle" type="Label" parent="CenterContainer/VBox/CardsHBox/SurvivalCard/VBox"]
+[node name="ContinueContainer" type="VBoxContainer" parent="CenterContainer/VBox/MenuPanel/MenuButtonsVBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "SURVIVAL CAMPAIGN"
+theme_override_constants/separation = 4
 
-[node name="CardDesc" type="Label" parent="CenterContainer/VBox/CardsHBox/SurvivalCard/VBox"]
-custom_minimum_size = Vector2(0, 70)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 0.9)
-theme_override_font_sizes/font_size = 12
-text = "Take control of the stranded astronaut. Manage oxygen levels, harvest mineral crystals and titanium, fend off hostile wildlife, and repair the research outpost."
-autowrap_mode = 3
-
-[node name="SurvivalButton" type="Button" parent="CenterContainer/VBox/CardsHBox/SurvivalCard/VBox"]
+[node name="ContinueButton" type="Button" parent="CenterContainer/VBox/MenuPanel/MenuButtonsVBox/ContinueContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 38)
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "▶ Play Survival Mode"
-
-[node name="AIArenaCard" type="PanelContainer" parent="CenterContainer/VBox/CardsHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_card_highlight")
-
-[node name="VBox" type="VBoxContainer" parent="CenterContainer/VBox/CardsHBox/AIArenaCard"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="CardTitle" type="Label" parent="CenterContainer/VBox/CardsHBox/AIArenaCard/VBox"]
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 1, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "AI vs AI SIMULATION"
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_primary")
+text = "▶ CONTINUE EXPEDITION"
 
-[node name="CardDesc" type="Label" parent="CenterContainer/VBox/CardsHBox/AIArenaCard/VBox"]
-custom_minimum_size = Vector2(0, 70)
+[node name="ContinueMetaLabel" type="Label" parent="CenterContainer/VBox/MenuPanel/MenuButtonsVBox/ContinueContainer"]
+unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 0.9)
-theme_override_font_sizes/font_size = 12
-text = "Pit autonomous Agent A against Agent B. Compare A*, Greedy Best-First, BFS, DFS, and Bidirectional search across Pursuit & Combat and Race to Objective scenarios with CSV/JSON export."
-autowrap_mode = 3
+theme_override_colors/font_color = Color(0.6, 0.75, 0.85, 0.8)
+theme_override_font_sizes/font_size = 11
+text = "Checking local save data..."
+horizontal_alignment = 1
 
-[node name="AIArenaButton" type="Button" parent="CenterContainer/VBox/CardsHBox/AIArenaCard/VBox"]
+[node name="NewGameButton" type="Button" parent="CenterContainer/VBox/MenuPanel/MenuButtonsVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_secondary")
+text = "✦ NEW EXPEDITION"
+
+[node name="AIArenaButton" type="Button" parent="CenterContainer/VBox/MenuPanel/MenuButtonsVBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "⚙ Launch AI Simulation Arena"
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_secondary")
+text = "🤖 AI vs AI SIMULATION ARENA"
+
+[node name="SettingsButton" type="Button" parent="CenterContainer/VBox/MenuPanel/MenuButtonsVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_secondary")
+text = "⚙ SETTINGS & AUDIO"
+
+[node name="QuitButton" type="Button" parent="CenterContainer/VBox/MenuPanel/MenuButtonsVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.5, 0.5, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_secondary")
+text = "✕ QUIT TO DESKTOP"
 
 [node name="BackendStatusHBox" type="HBoxContainer" parent="CenterContainer/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="BackendStatusLabel" type="Label" parent="CenterContainer/VBox/BackendStatusHBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.7, 0.8, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 11
 text = "Checking Python AI Backend..."
 
 [node name="RefreshBackendButton" type="Button" parent="CenterContainer/VBox/BackendStatusHBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 text = "Check Status"
+
+[node name="SettingsModal" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="SettingsModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.06, 0.85)
+
+[node name="Center" type="CenterContainer" parent="SettingsModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="SettingsModal/Center"]
+custom_minimum_size = Vector2(460, 420)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
+
+[node name="VBox" type="VBoxContainer" parent="SettingsModal/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="Label" parent="SettingsModal/Center/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "// MISSION TELEMETRY // SYSTEM SETTINGS"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="SettingsModal/Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="MasterVolHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SettingsModal/Center/Panel/VBox/MasterVolHBox"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Master Volume"
+
+[node name="MasterVolSlider" type="HSlider" parent="SettingsModal/Center/Panel/VBox/MasterVolHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 1.0
+
+[node name="MasterVolVal" type="Label" parent="SettingsModal/Center/Panel/VBox/MasterVolHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(45, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "100%"
+horizontal_alignment = 2
+
+[node name="SFXVolHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SettingsModal/Center/Panel/VBox/SFXVolHBox"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "SFX Volume"
+
+[node name="SFXVolSlider" type="HSlider" parent="SettingsModal/Center/Panel/VBox/SFXVolHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.8
+
+[node name="SFXVolVal" type="Label" parent="SettingsModal/Center/Panel/VBox/SFXVolHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(45, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "80%"
+horizontal_alignment = 2
+
+[node name="FullscreenCheck" type="CheckBox" parent="SettingsModal/Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Fullscreen Display"
+
+[node name="ScreenShakeCheck" type="CheckBox" parent="SettingsModal/Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+button_pressed = true
+text = "Screen Shake & Atmospheric Feedback"
+
+[node name="CameraSmoothCheck" type="CheckBox" parent="SettingsModal/Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+button_pressed = true
+text = "Smooth Camera Tracking"
+
+[node name="HSeparator2" type="HSeparator" parent="SettingsModal/Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="SaveManagementHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="DeleteSaveBtn" type="Button" parent="SettingsModal/Center/Panel/VBox/SaveManagementHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 11
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_danger")
+text = "🗑 Reset / Delete Expedition Save Data"
+
+[node name="SettingsFeedbackLabel" type="Label" parent="SettingsModal/Center/Panel/VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 1, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="SettingsModal/Center/Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CloseSettingsBtn" type="Button" parent="SettingsModal/Center/Panel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_primary")
+text = "APPLY & CLOSE"
