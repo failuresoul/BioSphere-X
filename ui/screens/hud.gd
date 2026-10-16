@@ -81,6 +81,7 @@ func _ready() -> void:
 	_setup_procedural_audio()
 	_connect_game_state_signals()
 	_connect_mission_manager_signals()
+	_connect_rule_engine_signals()
 	_initialize_hud_values()
 	
 	if resume_button:
@@ -206,6 +207,55 @@ func _connect_game_state_signals() -> void:
 		gs.connect("interaction_prompt_changed", _on_interaction_prompt_changed)
 	if gs.has_signal("tutorial_step_changed") and not gs.is_connected("tutorial_step_changed", _on_tutorial_step_changed):
 		gs.connect("tutorial_step_changed", _on_tutorial_step_changed)
+
+
+func _connect_rule_engine_signals() -> void:
+	if Engine.has_singleton("GameRuleEngine") or has_node("/root/GameRuleEngine"):
+		var gre = get_node("/root/GameRuleEngine")
+		if gre.has_signal("warning_issued") and not gre.is_connected("warning_issued", _on_rule_warning_issued):
+			gre.warning_issued.connect(_on_rule_warning_issued)
+		if gre.has_signal("extraction_objective_unlocked") and not gre.is_connected("extraction_objective_unlocked", _on_extraction_objective_unlocked):
+			gre.extraction_objective_unlocked.connect(_on_extraction_objective_unlocked)
+		if gre.has_signal("return_terminal_state_changed") and not gre.is_connected("return_terminal_state_changed", _on_return_terminal_state_changed):
+			gre.return_terminal_state_changed.connect(_on_return_terminal_state_changed)
+
+
+func _on_rule_warning_issued(warning_type: String, message: String, priority: int) -> void:
+	if warning_type == "low_oxygen":
+		_low_o2_alert = true
+		_play_low_oxygen_sound()
+	elif warning_type in ["critical_hypoxia", "suffocation_breach"]:
+		_low_o2_alert = true
+		_play_low_oxygen_sound()
+	show_system_alert("⚠️ SYSTEM ALERT: " + warning_type.to_upper(), message, "PRIORITY %d WARNING" % priority, Color(1.0, 0.4, 0.3))
+
+
+func _on_extraction_objective_unlocked() -> void:
+	show_system_alert("✓ OBJECTIVE UNLOCKED", "Required sample quota gathered. Extraction authorized!", "EXPEDITION EXTRACTION", Color(0.2, 0.95, 0.5))
+
+
+func _on_return_terminal_state_changed(is_enabled: bool, reason: String) -> void:
+	if is_enabled:
+		show_system_alert("🚀 RETURN TERMINAL ONLINE", "Base return terminal energized. Airlock extraction portal ready.", "DIRECTIVE ACTIVE", Color(0.2, 0.85, 1.0))
+	else:
+		show_system_alert("🔒 RETURN TERMINAL LOCKED", reason, "SECURITY RESTRICTION", Color(1.0, 0.4, 0.35))
+
+
+func show_system_alert(title: String, description: String, subtext: String = "", alert_color: Color = Color(0.2, 0.9, 1.0)) -> void:
+	if not feedback_banner:
+		return
+	feedback_banner.visible = true
+	feedback_banner.modulate = Color.WHITE
+	_feedback_banner_timer = 4.0
+	
+	if feedback_title_label:
+		feedback_title_label.text = title
+		feedback_title_label.modulate = alert_color
+	if feedback_desc_label:
+		feedback_desc_label.text = description
+	if feedback_rewards_label:
+		feedback_rewards_label.text = subtext
+		feedback_rewards_label.modulate = alert_color
 
 
 func _initialize_hud_values() -> void:

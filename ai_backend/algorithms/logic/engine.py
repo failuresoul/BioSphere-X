@@ -399,7 +399,7 @@ class RuleInferenceEngine:
             conclusions={
                 "low_oxygen_warning": True
             },
-            actions=["flash_oxygen_hud"],
+            actions=["flash_oxygen_hud", "show_low_oxygen_warning"],
             explanation_template="Suit oxygen level is low at {oxygen_level:.1f}% (< 25%). Caution pulse displayed."
         ))
 
@@ -458,6 +458,39 @@ class RuleInferenceEngine:
             explanation_template="Apex threat Goliath Prime neutralized. Surface sector perimeter secured."
         ))
 
+        self.register_rule(Rule(
+            id="rule_sample_count_unlocks_extraction",
+            name="Sample Count Unlocks Extraction Objective",
+            description="When required scientific sample quota is collected, unlocks extraction objective.",
+            category="missions",
+            priority=115,
+            conditions=[
+                Condition(field="sample_count", operator=">=", value=3)
+            ],
+            conclusions={
+                "extraction_objective_unlocked": True
+            },
+            actions=["unlock_extraction_objective", "notify_extraction_unlocked"],
+            explanation_template="Required sample quota fulfilled ({sample_count} >= 3). Extraction objective unlocked."
+        ))
+
+        self.register_rule(Rule(
+            id="rule_boss_and_item_enables_return_terminal",
+            name="Apex Neutralization and Mission Artifact Enables Return Terminal",
+            description="When boss is defeated and mission item is collected, enables the base return terminal.",
+            category="extraction",
+            priority=130,
+            conditions=[
+                Condition(field="boss_defeated", operator="==", value=True),
+                Condition(field="mission_item_collected", operator="==", value=True)
+            ],
+            conclusions={
+                "return_terminal_enabled": True
+            },
+            actions=["enable_return_terminal", "illuminate_return_beacon"],
+            explanation_template="Apex boss defeated and mission artifact recovered. Base return terminal enabled."
+        ))
+
         # ===================================================================
         # 3. EXTRACTION ELIGIBILITY RULES
         # ===================================================================
@@ -473,11 +506,12 @@ class RuleInferenceEngine:
             ],
             conclusions={
                 "extraction_blocked": True,
-                "extraction_eligible": False
+                "extraction_eligible": False,
+                "return_terminal_enabled": False
             },
             actions=["warn_combat_lockdown"],
             explanation_template="Alien hostiles in aggressive pursuit. Airlock security lockdown active.",
-            overrides=["extraction_eligible"]
+            overrides=["extraction_eligible", "return_terminal_enabled"]
         ))
 
         self.register_rule(Rule(

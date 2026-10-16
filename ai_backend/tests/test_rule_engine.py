@@ -315,8 +315,52 @@ def test_biosphere_extraction_eligibility_and_lockdown():
     res_combat = engine.forward_chain(facts_combat)
     assert res_combat.all_facts.get("extraction_blocked") is True
     assert res_combat.all_facts.get("extraction_eligible") is False
+    assert res_combat.all_facts.get("return_terminal_enabled") is False
     assert "warn_combat_lockdown" in res_combat.applicable_actions
     assert "unlock_airlock_exit" not in res_combat.applicable_actions
+
+
+def test_prompt26_sample_count_unlocks_extraction():
+    """Prompt 26: if required sample count is reached, unlock extraction objective."""
+    engine = RuleInferenceEngine()
+
+    # Under quota
+    res_under = engine.forward_chain({"sample_count": 2})
+    assert res_under.derived_facts.get("extraction_objective_unlocked") is None
+
+    # Quota reached (>= 3)
+    res_met = engine.forward_chain({"sample_count": 3})
+    assert res_met.derived_facts.get("extraction_objective_unlocked") is True
+    assert "unlock_extraction_objective" in res_met.applicable_actions
+    assert "notify_extraction_unlocked" in res_met.applicable_actions
+
+
+def test_prompt26_boss_and_item_enables_return_terminal():
+    """Prompt 26: if boss is defeated and mission item is collected, enable return terminal."""
+    engine = RuleInferenceEngine()
+
+    # Case A: Boss defeated but mission item not yet collected
+    res_no_item = engine.forward_chain({"boss_defeated": True, "mission_item_collected": False})
+    assert res_no_item.derived_facts.get("return_terminal_enabled") is None
+
+    # Case B: Item collected but boss not defeated
+    res_no_boss = engine.forward_chain({"boss_defeated": False, "mission_item_collected": True})
+    assert res_no_boss.derived_facts.get("return_terminal_enabled") is None
+
+    # Case C: Both criteria satisfied -> return terminal enabled!
+    res_enabled = engine.forward_chain({"boss_defeated": True, "mission_item_collected": True})
+    assert res_enabled.derived_facts.get("return_terminal_enabled") is True
+    assert "enable_return_terminal" in res_enabled.applicable_actions
+    assert "illuminate_return_beacon" in res_enabled.applicable_actions
+
+    # Case D: Hostile lockdown overrides return terminal to False
+    res_lockdown = engine.forward_chain({
+        "boss_defeated": True,
+        "mission_item_collected": True,
+        "combat_threat_active": True,
+        "in_safe_zone": False
+    })
+    assert res_lockdown.all_facts.get("return_terminal_enabled") is False
 
 
 def test_biosphere_environmental_rules():

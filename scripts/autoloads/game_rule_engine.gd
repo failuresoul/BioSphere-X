@@ -17,6 +17,8 @@ signal action_approved(action_name: String, details: Dictionary)
 signal extraction_status_changed(is_eligible: bool, reason: String)
 signal mission_prerequisite_evaluated(prerequisite_key: String, satisfied: bool)
 signal environmental_modifier_applied(modifier_key: String, value: Variant)
+signal extraction_objective_unlocked()
+signal return_terminal_state_changed(is_enabled: bool, reason: String)
 
 # Current derived state
 var current_facts: Dictionary = {}
@@ -25,10 +27,20 @@ var applicable_actions: Array = []
 var active_explanations: Dictionary = {}
 var detected_contradictions: Array = []
 
-# Extraction state
+# Extraction & Return Terminal state
 var is_extraction_eligible: bool = false
 var is_extraction_blocked: bool = false
 var extraction_block_reason: String = ""
+var is_return_terminal_enabled: bool = false
+var return_terminal_status_reason: String = "Return terminal offline: Defeat apex boss and collect mission artifact."
+var is_extraction_objective_unlocked: bool = false
+
+# Contextual Facts
+var in_safe_zone: bool = false
+var near_airlock: bool = false
+var combat_threat_active: bool = false
+var mission_item_collected: bool = false
+var boss_defeated: bool = false
 
 # Local rules repository for offline forward chaining fallback
 var _local_rules: Array[Dictionary] = []
@@ -38,10 +50,6 @@ var _local_rules: Array[Dictionary] = []
 @export var evaluation_interval: float = 1.0
 var _eval_timer: float = 0.0
 
-# References / Context
-var in_safe_zone: bool = false
-var near_airlock: bool = false
-var combat_threat_active: bool = false
 
 
 func _ready() -> void:
@@ -75,22 +83,31 @@ func collect_gameplay_facts() -> Dictionary:
 		
 		# Resource counts
 		if "resources" in gs:
-			facts["biomass_samples_collected"] = int(gs.resources.get("biomass", 0))
-			facts["samples_carried"] = int(gs.resources.get("biomass", 0))
+			var b_count = int(gs.resources.get("biomass", 0))
+			facts["biomass_samples_collected"] = b_count
+			facts["sample_count"] = b_count
+			facts["samples_carried"] = b_count
 			facts["crystals_collected"] = int(gs.resources.get("crystals", 0))
 			facts["titanium_collected"] = int(gs.resources.get("titanium", 0))
+			if b_count >= 1:
+				facts["mission_item_collected"] = true
 
 	# 2. Contextual spatial facts
 	facts["in_safe_zone"] = in_safe_zone
 	facts["near_airlock"] = near_airlock
 	facts["combat_threat_active"] = combat_threat_active
+	facts["mission_item_collected"] = mission_item_collected or facts.get("mission_item_collected", false)
+	facts["boss_defeated"] = boss_defeated
 
 	# 3. Mission status from MissionManager (read-only observer)
 	if Engine.has_singleton("MissionManager") or has_node("/root/MissionManager"):
 		var mm = get_node("/root/MissionManager")
 		if mm.has_method("is_mission_completed"):
 			facts["mission_01_oxygen_completed"] = mm.is_mission_completed("mission_01_oxygen")
-			facts["boss_defeated"] = mm.is_mission_completed("mission_05_boss")
+			if mm.is_mission_completed("mission_05_boss"):
+				facts["boss_defeated"] = true
+			if mm.is_mission_completed("mission_02_samples"):
+				facts["mission_item_collected"] = true
 		if mm.has_method("get_active_mission"):
 			var active = mm.get_active_mission()
 			if active != null:
@@ -180,15 +197,28 @@ func _process_inference_result(result: Dictionary) -> void:
 		var reason = "Expedition criteria satisfied. Airlock exit authorized." if eligible else "Extraction requirements unmet."
 		extraction_status_changed.emit(eligible, reason)
 
-	# 2. Update Mission Prerequisites
+	# 2. Update Return Terminal & Extraction Objective Status
+	var terminal_enabled: bool = bool(current_facts.get("return_terminal_enabled", false))
+	if terminal_enabled != is_return_terminal_enabled:
+		is_return_terminal_enabled = terminal_enabled
+		var term_reason = "Return terminal online: Extraction beacon active." if terminal_enabled else "Return terminal locked."
+		return_terminal_status_reason = term_reason
+		return_terminal_state_changed.emit(terminal_enabled, term_reason)
+
+	var obj_unlocked: bool = bool(current_facts.get("extraction_objective_unlocked", false))
+	if obj_unlocked and not is_extraction_objective_unlocked:
+		is_extraction_objective_unlocked = true
+		extraction_objective_unlocked.emit()
+
+	# 3. Update Mission Prerequisites
 	for fact_key in derived_facts.keys():
 		if fact_key.ends_with("_eligible") or fact_key.ends_with("_unlocked") or fact_key.ends_with("_authorized"):
 			mission_prerequisite_evaluated.emit(fact_key, bool(derived_facts[fact_key]))
 
-	# 3. Apply Approved Actions
+	# 4. Apply Approved Actions
 	_apply_approved_actions(applicable_actions, active_explanations)
 
-	# 4. Emit completed signal
+	# 5. Emit completed signal
 	inference_completed.emit(result)
 
 
@@ -201,7 +231,7 @@ func _apply_approved_actions(actions: Array, explanations: Dictionary) -> void:
 		action_approved.emit(act_str, {"explanation": explanation_text})
 
 		match act_str:
-			"flash_oxygen_hud":
+			"show_low_oxygen_warning", "flash_oxygen_hud":
 				warning_issued.emit("low_oxygen", "Caution: Oxygen reserves low (< 25%).", 100)
 			"trigger_critical_audio_alarm":
 				warning_issued.emit("critical_hypoxia", "Emergency: Critical hypoxia (< 10%). Return to base immediately!", 120)
@@ -209,6 +239,13 @@ func _apply_approved_actions(actions: Array, explanations: Dictionary) -> void:
 				warning_issued.emit("suffocation_breach", "Fatal Breach: Oxygen depleted! Suffocation damage active!", 150)
 			"warn_combat_lockdown":
 				warning_issued.emit("combat_lockdown", "Security Lockdown: Cannot extract while hostile threat active!", 160)
+				return_terminal_state_changed.emit(false, "Security Lockdown: Cannot extract while hostile threat active!")
+			"unlock_extraction_objective", "notify_extraction_unlocked":
+				is_extraction_objective_unlocked = true
+				extraction_objective_unlocked.emit()
+			"enable_return_terminal", "illuminate_return_beacon":
+				is_return_terminal_enabled = true
+				return_terminal_state_changed.emit(true, "Return terminal online: Extraction authorized.")
 			"unlock_airlock_exit":
 				# Extraction portal unlocked
 				pass
@@ -553,6 +590,39 @@ func _initialize_default_rules() -> void:
 		"explanation_template": "Biomass samples gathered and terminal scanned. Apex boss tracking active."
 	})
 
+	# 6b. Required sample count reached unlocks extraction objective (priority 115)
+	register_local_rule({
+		"id": "rule_sample_count_unlocks_extraction",
+		"name": "Sample Count Unlocks Extraction Objective",
+		"category": "missions",
+		"priority": 115,
+		"conditions": [
+			{"field": "sample_count", "operator": ">=", "value": 3}
+		],
+		"conclusions": {
+			"extraction_objective_unlocked": true
+		},
+		"actions": ["unlock_extraction_objective", "notify_extraction_unlocked"],
+		"explanation_template": "Required sample quota fulfilled (>= 3). Extraction objective unlocked."
+	})
+
+	# 6c. Boss defeated + mission item collected enables return terminal (priority 130)
+	register_local_rule({
+		"id": "rule_boss_and_item_enables_return_terminal",
+		"name": "Apex Neutralization and Mission Artifact Enables Return Terminal",
+		"category": "extraction",
+		"priority": 130,
+		"conditions": [
+			{"field": "boss_defeated", "operator": "==", "value": true},
+			{"field": "mission_item_collected", "operator": "==", "value": true}
+		],
+		"conclusions": {
+			"return_terminal_enabled": true
+		},
+		"actions": ["enable_return_terminal", "illuminate_return_beacon"],
+		"explanation_template": "Apex boss defeated and mission artifact recovered. Base return terminal enabled."
+	})
+
 	# 7. Combat lockdown blocks extraction (priority 160)
 	register_local_rule({
 		"id": "rule_combat_lockdown_blocks_extraction",
@@ -565,11 +635,12 @@ func _initialize_default_rules() -> void:
 		],
 		"conclusions": {
 			"extraction_blocked": true,
-			"extraction_eligible": false
+			"extraction_eligible": false,
+			"return_terminal_enabled": false
 		},
 		"actions": ["warn_combat_lockdown"],
 		"explanation_template": "Alien hostiles in pursuit. Airlock security lockdown active.",
-		"overrides": ["extraction_eligible"]
+		"overrides": ["extraction_eligible", "return_terminal_enabled"]
 	})
 
 	# 8. Extraction criteria satisfied (priority 120)
