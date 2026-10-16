@@ -1,7 +1,8 @@
-[gd_scene load_steps=12 format=3 uid="uid://bsxhudscreen"]
+[gd_scene load_steps=13 format=3 uid="uid://bsxhudscreen"]
 
 [ext_resource type="Script" path="res://ui/screens/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://ui/components/dev_navigation_menu.tscn" id="2_dev_menu"]
+[ext_resource type="PackedScene" path="res://ui/components/inventory_crafting_dialog.tscn" id="3_inv_dialog"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 content_margin_left = 12.0
@@ -332,7 +333,7 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -306.0
+offset_left = -396.0
 offset_top = 16.0
 offset_right = -16.0
 offset_bottom = 114.0
@@ -356,6 +357,14 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 10
 text = "AI NAV [F1]"
+
+[node name="InventoryButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.25, 1)
+theme_override_font_sizes/font_size = 10
+text = "🎒 CRAFT [I]"
 
 [node name="TitleLabel" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
 layout_mode = 2
@@ -894,6 +903,10 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "CLOSE (ESC)"
 
 [node name="DevNavigationMenu" parent="." instance=ExtResource("2_dev_menu")]
+unique_name_in_owner = true
+visible = false
+
+[node name="InventoryCraftingDialog" parent="." instance=ExtResource("3_inv_dialog")]
 unique_name_in_owner = true
 visible = false
 
