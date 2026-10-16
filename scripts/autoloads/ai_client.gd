@@ -122,6 +122,30 @@ func request_placement_suggestions(suggestion_data: Dictionary, callback: Callab
 	send_request("/api/ai/csp/suggest-placements", HTTPClient.METHOD_POST, suggestion_data, callback)
 
 
+func request_rule_inference(facts: Dictionary, categories: Array = [], max_iterations: int = 50, callback: Callable = Callable()) -> void:
+	var body := {
+		"facts": facts,
+		"categories": (categories if not categories.is_empty() else null),
+		"max_iterations": max_iterations
+	}
+	send_request("/api/ai/logic/infer", HTTPClient.METHOD_POST, body, callback)
+
+
+func request_rule_catalog(category: String = "", callback: Callable = Callable()) -> void:
+	var endpoint := "/api/ai/logic/rules"
+	if not category.is_empty():
+		endpoint += "?category=" + category.uri_encode()
+	send_request(endpoint, HTTPClient.METHOD_GET, {}, callback)
+
+
+func request_rule_explanation(target: String, facts: Dictionary = {}, callback: Callable = Callable()) -> void:
+	var body := {
+		"target": target,
+		"facts": facts
+	}
+	send_request("/api/ai/logic/explain", HTTPClient.METHOD_POST, body, callback)
+
+
 
 # ---------------------------------------------------------------------------
 # Core Asynchronous HTTP Request Pipeline

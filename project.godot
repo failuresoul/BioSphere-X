@@ -27,6 +27,7 @@ InventoryManager="*res://scripts/autoloads/inventory_manager.gd"
 ConstructionManager="*res://scripts/autoloads/construction_manager.gd"
 ExoplanetDatabase="*res://scripts/autoloads/exoplanet_database.gd"
 PlanetProgressionManager="*res://scripts/autoloads/planet_progression_manager.gd"
+GameRuleEngine="*res://scripts/autoloads/game_rule_engine.gd"
 
 [display]
 
