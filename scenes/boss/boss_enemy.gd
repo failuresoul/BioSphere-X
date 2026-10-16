@@ -794,6 +794,10 @@ func _on_health_died() -> void:
 	
 	_spawn_colossal_defeat_rewards()
 	boss_defeated.emit()
+	
+	var mm := get_node_or_null("/root/MissionManager")
+	if mm:
+		mm.call("notify_event", "boss_defeated", {"boss_id": name, "boss": self})
 
 
 func _spawn_colossal_defeat_rewards() -> void:

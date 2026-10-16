@@ -146,6 +146,38 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mission_prog_bg"]
+bg_color = Color(0.08, 0.12, 0.18, 0.85)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mission_prog_fill"]
+bg_color = Color(0.18, 0.85, 0.95, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_feedback_panel"]
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+bg_color = Color(0.04, 0.10, 0.14, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.9, 0.7, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0.1, 0.8, 0.5, 0.3)
+shadow_size = 12
+
 [node name="HUD" type="CanvasLayer"]
 layer = 10
 script = ExtResource("1_hud")
@@ -498,10 +530,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -340.0
-offset_top = -60.0
-offset_right = 340.0
-offset_bottom = -16.0
+offset_left = -360.0
+offset_top = -84.0
+offset_right = 360.0
+offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -509,25 +541,119 @@ grow_vertical = 0
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_objective")
 
-[node name="HBox" type="HBoxContainer" parent="Root/BottomObjectiveMargin/ObjectivePanel"]
+[node name="VBox" type="VBoxContainer" parent="Root/BottomObjectiveMargin/ObjectivePanel"]
 layout_mode = 2
-theme_override_constants/separation = 10
-alignment = 1
+theme_override_constants/separation = 4
 
-[node name="Tag" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/HBox"]
+[node name="HeaderHBox" type="HBoxContainer" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.75, 0.15, 1)
-theme_override_font_sizes/font_size = 11
-text = "[OBJECTIVE]"
+theme_override_constants/separation = 8
 
-[node name="ObjectiveLabel" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/HBox"]
+[node name="MissionTitleTag" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "[MISSION: LIFE SUPPORT RECOVERY]"
+
+[node name="ObjectiveTypeBadge" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/HeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.15, 1)
+theme_override_font_sizes/font_size = 10
+text = "[COLLECT OXYGEN]"
+
+[node name="Spacer" type="Control" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/HeaderHBox"]
+layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
-theme_override_font_sizes/font_size = 12
-text = "SURVEY SURFACE // Gather 3 Energy Crystals from alien deposits."
+
+[node name="MissionStateBadge" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/HeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 10
+text = "[ACTIVE]"
+
+[node name="ObjectiveLabel" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "Atmosphere toxic. Recover 3 Oxygen Cells from fallen crates or canisters."
 text_overrun_behavior = 3
+
+[node name="ProgressHBox" type="HBoxContainer" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MissionProgressBar" type="ProgressBar" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/ProgressHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("StyleBoxFlat_mission_prog_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_mission_prog_fill")
+max_value = 1.0
+step = 0.0
+value = 0.0
+show_percentage = false
+
+[node name="MissionProgressLabel" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/ProgressHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "0 / 3 Cells (0%)"
+horizontal_alignment = 2
+
+[node name="FeedbackMargin" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
+offset_top = 92.0
+offset_right = 280.0
+offset_bottom = 172.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="MissionFeedbackBanner" type="PanelContainer" parent="Root/FeedbackMargin"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_feedback_panel")
+
+[node name="VBox" type="VBoxContainer" parent="Root/FeedbackMargin/MissionFeedbackBanner"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="FeedbackTitleLabel" type="Label" parent="Root/FeedbackMargin/MissionFeedbackBanner/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "✓ MISSION ACCOMPLISHED"
+horizontal_alignment = 1
+
+[node name="FeedbackDescLabel" type="Label" parent="Root/FeedbackMargin/MissionFeedbackBanner/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "LIFE SUPPORT RECOVERY // OBJECTIVE COMPLETED"
+horizontal_alignment = 1
+
+[node name="FeedbackRewardsLabel" type="Label" parent="Root/FeedbackMargin/MissionFeedbackBanner/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.25, 1)
+theme_override_font_sizes/font_size = 10
+text = "REWARDS: +100 Oxygen Refill, +1 Biomass"
+horizontal_alignment = 1
 
 [node name="PauseOverlay" type="Control" parent="."]
 unique_name_in_owner = true

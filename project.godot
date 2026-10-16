@@ -22,6 +22,7 @@ AIClient="*res://scripts/autoloads/ai_client.gd"
 GameState="*res://scripts/autoloads/game_state.gd"
 NavigationManager="*res://scripts/autoloads/navigation_manager.gd"
 DifficultyController="*res://scripts/autoloads/difficulty_controller.gd"
+MissionManager="*res://scripts/autoloads/mission_manager.gd"
 
 [display]
 

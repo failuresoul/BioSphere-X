@@ -38,6 +38,18 @@ extends CanvasLayer
 @onready var dev_nav_button: Button = %DevNavButton
 @onready var dev_nav_menu: PanelContainer = %DevNavigationMenu
 
+# Mission Telemetry & Feedback UI
+@onready var mission_title_tag: Label = %MissionTitleTag
+@onready var objective_type_badge: Label = %ObjectiveTypeBadge
+@onready var mission_state_badge: Label = %MissionStateBadge
+@onready var mission_progress_bar: ProgressBar = %MissionProgressBar
+@onready var mission_progress_label: Label = %MissionProgressLabel
+
+@onready var feedback_banner: PanelContainer = %MissionFeedbackBanner
+@onready var feedback_title_label: Label = %FeedbackTitleLabel
+@onready var feedback_desc_label: Label = %FeedbackDescLabel
+@onready var feedback_rewards_label: Label = %FeedbackRewardsLabel
+
 # Warning & Feedback State
 var _low_hp_alert: bool = false
 var _low_o2_alert: bool = false
@@ -45,12 +57,14 @@ var _is_refilling_o2: bool = false
 var _pulse_timer: float = 0.0
 var _damage_flash_alpha: float = 0.0
 var _last_health: float = 100.0
+var _feedback_banner_timer: float = 0.0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_procedural_audio()
 	_connect_game_state_signals()
+	_connect_mission_manager_signals()
 	_initialize_hud_values()
 	
 	if resume_button:
@@ -114,6 +128,17 @@ func _process(delta: float) -> void:
 			oxygen_status_label.modulate = Color(1.0, 0.35 + p * 0.35, 0.35 + p * 0.35)
 		else:
 			oxygen_status_label.visible = false
+	
+	# Animate Mission Feedback Banner
+	if _feedback_banner_timer > 0.0:
+		_feedback_banner_timer = maxf(0.0, _feedback_banner_timer - delta)
+		if feedback_banner:
+			if _feedback_banner_timer < 0.5:
+				feedback_banner.modulate.a = _feedback_banner_timer / 0.5
+			else:
+				feedback_banner.modulate.a = 1.0
+			if _feedback_banner_timer <= 0.0:
+				feedback_banner.visible = false
 
 
 func _connect_game_state_signals() -> void:
@@ -318,3 +343,183 @@ func _on_restart_pressed() -> void:
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_method("restart_game"):
 		gs.call("restart_game")
+
+
+# ---------------------------------------------------------------------------
+# Mission Manager Integration & HUD Telemetry
+# ---------------------------------------------------------------------------
+func _connect_mission_manager_signals() -> void:
+	var mm := get_node_or_null("/root/MissionManager")
+	if not mm:
+		return
+	
+	if mm.has_signal("mission_started") and not mm.is_connected("mission_started", _on_mission_started):
+		mm.connect("mission_started", _on_mission_started)
+	if mm.has_signal("mission_progress_updated") and not mm.is_connected("mission_progress_updated", _on_mission_progress_updated):
+		mm.connect("mission_progress_updated", _on_mission_progress_updated)
+	if mm.has_signal("mission_completed") and not mm.is_connected("mission_completed", _on_mission_completed):
+		mm.connect("mission_completed", _on_mission_completed)
+	if mm.has_signal("mission_failed") and not mm.is_connected("mission_failed", _on_mission_failed):
+		mm.connect("mission_failed", _on_mission_failed)
+	if mm.has_signal("campaign_completed") and not mm.is_connected("campaign_completed", _on_campaign_completed):
+		mm.connect("campaign_completed", _on_campaign_completed)
+	
+	var active = mm.call("get_active_mission")
+	if active:
+		_update_mission_display(active)
+
+
+func _on_mission_started(mission: RefCounted) -> void:
+	_update_mission_display(mission)
+
+
+func _on_mission_progress_updated(mission: RefCounted) -> void:
+	_update_mission_display(mission)
+
+
+func _on_mission_completed(mission: RefCounted, rewards: Dictionary) -> void:
+	_update_mission_display(mission)
+	show_mission_success(mission, rewards)
+
+
+func _on_mission_failed(mission: RefCounted, reason: String) -> void:
+	_update_mission_display(mission)
+	show_mission_failure(mission, reason)
+
+
+func _on_campaign_completed() -> void:
+	if feedback_banner:
+		feedback_banner.visible = true
+		feedback_banner.modulate = Color.WHITE
+		_feedback_banner_timer = 8.0
+	if feedback_title_label:
+		feedback_title_label.text = "★ EXPEDITION CAMPAIGN ACCOMPLISHED ★"
+		feedback_title_label.modulate = Color(0.2, 1.0, 0.8)
+	if feedback_desc_label:
+		feedback_desc_label.text = "ALL BIOSPHERE-X SURFACE DIRECTIVES COMPLETE"
+	if feedback_rewards_label:
+		feedback_rewards_label.text = "EXPEDITION RATING: EXEMPLAR // TELEMETRY SECURED"
+	_play_mission_success_sound()
+
+
+func _update_mission_display(mission: RefCounted) -> void:
+	if not mission:
+		return
+	
+	if mission_title_tag:
+		mission_title_tag.text = "[MISSION: %s]" % str(mission.get("title"))
+		
+	if objective_type_badge:
+		var obj_type: int = int(mission.get("objective_type"))
+		match obj_type:
+			0: objective_type_badge.text = "[COLLECT OXYGEN]"
+			1: objective_type_badge.text = "[RETRIEVE SAMPLES]"
+			2: objective_type_badge.text = "[ACTIVATE TERMINAL]"
+			3: objective_type_badge.text = "[SURVIVE ENCOUNTER]"
+			4: objective_type_badge.text = "[DEFEAT BOSS]"
+			5: objective_type_badge.text = "[RETURN TO BASE]"
+			_: objective_type_badge.text = "[OBJECTIVE]"
+			
+	if mission_state_badge:
+		var st: int = int(mission.get("state"))
+		match st:
+			0:
+				mission_state_badge.text = "[LOCKED]"
+				mission_state_badge.modulate = Color(0.6, 0.6, 0.6)
+			1:
+				mission_state_badge.text = "[ACTIVE]"
+				mission_state_badge.modulate = Color(0.2, 0.9, 0.5)
+			2:
+				mission_state_badge.text = "[COMPLETED]"
+				mission_state_badge.modulate = Color(0.2, 0.85, 1.0)
+			3:
+				mission_state_badge.text = "[FAILED]"
+				mission_state_badge.modulate = Color(1.0, 0.3, 0.3)
+	
+	if objective_label:
+		objective_label.text = str(mission.get("description"))
+		
+	var ratio: float = float(mission.call("get_progress_ratio")) if mission.has_method("get_progress_ratio") else 0.0
+	if mission_progress_bar:
+		mission_progress_bar.step = 0.0
+		mission_progress_bar.max_value = 1.0
+		mission_progress_bar.value = ratio
+		
+	if mission_progress_label:
+		if mission.has_method("get_progress_text"):
+			mission_progress_label.text = str(mission.call("get_progress_text"))
+		else:
+			mission_progress_label.text = "%.0f%%" % (ratio * 100.0)
+
+
+func show_mission_success(mission: RefCounted, rewards: Dictionary) -> void:
+	if not feedback_banner:
+		return
+	feedback_banner.visible = true
+	feedback_banner.modulate = Color.WHITE
+	_feedback_banner_timer = 4.0
+	
+	if feedback_title_label:
+		feedback_title_label.text = "✓ MISSION ACCOMPLISHED"
+		feedback_title_label.modulate = Color(0.2, 1.0, 0.6)
+	if feedback_desc_label:
+		feedback_desc_label.text = "%s // OBJECTIVE COMPLETED" % str(mission.get("title"))
+	if feedback_rewards_label:
+		var rew_parts := []
+		for k in rewards:
+			rew_parts.append("+%s %s" % [str(rewards[k]), str(k).replace("_", " ").capitalize()])
+		feedback_rewards_label.text = "REWARDS: " + (", ".join(rew_parts) if not rew_parts.is_empty() else "Telemetry Registered")
+		feedback_rewards_label.modulate = Color(0.95, 0.8, 0.25)
+	
+	_play_mission_success_sound()
+
+
+func show_mission_failure(mission: RefCounted, reason: String) -> void:
+	if not feedback_banner:
+		return
+	feedback_banner.visible = true
+	feedback_banner.modulate = Color.WHITE
+	_feedback_banner_timer = 5.0
+	
+	if feedback_title_label:
+		feedback_title_label.text = "✕ MISSION FAILED"
+		feedback_title_label.modulate = Color(1.0, 0.3, 0.35)
+	if feedback_desc_label:
+		feedback_desc_label.text = "%s // CRITERIA VIOLATED" % str(mission.get("title"))
+	if feedback_rewards_label:
+		feedback_rewards_label.text = "CAUSE: %s" % reason
+		feedback_rewards_label.modulate = Color(1.0, 0.65, 0.65)
+		
+	_play_mission_fail_sound()
+
+
+func _play_mission_success_sound() -> void:
+	if not audio_player or not audio_player.stream is AudioStreamGenerator:
+		return
+	if not audio_player.playing:
+		audio_player.play()
+	var pb = audio_player.get_stream_playback()
+	if pb:
+		var frames: int = pb.get_frames_available()
+		var n := mini(frames, 700)
+		for i in n:
+			var freq := 0.25 if i < 230 else (0.33 if i < 460 else 0.44)
+			var env := 1.0 - (float(i) / float(n))
+			var s := sin(float(i) * freq) * 0.20 * env
+			pb.push_frame(Vector2(s, s))
+
+
+func _play_mission_fail_sound() -> void:
+	if not audio_player or not audio_player.stream is AudioStreamGenerator:
+		return
+	if not audio_player.playing:
+		audio_player.play()
+	var pb = audio_player.get_stream_playback()
+	if pb:
+		var frames: int = pb.get_frames_available()
+		var n := mini(frames, 700)
+		for i in n:
+			var freq := 0.32 - (float(i) / float(n)) * 0.16
+			var env := 1.0 - (float(i) / float(n))
+			var s := sin(float(i) * freq) * 0.22 * env
+			pb.push_frame(Vector2(s, s))

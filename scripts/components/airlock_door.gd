@@ -76,6 +76,11 @@ func can_interact(_user: Node2D = null) -> bool:
 func interact(_user: Node2D = null) -> bool:
 	is_open = not is_open
 	door_toggled.emit(is_open)
+	
+	var mm := get_node_or_null("/root/MissionManager")
+	if mm:
+		mm.call("notify_event", "base_reached", {"target_zone": "habitat_airlock", "door": self, "is_open": is_open})
+		
 	return true
 
 

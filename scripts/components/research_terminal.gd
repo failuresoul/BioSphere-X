@@ -69,6 +69,11 @@ func interact(user: Node2D = null) -> bool:
 			gs.call("set_objective", "RESEARCH OUTPOST ACCESSED // Telemetry decoded. Planet BioSphere-X surveyed.")
 	
 	terminal_scanned.emit(user)
+	
+	var mm := get_node_or_null("/root/MissionManager")
+	if mm:
+		mm.call("notify_event", "terminal_activated", {"terminal_id": terminal_name, "terminal": self})
+	
 	return true
 
 

@@ -877,6 +877,10 @@ func _on_health_died() -> void:
 	
 	enemy_died.emit(self)
 	
+	var mm := get_node_or_null("/root/MissionManager")
+	if mm:
+		mm.call("notify_event", "enemy_defeated", {"enemy_type": enemy_type, "enemy": self})
+	
 	if disappear_on_death:
 		_cleanup_corpse()
 
