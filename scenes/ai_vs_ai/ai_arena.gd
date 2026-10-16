@@ -128,7 +128,17 @@ func _ready() -> void:
 	if nav_mgr and nav_mgr.has_method("set_map_data"):
 		nav_mgr.call("set_map_data", map_data)
 
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_ambient"):
+		audio.call("play_ambient", "space_ambient")
+
 	reset_match()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE):
+		toggle_pause()
+		get_viewport().set_input_as_handled()
 
 
 func _setup_map_data() -> void:
@@ -396,6 +406,10 @@ func start_match() -> void:
 	if results_panel:
 		results_panel.visible = false
 
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "ui_click")
+
 	match_started.emit()
 
 
@@ -411,6 +425,10 @@ func pause_match() -> void:
 	if pause_button:
 		pause_button.text = "Resume"
 
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "ui_click")
+
 	match_paused.emit(true)
 
 
@@ -425,6 +443,10 @@ func resume_match() -> void:
 		match_status_label.modulate = Color(0.2, 1.0, 0.4)
 	if pause_button:
 		pause_button.text = "Pause"
+
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "ui_click")
 
 	match_paused.emit(false)
 
@@ -555,6 +577,9 @@ func _terminate_match(outcome_str: String) -> void:
 		results_panel.visible = true
 
 	match_finished.emit(match_results)
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "mission_complete")
 	print("BioSphere-X AI vs AI Match Completed: ", match_results)
 
 

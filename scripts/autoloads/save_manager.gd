@@ -149,8 +149,7 @@ func save_game(path: String = DEFAULT_SAVE_PATH) -> bool:
 	var items_payload: Dictionary = inv.call("get_all_items") if inv and inv.has_method("get_all_items") else {}
 	if gs and "resources" in gs:
 		for rk in gs.resources:
-			if not items_payload.has(rk) or items_payload[rk] == 0:
-				items_payload[rk] = int(gs.resources[rk])
+			items_payload[rk] = int(gs.resources[rk])
 		
 	var save_data: Dictionary = {
 		"format_tag": SAVE_FORMAT_TAG,

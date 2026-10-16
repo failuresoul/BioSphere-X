@@ -1,6 +1,7 @@
 class_name AutonomousAgent
 extends CharacterBody2D
-## Autonomous AI Agent for BioSphere-X AI vs AI Simulation.
+
+const FloatingCombatTextScript := preload("res://scripts/components/floating_combat_text.gd")
 ## Operates without human input, executing pathfinding through the Python AI backend,
 ## avoiding obstacles, pursuing opponents or objectives, and engaging in decoupled combat.
 
@@ -322,6 +323,9 @@ func _try_fire_weapon(fire_dir: Vector2) -> void:
 	if weapon_component.can_attack():
 		_recoil_offset = -fire_dir * 4.0
 		weapon_component.attack(fire_dir, global_position, self)
+		var audio = get_node_or_null("/root/AudioManager")
+		if audio and audio.has_method("play_sfx"):
+			audio.call("play_sfx", "laser_fire", randf_range(0.95, 1.05))
 
 
 func _on_weapon_fired(proj: Node2D, _dir: Vector2) -> void:
@@ -379,6 +383,10 @@ func take_damage(amount: float, source: Node = null) -> bool:
 		damage_taken += amount
 		_hit_flash_timer = 1.0
 		agent_damaged.emit(self, amount, health_component.current_health)
+		FloatingCombatTextScript.spawn(self, global_position, "-%d" % int(amount), Color(1.0, 0.4, 0.4))
+		var audio = get_node_or_null("/root/AudioManager")
+		if audio and audio.has_method("play_sfx"):
+			audio.call("play_sfx", "laser_hit", randf_range(0.95, 1.1))
 
 	return res
 
@@ -406,6 +414,9 @@ func _on_health_depleted() -> void:
 		collision_shape.set_deferred("disabled", true)
 
 	agent_died.emit(self)
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "enemy_death", randf_range(0.9, 1.05))
 
 
 func get_metrics() -> Dictionary:

@@ -42,6 +42,9 @@ func _on_body_entered(body: Node2D) -> void:
 		is_active = false
 		winner_agent = body
 		objective_reached.emit(body)
+		var audio = get_node_or_null("/root/AudioManager")
+		if audio and audio.has_method("play_sfx"):
+			audio.call("play_sfx", "mission_complete")
 		queue_redraw()
 
 

@@ -30,6 +30,7 @@ func _ready() -> void:
 	print("==================================================")
 	print("  ALL AI vs AI TESTS COMPLETED SUCCESSFULLY! [8/8]")
 	print("==================================================")
+	get_tree().quit(0)
 
 
 func test_agent_initialization() -> void:
