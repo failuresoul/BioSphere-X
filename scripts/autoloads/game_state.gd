@@ -54,6 +54,7 @@ var current_objective: String = "SURVEY SURFACE // Gather 3 Energy Crystals from
 # State Flags
 var is_paused: bool = false
 var is_game_over: bool = false
+var failure_count: int = 0
 
 
 func _ready() -> void:
@@ -274,10 +275,23 @@ func trigger_game_over() -> void:
 	if is_game_over:
 		return
 	is_game_over = true
+	failure_count += 1
 	is_paused = false
 	get_tree().paused = false
-	print("BioSphere-X: Game Over — Astronaut eliminated.")
+	print("BioSphere-X: Game Over — Astronaut eliminated. Total failures: %d" % failure_count)
 	game_over_triggered.emit()
+
+
+func get_failure_count() -> int:
+	return failure_count
+
+
+func record_failure() -> void:
+	failure_count += 1
+
+
+func reset_failure_count() -> void:
+	failure_count = 0
 
 
 func restart_game() -> void:

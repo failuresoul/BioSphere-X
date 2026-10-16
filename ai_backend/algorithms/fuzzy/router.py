@@ -19,6 +19,7 @@ class FuzzyDifficultyRequest(BaseModel):
     player_health: float = Field(default=100.0, ge=0.0, le=100.0, description="Current player health (0-100)")
     recent_damage: float = Field(default=0.0, ge=0.0, le=100.0, description="Recent damage sustained by player (0-100)")
     enemy_distance: float = Field(default=200.0, ge=0.0, le=1000.0, description="Distance from player in pixels (0-1000)")
+    repeated_failures: float = Field(default=0.0, ge=0.0, le=20.0, description="Number of player deaths / failed attempts (0-20)")
     fixed_mode: Optional[str] = Field(default=None, description="Optional fixed mode: 'easy', 'normal', 'hard', 'nightmare'")
 
 
@@ -70,7 +71,7 @@ def get_fuzzy_system_metadata():
 @router.post("/difficulty", response_model=FuzzyDifficultyResponse)
 def evaluate_adaptive_difficulty(req: FuzzyDifficultyRequest):
     """
-    Receives player combat metrics (health, recent damage, distance) and infers
+    Receives player combat metrics (health, recent damage, distance, repeated failures) and infers
     a bounded difficulty and enemy aggression value using Mamdani fuzzy logic and centroid defuzzification.
     """
     try:
@@ -78,6 +79,7 @@ def evaluate_adaptive_difficulty(req: FuzzyDifficultyRequest):
             player_health=req.player_health,
             recent_damage=req.recent_damage,
             enemy_distance=req.enemy_distance,
+            repeated_failures=req.repeated_failures,
             fixed_mode=req.fixed_mode
         )
         return FuzzyDifficultyResponse(**res)

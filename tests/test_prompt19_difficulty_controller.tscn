@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bsxtestprompt19diffcontroller"]
+
+[ext_resource type="Script" path="res://tests/test_prompt19_difficulty_controller.gd" id="1_test"]
+
+[node name="TestPrompt19DifficultyController" type="Node2D"]
+script = ExtResource("1_test")

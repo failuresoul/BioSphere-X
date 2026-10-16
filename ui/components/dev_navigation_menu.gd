@@ -17,6 +17,8 @@ const ModularPathfinderScript := preload("res://scripts/utils/modular_pathfinder
 @onready var test_query_button: Button = %TestQueryButton
 @onready var close_button: Button = %CloseButton
 @onready var launch_ai_arena_button: Button = %LaunchAIArenaButton
+@onready var difficulty_dropdown: OptionButton = %DifficultyDropdown
+@onready var difficulty_telemetry: Label = %DifficultyTelemetry
 
 @onready var status_badge: Label = %StatusBadge
 @onready var error_banner: Label = %ErrorBanner
@@ -46,6 +48,24 @@ const ALGO_LABELS: Array[String] = [
 	"Greedy Best-First Search"
 ]
 
+const DIFF_KEYS: Array[String] = [
+	"adaptive_fuzzy",
+	"adaptive_simple",
+	"easy",
+	"normal",
+	"hard",
+	"nightmare"
+]
+
+const DIFF_LABELS: Array[String] = [
+	"Adaptive: Fuzzy Inference System (Mamdani)",
+	"Adaptive: Simple Step Rules",
+	"Fixed: Easy (0.35 Aggression)",
+	"Fixed: Normal (0.60 Aggression)",
+	"Fixed: Hard (0.85 Aggression)",
+	"Fixed: Nightmare (1.00 Aggression)"
+]
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -71,11 +91,25 @@ func toggle_visibility() -> void:
 
 
 func _populate_dropdown() -> void:
-	if not algo_dropdown:
-		return
-	algo_dropdown.clear()
-	for i in range(ALGO_LABELS.size()):
-		algo_dropdown.add_item(ALGO_LABELS[i], i)
+	if algo_dropdown:
+		algo_dropdown.clear()
+		for i in range(ALGO_LABELS.size()):
+			algo_dropdown.add_item(ALGO_LABELS[i], i)
+	
+	if difficulty_dropdown:
+		difficulty_dropdown.clear()
+		for i in range(DIFF_LABELS.size()):
+			difficulty_dropdown.add_item(DIFF_LABELS[i], i)
+		var dc = get_node_or_null("/root/DifficultyController")
+		if dc:
+			var cur_mode: String = dc.get("difficulty_mode")
+			var idx = DIFF_KEYS.find(cur_mode)
+			if idx >= 0:
+				difficulty_dropdown.selected = idx
+			var params: Dictionary = dc.call("get_current_multipliers")
+			var agg: float = float(dc.get("current_aggression"))
+			var intensity: float = float(dc.get("current_encounter_intensity"))
+			_on_difficulty_updated(agg, intensity, params)
 
 
 func _connect_signals() -> void:
@@ -100,6 +134,12 @@ func _connect_signals() -> void:
 			Engine.time_scale = 1.0
 			get_tree().change_scene_to_file("res://scenes/ai_vs_ai/ai_arena.tscn")
 		)
+	if difficulty_dropdown:
+		difficulty_dropdown.item_selected.connect(_on_difficulty_selected)
+		
+	var dc = get_node_or_null("/root/DifficultyController")
+	if dc and dc.has_signal("difficulty_updated"):
+		dc.connect("difficulty_updated", _on_difficulty_updated)
 		
 	var nav_mgr = get_node_or_null("/root/NavigationManager")
 	if nav_mgr:
@@ -266,3 +306,22 @@ func _on_metrics_updated(metrics: Dictionary) -> void:
 		metrics_time_label.text = "%.3f ms" % float(metrics.get("execution_time_ms", 0.0))
 	if metrics_length_label:
 		metrics_length_label.text = "%d points" % int(metrics.get("path_length", 0))
+
+
+func _on_difficulty_selected(index: int) -> void:
+	if index < 0 or index >= DIFF_KEYS.size():
+		return
+	var chosen_mode := DIFF_KEYS[index]
+	var dc = get_node_or_null("/root/DifficultyController")
+	if dc and dc.has_method("set_difficulty_mode"):
+		dc.call("set_difficulty_mode", chosen_mode)
+
+
+func _on_difficulty_updated(agg: float, intensity: float, params: Dictionary) -> void:
+	if difficulty_telemetry:
+		var spd: float = float(params.get("speed_multiplier", 1.0))
+		var dmg: float = float(params.get("attack_damage_multiplier", 1.0))
+		var cd: float = float(params.get("attack_cooldown_multiplier", 1.0))
+		difficulty_telemetry.text = "Aggression: %.2f | Intensity: %.2fx | Speed: %.2fx | Dmg: %.2fx | CD: %.2fx" % [
+			agg, intensity, spd, dmg, cd
+		]

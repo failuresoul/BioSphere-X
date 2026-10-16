@@ -76,7 +76,14 @@ class FuzzyInferenceEngine:
         dist_var.add_term("FAR", lambda x: trapezoidal(x, 320.0, 450.0, 600.0, 650.0))
         self.inputs["enemy_distance"] = dist_var
 
-        # 4. Output: Enemy Aggression (0.1 to 1.0)
+        # 4. Input: Repeated Failures / Deaths (0 to 10)
+        failure_var = LinguisticVariable("repeated_failures", (0.0, 10.0))
+        failure_var.add_term("FEW", lambda x: trapezoidal(x, -2.0, 0.0, 1.0, 2.5))
+        failure_var.add_term("SOME", lambda x: triangular(x, 1.5, 3.0, 5.0))
+        failure_var.add_term("MANY", lambda x: trapezoidal(x, 4.0, 6.0, 10.0, 15.0))
+        self.inputs["repeated_failures"] = failure_var
+
+        # 5. Output: Enemy Aggression (0.1 to 1.0)
         aggression_var = LinguisticVariable("enemy_aggression", (0.1, 1.0))
         aggression_var.add_term("VERY_LOW", lambda x: trapezoidal(x, 0.05, 0.10, 0.20, 0.35))
         aggression_var.add_term("LOW", lambda x: triangular(x, 0.25, 0.40, 0.55))
@@ -108,6 +115,25 @@ class FuzzyInferenceEngine:
             FuzzyRule(
                 {"player_health": "CRITICAL", "recent_damage": "LOW"},
                 ("enemy_aggression", "BALANCED"),
+                weight=0.8
+            ),
+
+            # Repeated failures relief rules
+            FuzzyRule(
+                {"repeated_failures": "MANY"},
+                ("enemy_aggression", "VERY_LOW"),
+                weight=1.0,
+                description="Repeated player eliminations trigger adaptive relief to prevent frustration"
+            ),
+            FuzzyRule(
+                {"repeated_failures": "SOME", "player_health": "CRITICAL"},
+                ("enemy_aggression", "VERY_LOW"),
+                weight=1.0,
+                description="Consecutive failures with critical health grants substantial breathing room"
+            ),
+            FuzzyRule(
+                {"repeated_failures": "SOME"},
+                ("enemy_aggression", "LOW"),
                 weight=0.8
             ),
 
@@ -167,6 +193,7 @@ class FuzzyInferenceEngine:
         player_health: float,
         recent_damage: float,
         enemy_distance: float,
+        repeated_failures: float = 0.0,
         fixed_mode: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -195,11 +222,13 @@ class FuzzyInferenceEngine:
         clamped_health = max(0.0, min(100.0, float(player_health)))
         clamped_damage = max(0.0, min(100.0, float(recent_damage)))
         clamped_dist = max(0.0, min(600.0, float(enemy_distance)))
+        clamped_failures = max(0.0, min(10.0, float(repeated_failures)))
 
         raw_inputs = {
             "player_health": clamped_health,
             "recent_damage": clamped_damage,
-            "enemy_distance": clamped_dist
+            "enemy_distance": clamped_dist,
+            "repeated_failures": clamped_failures
         }
 
         # 2. Fuzzification
@@ -298,9 +327,13 @@ class FuzzyInferenceEngine:
         # 4. Detection Range Multiplier: 0.85x to 1.20x
         detection_mult = 0.80 + (0.40 * agg)
 
+        # 5. Encounter Intensity: 0.60x to 1.40x
+        encounter_intensity = 0.60 + (0.80 * agg)
+
         return {
             "speed_multiplier": round(speed_mult, 3),
             "attack_damage_multiplier": round(damage_mult, 3),
             "attack_cooldown_multiplier": round(cooldown_mult, 3),
-            "detection_range_multiplier": round(detection_mult, 3)
+            "detection_range_multiplier": round(detection_mult, 3),
+            "encounter_intensity": round(encounter_intensity, 3)
         }

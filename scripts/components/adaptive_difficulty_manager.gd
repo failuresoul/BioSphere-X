@@ -154,7 +154,8 @@ func _apply_parameters(aggression: float, params: Dictionary, source_mode: Strin
 		"speed_multiplier": clampf(float(params.get("speed_multiplier", 1.0)), 0.65, 1.50),
 		"attack_damage_multiplier": clampf(float(params.get("attack_damage_multiplier", 1.0)), 0.65, 1.50),
 		"attack_cooldown_multiplier": clampf(float(params.get("attack_cooldown_multiplier", 1.0)), 0.60, 1.60),
-		"detection_range_multiplier": clampf(float(params.get("detection_range_multiplier", 1.0)), 0.75, 1.40)
+		"detection_range_multiplier": clampf(float(params.get("detection_range_multiplier", 1.0)), 0.75, 1.40),
+		"encounter_intensity": clampf(float(params.get("encounter_intensity", 1.0)), 0.50, 1.50)
 	}
 	
 	current_parameters = validated
@@ -176,5 +177,6 @@ static func calculate_multipliers(aggression: float) -> Dictionary:
 		"speed_multiplier": snappedf(0.75 + (0.50 * agg), 0.01),
 		"attack_damage_multiplier": snappedf(0.70 + (0.55 * agg), 0.01),
 		"attack_cooldown_multiplier": snappedf(1.40 - (0.65 * agg), 0.01),
-		"detection_range_multiplier": snappedf(0.80 + (0.40 * agg), 0.01)
+		"detection_range_multiplier": snappedf(0.80 + (0.40 * agg), 0.01),
+		"encounter_intensity": snappedf(0.60 + (0.80 * agg), 0.01)
 	}

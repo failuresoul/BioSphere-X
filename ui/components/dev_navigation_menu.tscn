@@ -21,7 +21,7 @@ shadow_color = Color(0, 0, 0, 0.6)
 shadow_size = 12
 
 [node name="DevNavigationMenu" type="PanelContainer"]
-custom_minimum_size = Vector2(460, 480)
+custom_minimum_size = Vector2(460, 560)
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -215,6 +215,43 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
 text = "0 points"
+
+[node name="DiffSep" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="DiffTitle" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.7, 0.1, 1)
+theme_override_font_sizes/font_size = 12
+text = "PROMPT 19 // DIFFICULTY CONTROLLER"
+
+[node name="DiffRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DiffLbl" type="Label" parent="VBox/DiffRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Difficulty Mode:"
+
+[node name="DifficultyDropdown" type="OptionButton" parent="VBox/DiffRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+
+[node name="DifficultyTelemetry" type="Label" parent="VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "Aggression: 0.60 | Intensity: 1.08x | Speed: 1.00x | Dmg: 1.00x | CD: 1.00x"
+
+[node name="DiffFairnessNotice" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.75, 0.6, 0.85)
+theme_override_font_sizes/font_size = 9
+text = "Fairness: Scaled attributes affect alien behaviors only. Player health is never modified."
 
 [node name="LaunchAIArenaButton" type="Button" parent="VBox"]
 unique_name_in_owner = true

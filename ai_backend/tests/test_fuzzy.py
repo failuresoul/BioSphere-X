@@ -235,3 +235,35 @@ def test_api_post_difficulty_fixed_mode():
     data = response.json()
     assert data["mode"] == "fixed_hard"
     assert data["enemy_aggression"] == 0.85
+
+
+def test_repeated_failures_impact_on_difficulty():
+    """Verify that repeated failures reduce enemy aggression to prevent player frustration."""
+    engine = FuzzyInferenceEngine()
+    
+    # Baseline with 0 failures
+    res_zero = engine.evaluate(player_health=60.0, recent_damage=20.0, enemy_distance=150.0, repeated_failures=0.0)
+    
+    # Same combat metrics but player has failed 5 times
+    res_failed = engine.evaluate(player_health=60.0, recent_damage=20.0, enemy_distance=150.0, repeated_failures=5.0)
+    
+    assert res_failed["enemy_aggression"] < res_zero["enemy_aggression"], "Repeated failures must dampen enemy aggression"
+    assert "encounter_intensity" in res_failed["parameters"]
+    assert 0.50 <= res_failed["parameters"]["encounter_intensity"] <= 1.50
+
+
+def test_api_post_difficulty_with_repeated_failures():
+    """Verify API correctly processes repeated_failures signal and returns encounter intensity."""
+    payload = {
+        "player_health": 80.0,
+        "recent_damage": 10.0,
+        "enemy_distance": 120.0,
+        "repeated_failures": 6.0
+    }
+    response = client.post("/api/ai/fuzzy/difficulty", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "parameters" in data
+    assert "encounter_intensity" in data["parameters"]
+    assert 0.50 <= data["parameters"]["encounter_intensity"] <= 1.50
+
