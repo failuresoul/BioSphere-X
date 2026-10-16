@@ -24,6 +24,7 @@ NavigationManager="*res://scripts/autoloads/navigation_manager.gd"
 DifficultyController="*res://scripts/autoloads/difficulty_controller.gd"
 MissionManager="*res://scripts/autoloads/mission_manager.gd"
 InventoryManager="*res://scripts/autoloads/inventory_manager.gd"
+ConstructionManager="*res://scripts/autoloads/construction_manager.gd"
 
 [display]
 

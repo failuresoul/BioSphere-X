@@ -110,6 +110,19 @@ func request_fuzzy_profiles(callback: Callable = Callable()) -> void:
 	send_request("/api/ai/fuzzy/profiles", HTTPClient.METHOD_GET, {}, callback)
 
 
+func request_placement_validation(placement_data: Dictionary, callback: Callable = Callable()) -> void:
+	send_request("/api/ai/csp/validate-placement", HTTPClient.METHOD_POST, placement_data, callback)
+
+
+func request_placement_catalog(callback: Callable = Callable()) -> void:
+	send_request("/api/ai/csp/structures", HTTPClient.METHOD_GET, {}, callback)
+
+
+func request_placement_suggestions(suggestion_data: Dictionary, callback: Callable = Callable()) -> void:
+	send_request("/api/ai/csp/suggest-placements", HTTPClient.METHOD_POST, suggestion_data, callback)
+
+
+
 # ---------------------------------------------------------------------------
 # Core Asynchronous HTTP Request Pipeline
 # ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import time
 from algorithms.pathfinding.router import router as pathfinding_router
 from algorithms.adversarial.router import router as adversarial_router
 from algorithms.fuzzy.router import router as fuzzy_router
+from algorithms.csp.router import router as csp_router
 
 app = FastAPI(
     title="BioSphere-X AI Backend",
@@ -32,6 +33,7 @@ app.add_middleware(
 app.include_router(pathfinding_router)
 app.include_router(adversarial_router)
 app.include_router(fuzzy_router)
+app.include_router(csp_router)
 
 
 class EchoRequest(BaseModel):

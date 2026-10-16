@@ -39,6 +39,8 @@ extends CanvasLayer
 @onready var dev_nav_menu: PanelContainer = %DevNavigationMenu
 @onready var inventory_button: Button = %InventoryButton
 @onready var inventory_dialog: PanelContainer = %InventoryCraftingDialog
+@onready var build_menu_button: Button = %BuildMenuButton
+@onready var construction_menu: PanelContainer = %ConstructionMenu
 
 # Mission Telemetry & Feedback UI
 @onready var mission_title_tag: Label = %MissionTitleTag
@@ -103,6 +105,13 @@ func _ready() -> void:
 				inventory_dialog.call("toggle_visibility")
 			else:
 				inventory_dialog.visible = not inventory_dialog.visible
+		)
+	if build_menu_button and construction_menu:
+		build_menu_button.pressed.connect(func():
+			if construction_menu.has_method("toggle_menu"):
+				construction_menu.call("toggle_menu")
+			else:
+				construction_menu.visible = not construction_menu.visible
 		)
 
 
@@ -565,6 +574,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif (event.keycode == KEY_I or event.keycode == KEY_TAB) and inventory_dialog:
 			if inventory_dialog.has_method("toggle_visibility"):
 				inventory_dialog.call("toggle_visibility")
+				get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_B and construction_menu:
+			if construction_menu.has_method("toggle_menu"):
+				construction_menu.call("toggle_menu")
 				get_viewport().set_input_as_handled()
 
 
