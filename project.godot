@@ -26,6 +26,7 @@ MissionManager="*res://scripts/autoloads/mission_manager.gd"
 InventoryManager="*res://scripts/autoloads/inventory_manager.gd"
 ConstructionManager="*res://scripts/autoloads/construction_manager.gd"
 ExoplanetDatabase="*res://scripts/autoloads/exoplanet_database.gd"
+PlanetProgressionManager="*res://scripts/autoloads/planet_progression_manager.gd"
 
 [display]
 

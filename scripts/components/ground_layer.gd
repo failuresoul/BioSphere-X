@@ -8,9 +8,13 @@ var grid_color := Color(0.15, 0.12, 0.28, 0.18)  # Faint grid lines
 var craters: Array = []
 
 
-func setup(origin: Vector2, size: Vector2) -> void:
+func setup(origin: Vector2, size: Vector2, p_base_color: Variant = null) -> void:
 	world_origin = origin
 	world_size = size
+	if p_base_color is Color:
+		base_color = p_base_color
+		grid_color = base_color.lightened(0.2)
+		grid_color.a = 0.22
 	_generate_craters()
 	queue_redraw()
 

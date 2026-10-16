@@ -39,6 +39,20 @@ func _ready() -> void:
 		if db.has_signal("planet_selected"):
 			db.planet_selected.connect(_on_planet_selected_externally)
 			
+	var ppm = get_node_or_null("/root/PlanetProgressionManager")
+	if ppm:
+		if ppm.has_signal("planet_unlocked"):
+			ppm.planet_unlocked.connect(func(_pid, _pname):
+				if visible:
+					refresh_screen()
+			)
+		if ppm.has_signal("transition_rejected"):
+			ppm.transition_rejected.connect(func(_pid, reason):
+				if feedback_label:
+					feedback_label.text = reason
+					feedback_label.modulate = Color(1.0, 0.35, 0.35)
+			)
+			
 	refresh_screen()
 
 
@@ -108,6 +122,7 @@ func _populate_planet_list() -> void:
 	if not db:
 		return
 		
+	var ppm = get_node_or_null("/root/PlanetProgressionManager")
 	var planets: Array = db.call("get_all_planets")
 	for p in planets:
 		var p_id: String = str(p.get("id"))
@@ -116,13 +131,20 @@ func _populate_planet_list() -> void:
 		var dist_str := "%.1f pc" % float(dist) if dist != null else "Dist: Unmeasured"
 		var method: String = str(p.get("discoverymethod", "Unknown"))
 		
+		var is_unlocked := true
+		if ppm and ppm.has_method("is_planet_unlocked"):
+			is_unlocked = ppm.call("is_planet_unlocked", p_id)
+			
 		var btn := Button.new()
-		btn.text = "%s\n[%s | %s]" % [p_name, dist_str, method]
+		if is_unlocked:
+			btn.text = "%s\n[%s | %s]" % [p_name, dist_str, method]
+		else:
+			btn.text = "🔒 %s [LOCKED]\n[%s | %s]" % [p_name, dist_str, method]
+			btn.modulate = Color(0.75, 0.75, 0.75, 0.8)
+			
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.custom_minimum_size = Vector2(230, 48)
 		btn.add_theme_font_size_override("font_size", 12)
-		
-		# Button style
 		btn.pressed.connect(func(): display_planet(p_id))
 		planet_list_container.add_child(btn)
 
@@ -203,19 +225,74 @@ func display_planet(planet_id: String) -> void:
 		g_text += "• [b]Suit Thermal Environment:[/b] %s" % props.get("gameplay_thermal_effect")
 		gameplay_props_label.text = g_text
 		
+	var ppm = get_node_or_null("/root/PlanetProgressionManager")
+	var is_unlocked := true
+	var lock_reason := ""
+	if ppm and ppm.has_method("is_planet_unlocked"):
+		is_unlocked = ppm.call("is_planet_unlocked", planet_id)
+		if not is_unlocked:
+			lock_reason = ppm.call("get_planet_lock_reason", planet_id)
+			
+	var current_p_id := ""
+	if ppm:
+		current_p_id = ppm.get("current_planet_id")
+	elif db:
+		current_p_id = db.get("selected_planet_id")
+		
+	if deploy_button:
+		if not is_unlocked:
+			deploy_button.disabled = true
+			deploy_button.text = "🔒 DESTINATION LOCKED"
+		elif current_p_id == planet_id:
+			deploy_button.disabled = false
+			deploy_button.text = "✓ CURRENT PLANET DEPLOYED"
+		else:
+			deploy_button.disabled = false
+			deploy_button.text = "ENGAGE HYPERSPACE JUMP"
+			
 	if feedback_label:
-		var db_sel = db.get("selected_planet_id")
-		if db_sel == planet_id:
+		if not is_unlocked:
+			feedback_label.text = lock_reason
+			feedback_label.modulate = Color(1.0, 0.4, 0.4)
+		elif current_p_id == planet_id:
 			feedback_label.text = "✓ CURRENTLY TARGETED EXPEDITION DESTINATION"
 			feedback_label.modulate = Color(0.2, 1.0, 0.6)
 		else:
-			feedback_label.text = "Click 'Set as Destination' to lock planetary coordinates."
-			feedback_label.modulate = Color(0.8, 0.8, 0.8)
+			feedback_label.text = "Destination cleared for transit. Click 'Engage Hyperspace Jump' to depart."
+			feedback_label.modulate = Color(0.3, 0.9, 1.0)
 
 
 func _on_deploy_pressed() -> void:
 	if _current_selected_id.is_empty():
 		return
+		
+	var ppm = get_node_or_null("/root/PlanetProgressionManager")
+	if ppm:
+		if not ppm.call("is_planet_unlocked", _current_selected_id):
+			var reason: String = ppm.call("get_planet_lock_reason", _current_selected_id)
+			if feedback_label:
+				feedback_label.text = reason
+				feedback_label.modulate = Color(1.0, 0.35, 0.35)
+			return
+			
+		var db = get_node_or_null("/root/ExoplanetDatabase")
+		var p_name := _current_selected_id
+		if db:
+			db.call("select_planet", _current_selected_id)
+			var p = db.call("get_planet", _current_selected_id)
+			p_name = p.get("pl_name", _current_selected_id)
+			
+		if feedback_label:
+			feedback_label.text = "✓ EXPEDITION DESTINATION LOCKED: %s!" % p_name
+			feedback_label.modulate = Color(0.2, 1.0, 0.6)
+			
+		destination_confirmed.emit(_current_selected_id, p_name)
+		close_screen()
+		
+		# Execute transition with loading screen!
+		ppm.call("transition_to_planet", _current_selected_id)
+		return
+		
 	var db = get_node_or_null("/root/ExoplanetDatabase")
 	if db:
 		db.call("select_planet", _current_selected_id)

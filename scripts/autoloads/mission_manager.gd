@@ -357,3 +357,28 @@ func get_active_mission_dict() -> Dictionary:
 
 func reset_campaign() -> void:
 	_setup_default_campaign()
+
+
+func reset_missions() -> void:
+	_missions.clear()
+	_mission_order.clear()
+	_active_mission_id = ""
+
+
+func load_mission_sequence(sequence: Array) -> void:
+	reset_missions()
+	for m_spec in sequence:
+		var m = MissionDataScript.create(
+			str(m_spec.get("id")),
+			str(m_spec.get("title")),
+			str(m_spec.get("desc")),
+			int(m_spec.get("type")),
+			float(m_spec.get("target")),
+			m_spec.get("rewards", {}),
+			m_spec.get("params", {}),
+			str(m_spec.get("unit", ""))
+		)
+		register_mission(m)
+		
+	if not _mission_order.is_empty():
+		start_mission(_mission_order[0])

@@ -13,8 +13,13 @@ const WALL_SHADOW := Color(0.04, 0.03, 0.06, 0.60)
 const OUTLINE_COLOR := Color(0.08, 0.06, 0.10)
 
 
-func setup(p_size: Vector2) -> void:
+var wall_base_color: Variant = null
+
+
+func setup(p_size: Vector2, p_color: Variant = null) -> void:
 	size = p_size
+	if p_color is Color:
+		wall_base_color = p_color
 	collision_layer = 1
 	collision_mask = 1
 	
@@ -33,13 +38,14 @@ func _draw() -> void:
 	
 	# 2. Main Wall Body
 	var r := Rect2(-size.x * 0.5, -size.y * 0.5, size.x, size.y)
-	draw_rect(r, WALL_BASE)
+	var base_c: Color = wall_base_color if wall_base_color is Color else WALL_BASE
+	draw_rect(r, base_c)
 	draw_rect(r, OUTLINE_COLOR, false, 2.0)
 	
 	# 3. Horizontal Geological Strata Bands
 	var band_h := maxf(4.0, size.y * 0.18)
 	var band_y := r.position.y + size.y * 0.4
-	draw_rect(Rect2(r.position.x + 2, band_y, size.x - 4, band_h), WALL_STRATA)
+	draw_rect(Rect2(r.position.x + 2, band_y, size.x - 4, band_h), base_c.lightened(0.25))
 	
 	# 4. Elevated Cliff-Top Rim Highlight (Top edge)
 	var rim_h := maxf(3.0, size.y * 0.12)

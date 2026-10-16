@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c7mtestplanetprogression"]
+
+[ext_resource type="Script" path="res://tests/test_planet_progression.gd" id="1_test"]
+
+[node name="TestPlanetProgression" type="Node"]
+script = ExtResource("1_test")

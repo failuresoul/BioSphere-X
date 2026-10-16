@@ -233,6 +233,9 @@ func test_planet_selection_and_gamestate_sync() -> void:
 # ---------------------------------------------------------------------------
 func test_ui_screen_lifecycle_and_interaction() -> void:
 	print("[TEST 8/8] Testing PlanetSelectionScreen UI Lifecycle & Interactions...")
+	var ppm = get_node_or_null("/root/PlanetProgressionManager")
+	if ppm:
+		ppm.call("unlock_planet", "lhs_1140_b")
 	var screen = PlanetSelectionScreenScene.instantiate()
 	add_child(screen)
 	

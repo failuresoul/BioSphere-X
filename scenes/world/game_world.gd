@@ -40,40 +40,121 @@ var _research_base_ref: Node2D = null
 
 func _ready() -> void:
 	add_to_group("world")
-	# Initialize reusable MapData structure
+	
+	var ppm = get_node_or_null("/root/PlanetProgressionManager")
+	var initial_cfg: RefCounted = null
+	if ppm and ppm.has_method("get_current_planet_config"):
+		initial_cfg = ppm.call("get_current_planet_config")
+	if not initial_cfg:
+		var cfg_script = preload("res://scripts/components/planet_level_config.gd")
+		initial_cfg = cfg_script.create_trappist_1_e()
+		
+	load_planet_level(initial_cfg)
+	
+	# Navigation & Grid Debug Visualizer (only if not already added)
+	if not has_node("NavigationDebugVisualizer"):
+		var debug_viz := preload("res://scenes/world/navigation_debug_visualizer.gd").new()
+		debug_viz.name = "NavigationDebugVisualizer"
+		add_child(debug_viz)
+
+
+## Dynamically loads and configures an exoplanet level without duplicating
+## global UI (HUD), player inventory, or game-state singletons.
+func load_planet_level(cfg: RefCounted) -> void:
+	if not cfg:
+		return
+		
+	var p_id: String = str(cfg.get("planet_id"))
+	var p_name_val = cfg.get("planet_name")
+	var p_name: String = str(p_name_val) if p_name_val != null else p_id
+	var ground_col: Color = cfg.get("ground_color") if "ground_color" in cfg else Color(0.20, 0.14, 0.22)
+	var canyon_col: Color = cfg.get("canyon_wall_color") if "canyon_wall_color" in cfg else Color(0.34, 0.22, 0.32)
+	var barrier_col: Color = cfg.get("barrier_color") if "barrier_color" in cfg else Color(0.95, 0.25, 0.40, 0.70)
+	var o2_val = cfg.get("oxygen_depletion_rate")
+	var o2_rate: float = float(o2_val) if o2_val != null else 1.5
+	var hazard_val = cfg.get("hazard_level")
+	var hazard_lvl: String = str(hazard_val) if hazard_val != null else "MODERATE"
+	var deposit_specs: Array = cfg.get("deposit_specs") if "deposit_specs" in cfg else []
+	var collectable_specs: Array = cfg.get("collectable_specs") if "collectable_specs" in cfg else []
+	var scouts_val = cfg.get("enemy_scouts_count")
+	var scouts_count: int = int(scouts_val) if scouts_val != null else 3
+	var spitters_val = cfg.get("enemy_spitters_count")
+	var spitters_count: int = int(spitters_val) if spitters_val != null else 2
+	var brutes_val = cfg.get("enemy_brutes_count")
+	var brutes_count: int = int(brutes_val) if brutes_val != null else 1
+	var boss_val = cfg.get("has_boss")
+	var has_boss: bool = bool(boss_val) if boss_val != null else true
+	var missions: Array = cfg.get("mission_sequence") if "mission_sequence" in cfg else []
+	
+	# 1. Reset / initialize reusable MapData
 	map_data = MapDataScript.new(GRID_SIZE, CELL_SIZE, WORLD_ORIGIN)
 	
-	_build_ground()
-	_build_boundaries()
-	_build_canyon_ridges()
+	# 2. Ground
+	_build_ground(ground_col)
+	
+	# 3. Boundaries
+	_build_boundaries(barrier_col)
+	
+	# 4. Canyon ridges
+	_build_canyon_ridges(canyon_col)
+	
+	# 5. Base & Outposts
 	_build_research_base()
 	_build_research_outpost()
-	_build_resource_fields()
+	
+	# 6. Resources & Deposits
+	_build_resource_fields(deposit_specs)
 	_build_scattered_rocks()
 	_build_alien_flora()
 	_build_oxygen_stations()
-	_build_collectables()
+	_build_collectables(collectable_specs)
 	_build_research_terminals()
+	
+	# 7. Player (Preserve single instance, reposition to spawn)
 	_spawn_player()
-	_spawn_enemies()
-	_spawn_boss()
+	
+	# 8. Enemies & Boss
+	_spawn_enemies(scouts_count, spitters_count, brutes_count)
+	_spawn_boss(has_boss)
+	
+	# 9. Tutorial & HUD (Prevent duplicates)
 	_build_tutorial_system()
 	_build_hud()
 	
-	var summary: Dictionary = map_data.call("get_obstacle_summary")
-	print("BioSphere-X: Complete alien planet map generated. Obstacles: ", summary)
-	
+	# 10. Update NavigationManager
 	var nav_mgr = get_node_or_null("/root/NavigationManager")
 	if nav_mgr and nav_mgr.has_method("set_map_data"):
 		nav_mgr.call("set_map_data", map_data)
-	
-	# Navigation & Grid Debug Visualizer
-	var debug_viz := preload("res://scenes/world/navigation_debug_visualizer.gd").new()
-	debug_viz.name = "NavigationDebugVisualizer"
-	add_child(debug_viz)
+		
+	# 11. Update GameState environmental rates
+	var gs = get_node_or_null("/root/GameState")
+	if gs:
+		gs.oxygen_depletion_rate = o2_rate
+		if "selected_planet" in gs:
+			gs.selected_planet = p_name
+			
+	# 12. Update DifficultyController
+	var diff_ctrl = get_node_or_null("/root/DifficultyController")
+	if diff_ctrl and "base_aggression" in cfg:
+		var base_agg_val = cfg.get("base_aggression")
+		var base_agg: float = float(base_agg_val) if base_agg_val != null else 0.5
+		if diff_ctrl.has_method("set_baseline_aggression"):
+			diff_ctrl.call("set_baseline_aggression", base_agg)
+			
+	# 13. Load Planet Mission Sequence
+	var mm = get_node_or_null("/root/MissionManager")
+	if mm and mm.has_method("load_mission_sequence"):
+		mm.call("load_mission_sequence", missions)
+		
+	var summary: Dictionary = map_data.call("get_obstacle_summary")
+	print("[GameWorld] Level loaded for %s (Hazard: %s, O2 Drain: %.1f/s, Obstacles: %s)" % [
+		p_name, hazard_lvl, o2_rate, str(summary)
+	])
 
 
 func _build_hud() -> void:
+	if has_node("HUD") or get_tree().get_first_node_in_group("hud"):
+		return
 	var hud := _hud_scene.instantiate()
 	hud.name = "HUD"
 	add_child(hud)
@@ -82,34 +163,41 @@ func _build_hud() -> void:
 # ---------------------------------------------------------------------------
 # Ground
 # ---------------------------------------------------------------------------
-func _build_ground() -> void:
-	var ground := Node2D.new()
-	ground.name = "Ground"
-	ground.z_index = -10
-	ground.set_script(_ground_script)
-	add_child(ground)
-	ground.setup(WORLD_ORIGIN, WORLD_SIZE)
+func _build_ground(p_color: Color = Color.TRANSPARENT) -> void:
+	var ground = get_node_or_null("Ground")
+	if not ground:
+		ground = Node2D.new()
+		ground.name = "Ground"
+		ground.z_index = -10
+		ground.set_script(_ground_script)
+		add_child(ground)
+	ground.setup(WORLD_ORIGIN, WORLD_SIZE, p_color if p_color != Color.TRANSPARENT else null)
 
 
 # ---------------------------------------------------------------------------
 # Map Boundaries
 # ---------------------------------------------------------------------------
-func _build_boundaries() -> void:
-	var container := Node2D.new()
-	container.name = "Boundaries"
-	add_child(container)
+func _build_boundaries(barrier_color: Color = Color(0.95, 0.25, 0.40, 0.70)) -> void:
+	var container = get_node_or_null("Boundaries")
+	if container:
+		for child in container.get_children():
+			child.queue_free()
+	else:
+		container = Node2D.new()
+		container.name = "Boundaries"
+		add_child(container)
 	
 	var edge_x := WORLD_ORIGIN.x + WORLD_SIZE.x
 	var edge_y := WORLD_ORIGIN.y + WORLD_SIZE.y
 	
 	# Top, Bottom, Left, Right
-	_add_boundary_wall(container, Vector2(0, WORLD_ORIGIN.y), Vector2(WORLD_SIZE.x + BOUNDARY_THICKNESS * 2, BOUNDARY_THICKNESS))
-	_add_boundary_wall(container, Vector2(0, edge_y), Vector2(WORLD_SIZE.x + BOUNDARY_THICKNESS * 2, BOUNDARY_THICKNESS))
-	_add_boundary_wall(container, Vector2(WORLD_ORIGIN.x, 0), Vector2(BOUNDARY_THICKNESS, WORLD_SIZE.y))
-	_add_boundary_wall(container, Vector2(edge_x, 0), Vector2(BOUNDARY_THICKNESS, WORLD_SIZE.y))
+	_add_boundary_wall(container, Vector2(0, WORLD_ORIGIN.y), Vector2(WORLD_SIZE.x + BOUNDARY_THICKNESS * 2, BOUNDARY_THICKNESS), barrier_color)
+	_add_boundary_wall(container, Vector2(0, edge_y), Vector2(WORLD_SIZE.x + BOUNDARY_THICKNESS * 2, BOUNDARY_THICKNESS), barrier_color)
+	_add_boundary_wall(container, Vector2(WORLD_ORIGIN.x, 0), Vector2(BOUNDARY_THICKNESS, WORLD_SIZE.y), barrier_color)
+	_add_boundary_wall(container, Vector2(edge_x, 0), Vector2(BOUNDARY_THICKNESS, WORLD_SIZE.y), barrier_color)
 
 
-func _add_boundary_wall(parent: Node, pos: Vector2, size: Vector2) -> void:
+func _add_boundary_wall(parent: Node, pos: Vector2, size: Vector2, barrier_color: Color = Color(0.95, 0.25, 0.40, 0.70)) -> void:
 	var wall := StaticBody2D.new()
 	wall.position = pos
 	wall.collision_layer = 1
@@ -123,7 +211,7 @@ func _add_boundary_wall(parent: Node, pos: Vector2, size: Vector2) -> void:
 	
 	# Visual energy boundary barrier
 	var vis := ColorRect.new()
-	vis.color = Color(0.95, 0.25, 0.40, 0.70)
+	vis.color = barrier_color
 	vis.size = size
 	vis.position = -size * 0.5
 	wall.add_child(vis)
@@ -137,10 +225,15 @@ func _add_boundary_wall(parent: Node, pos: Vector2, size: Vector2) -> void:
 # ---------------------------------------------------------------------------
 # Canyon Walls & Narrow Passages
 # ---------------------------------------------------------------------------
-func _build_canyon_ridges() -> void:
-	var container := Node2D.new()
-	container.name = "CanyonRidges"
-	add_child(container)
+func _build_canyon_ridges(wall_color: Color = Color.TRANSPARENT) -> void:
+	var container = get_node_or_null("CanyonRidges")
+	if container:
+		for child in container.get_children():
+			child.queue_free()
+	else:
+		container = Node2D.new()
+		container.name = "CanyonRidges"
+		add_child(container)
 	
 	# Strategically placed ridges that carve out canyons, choke points, and corridors
 	var ridge_specs: Array[Dictionary] = [
@@ -171,7 +264,7 @@ func _build_canyon_ridges() -> void:
 		wall.set_script(_canyon_wall_script)
 		wall.position = spec["pos"]
 		container.add_child(wall)
-		wall.call("setup", spec["size"])
+		wall.call("setup", spec["size"], wall_color if wall_color != Color.TRANSPARENT else null)
 		
 		var rect := Rect2(spec["pos"] - spec["size"] * 0.5, spec["size"])
 		map_data.set_world_rect_blocked(rect, true, MapDataScript.CellType.WALL)
@@ -181,7 +274,15 @@ func _build_canyon_ridges() -> void:
 # Research Debris (Abandoned Crash Site Outpost in North-East)
 # ---------------------------------------------------------------------------
 func _build_research_outpost() -> void:
-	var container := Node2D.new()
+	var container = get_node_or_null("ResearchOutpost")
+	if container:
+		# Debris already present, re-register obstacles in map_data
+		for deb in container.get_children():
+			var sz: Vector2 = deb.get("size") if "size" in deb else Vector2(40, 40)
+			var rect := Rect2(deb.position - sz * 0.5, sz)
+			map_data.set_world_rect_blocked(rect, true, MapDataScript.CellType.DEBRIS)
+		return
+	container = Node2D.new()
 	container.name = "ResearchOutpost"
 	add_child(container)
 	
@@ -209,28 +310,35 @@ func _build_research_outpost() -> void:
 # ---------------------------------------------------------------------------
 # Resource Deposits (Crystals, Ores, Biomass)
 # ---------------------------------------------------------------------------
-func _build_resource_fields() -> void:
-	var container := Node2D.new()
-	container.name = "ResourceDeposits"
-	add_child(container)
+func _build_resource_fields(custom_specs: Array = []) -> void:
+	var container = get_node_or_null("ResourceDeposits")
+	if container:
+		for child in container.get_children():
+			child.queue_free()
+	else:
+		container = Node2D.new()
+		container.name = "ResourceDeposits"
+		add_child(container)
 	
-	var deposit_specs: Array[Dictionary] = [
-		# South-West Energy Crystal Field
-		{"pos": Vector2(-680, 520), "type": 0, "radius": 26.0},
-		{"pos": Vector2(-620, 600), "type": 0, "radius": 30.0},
-		{"pos": Vector2(-740, 680), "type": 0, "radius": 24.0},
-		{"pos": Vector2(-540, 680), "type": 0, "radius": 28.0},
-		
-		# North-West Titanium / Mineral Ore Ridge
-		{"pos": Vector2(-720, -420), "type": 1, "radius": 28.0},
-		{"pos": Vector2(-780, -520), "type": 1, "radius": 32.0},
-		{"pos": Vector2(-620, -480), "type": 1, "radius": 26.0},
-		
-		# South-East Alien Biomass Organisms
-		{"pos": Vector2(520, 580), "type": 2, "radius": 26.0},
-		{"pos": Vector2(620, 640), "type": 2, "radius": 30.0},
-		{"pos": Vector2(580, 720), "type": 2, "radius": 28.0}
-	]
+	var deposit_specs: Array = custom_specs
+	if deposit_specs.is_empty():
+		deposit_specs = [
+			# South-West Energy Crystal Field
+			{"pos": Vector2(-680, 520), "type": 0, "radius": 26.0},
+			{"pos": Vector2(-620, 600), "type": 0, "radius": 30.0},
+			{"pos": Vector2(-740, 680), "type": 0, "radius": 24.0},
+			{"pos": Vector2(-540, 680), "type": 0, "radius": 28.0},
+			
+			# North-West Titanium / Mineral Ore Ridge
+			{"pos": Vector2(-720, -420), "type": 1, "radius": 28.0},
+			{"pos": Vector2(-780, -520), "type": 1, "radius": 32.0},
+			{"pos": Vector2(-620, -480), "type": 1, "radius": 26.0},
+			
+			# South-East Alien Biomass Organisms
+			{"pos": Vector2(520, 580), "type": 2, "radius": 26.0},
+			{"pos": Vector2(620, 640), "type": 2, "radius": 30.0},
+			{"pos": Vector2(580, 720), "type": 2, "radius": 28.0}
+		]
 	
 	for spec in deposit_specs:
 		var dep: StaticBody2D = StaticBody2D.new()
@@ -246,7 +354,13 @@ func _build_resource_fields() -> void:
 # Scattered Rocks (Natural Obstacles)
 # ---------------------------------------------------------------------------
 func _build_scattered_rocks() -> void:
-	var container := Node2D.new()
+	var container = get_node_or_null("Rocks")
+	if container:
+		for rock in container.get_children():
+			var r = rock.get("radius") if "radius" in rock else 24.0
+			map_data.set_world_circle_blocked(rock.position, r, true, MapDataScript.CellType.ROCK)
+		return
+	container = Node2D.new()
 	container.name = "Rocks"
 	add_child(container)
 	
@@ -276,6 +390,8 @@ func _build_scattered_rocks() -> void:
 # Alien Flora & Spores
 # ---------------------------------------------------------------------------
 func _build_alien_flora() -> void:
+	if has_node("Plants"):
+		return
 	var container := Node2D.new()
 	container.name = "Plants"
 	container.z_index = -1
@@ -302,6 +418,8 @@ func _build_alien_flora() -> void:
 # Research Base Compound (Spawn Habitat & Safe Sanctuary)
 # ---------------------------------------------------------------------------
 func _build_research_base() -> void:
+	if has_node("ResearchBase"):
+		return
 	var base := _research_base_script.new()
 	base.name = "ResearchBase"
 	base.position = PLAYER_SPAWN_POS
@@ -313,6 +431,8 @@ func _build_research_base() -> void:
 # Oxygen Stations & Atmospheric Safe Zones
 # ---------------------------------------------------------------------------
 func _build_oxygen_stations() -> void:
+	if has_node("OxygenStations"):
+		return
 	var container := Node2D.new()
 	container.name = "OxygenStations"
 	add_child(container)
@@ -362,29 +482,36 @@ func _build_oxygen_stations() -> void:
 # ---------------------------------------------------------------------------
 # Collectable Resources (Oxygen Cells, Metal, Energy Crystals, Samples)
 # ---------------------------------------------------------------------------
-func _build_collectables() -> void:
-	var container := Node2D.new()
-	container.name = "Collectables"
-	add_child(container)
+func _build_collectables(custom_specs: Array = []) -> void:
+	var container = get_node_or_null("Collectables")
+	if container:
+		for child in container.get_children():
+			child.queue_free()
+	else:
+		container = Node2D.new()
+		container.name = "Collectables"
+		add_child(container)
 	
-	var items: Array[Dictionary] = [
-		# Oxygen Cells (Type 0)
-		{"pos": Vector2(100, -120), "type": 0, "qty": 1},
-		{"pos": Vector2(-320, -320), "type": 0, "qty": 1},
-		{"pos": Vector2(460, 200), "type": 0, "qty": 2},
-		# Metal / Titanium (Type 1)
-		{"pos": Vector2(520, -380), "type": 1, "qty": 2},
-		{"pos": Vector2(660, -420), "type": 1, "qty": 3},
-		{"pos": Vector2(-220, 260), "type": 1, "qty": 2},
-		# Energy Crystals (Type 2)
-		{"pos": Vector2(-540, 540), "type": 2, "qty": 1},
-		{"pos": Vector2(-600, 620), "type": 2, "qty": 2},
-		{"pos": Vector2(160, 220), "type": 2, "qty": 1},
-		# Scientific Samples (Type 3)
-		{"pos": Vector2(-140, 100), "type": 3, "qty": 1},
-		{"pos": Vector2(460, 560), "type": 3, "qty": 2},
-		{"pos": Vector2(640, -220), "type": 3, "qty": 1}
-	]
+	var items: Array = custom_specs
+	if items.is_empty():
+		items = [
+			# Oxygen Cells (Type 0)
+			{"pos": Vector2(100, -120), "type": 0, "qty": 1},
+			{"pos": Vector2(-320, -320), "type": 0, "qty": 1},
+			{"pos": Vector2(460, 200), "type": 0, "qty": 2},
+			# Metal / Titanium (Type 1)
+			{"pos": Vector2(520, -380), "type": 1, "qty": 2},
+			{"pos": Vector2(660, -420), "type": 1, "qty": 3},
+			{"pos": Vector2(-220, 260), "type": 1, "qty": 2},
+			# Energy Crystals (Type 2)
+			{"pos": Vector2(-540, 540), "type": 2, "qty": 1},
+			{"pos": Vector2(-600, 620), "type": 2, "qty": 2},
+			{"pos": Vector2(160, 220), "type": 2, "qty": 1},
+			# Scientific Samples (Type 3)
+			{"pos": Vector2(-140, 100), "type": 3, "qty": 1},
+			{"pos": Vector2(460, 560), "type": 3, "qty": 2},
+			{"pos": Vector2(640, -220), "type": 3, "qty": 1}
+		]
 	
 	for i in items.size():
 		var data: Dictionary = items[i]
@@ -400,6 +527,8 @@ func _build_collectables() -> void:
 # Research Terminals & Station Interactive Objects
 # ---------------------------------------------------------------------------
 func _build_research_terminals() -> void:
+	if has_node("StationInteractiveObjects"):
+		return
 	var container := Node2D.new()
 	container.name = "StationInteractiveObjects"
 	add_child(container)
@@ -424,6 +553,8 @@ func _build_research_terminals() -> void:
 # Tutorial System
 # ---------------------------------------------------------------------------
 func _build_tutorial_system() -> void:
+	if has_node("TutorialManager"):
+		return
 	var tutorial: Node = Node.new()
 	tutorial.name = "TutorialManager"
 	tutorial.set_script(_tutorial_script)
@@ -440,6 +571,12 @@ func _build_tutorial_system() -> void:
 # Player Spawning
 # ---------------------------------------------------------------------------
 func _spawn_player() -> void:
+	var p = get_node_or_null("Player")
+	if p:
+		_player_ref = p
+		_player_ref.global_position = PLAYER_SPAWN_POS
+		_player_ref.velocity = Vector2.ZERO
+		return
 	var player: Node2D = _player_scene.instantiate()
 	player.name = "Player"
 	player.position = PLAYER_SPAWN_POS
@@ -450,38 +587,62 @@ func _spawn_player() -> void:
 # ---------------------------------------------------------------------------
 # Alien Enemy Spawning
 # ---------------------------------------------------------------------------
-func _spawn_enemies() -> void:
-	var container := Node2D.new()
-	container.name = "AlienEnemies"
-	add_child(container)
+func _spawn_enemies(scouts_count: int = 3, spitters_count: int = 2, brutes_count: int = 1) -> void:
+	var container = get_node_or_null("AlienEnemies")
+	if container:
+		for child in container.get_children():
+			child.queue_free()
+	else:
+		container = Node2D.new()
+		container.name = "AlienEnemies"
+		add_child(container)
 	
-	var enemy_spawns: Array[Dictionary] = [
-		{"scene": _enemy_scout_scene, "pos": Vector2(-420, -280), "name": "Scout_NorthWestGateway"},
-		{"scene": _enemy_scout_scene, "pos": Vector2(180, -320), "name": "Scout_NorthCanyon"},
-		{"scene": _enemy_scout_scene, "pos": Vector2(320, 240), "name": "Scout_SouthPlains"},
-		{"scene": _enemy_spitter_scene, "pos": Vector2(680, -600), "name": "Spitter_RuinsPerimeter"},
-		{"scene": _enemy_spitter_scene, "pos": Vector2(720, -50), "name": "Spitter_EastLabyrinth"},
-		{"scene": _enemy_brute_scene, "pos": Vector2(-650, 480), "name": "Brute_CrystalValleyGuard"}
+	var scout_positions: Array[Vector2] = [
+		Vector2(-420, -280), Vector2(180, -320), Vector2(320, 240),
+		Vector2(-200, -450), Vector2(500, 150)
+	]
+	var spitter_positions: Array[Vector2] = [
+		Vector2(680, -600), Vector2(720, -50), Vector2(-550, -200),
+		Vector2(400, -550)
+	]
+	var brute_positions: Array[Vector2] = [
+		Vector2(-650, 480), Vector2(-450, 600), Vector2(-750, 350),
+		Vector2(-350, 700), Vector2(600, 400), Vector2(250, 600)
 	]
 	
-	for spec in enemy_spawns:
-		var scene: PackedScene = spec["scene"]
-		var enemy: CharacterBody2D = scene.instantiate()
-		enemy.name = spec["name"]
-		enemy.position = spec["pos"]
-		container.add_child(enemy)
+	for i in range(mini(scouts_count, scout_positions.size())):
+		var scout: CharacterBody2D = _enemy_scout_scene.instantiate()
+		scout.name = "Scout_%d" % i
+		scout.position = scout_positions[i]
+		container.add_child(scout)
+		
+	for i in range(mini(spitters_count, spitter_positions.size())):
+		var spitter: CharacterBody2D = _enemy_spitter_scene.instantiate()
+		spitter.name = "Spitter_%d" % i
+		spitter.position = spitter_positions[i]
+		container.add_child(spitter)
+		
+	for i in range(mini(brutes_count, brute_positions.size())):
+		var brute: CharacterBody2D = _enemy_brute_scene.instantiate()
+		brute.name = "Brute_%d" % i
+		brute.position = brute_positions[i]
+		container.add_child(brute)
 
 
 # ---------------------------------------------------------------------------
 # Colossal Boss Spawning (Ancient Crater Basin)
 # ---------------------------------------------------------------------------
-func _spawn_boss() -> void:
-	if not _boss_scene:
+func _spawn_boss(should_spawn: bool = true) -> void:
+	var boss = get_node_or_null("GoliathPrime_Boss")
+	if boss:
+		boss.queue_free()
+	
+	if not should_spawn or not _boss_scene:
 		return
-	var boss: CharacterBody2D = _boss_scene.instantiate()
-	boss.name = "GoliathPrime_Boss"
-	boss.position = Vector2(560, -820) # Ancient Crater Basin North of Outpost
-	add_child(boss)
+	var new_boss: CharacterBody2D = _boss_scene.instantiate()
+	new_boss.name = "GoliathPrime_Boss"
+	new_boss.position = Vector2(560, -820) # Ancient Crater Basin North of Outpost
+	add_child(new_boss)
 
 
 
