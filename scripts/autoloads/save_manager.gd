@@ -27,9 +27,23 @@ func get_last_error() -> String:
 var current_settings: Dictionary = {
 	"master_volume": 1.0,
 	"sfx_volume": 0.8,
+	"ambient_volume": 0.6,
 	"screen_shake": true,
 	"camera_smoothing": true,
-	"fullscreen": false
+	"fullscreen": false,
+	"resolution": "1280x720",
+	"difficulty_mode": "adaptive_fuzzy",
+	"keybindings": {
+		"move_up": KEY_W,
+		"move_down": KEY_S,
+		"move_left": KEY_A,
+		"move_right": KEY_D,
+		"interact": KEY_E,
+		"attack": KEY_SPACE,
+		"terminal": KEY_QUOTELEFT,
+		"inventory": KEY_TAB,
+		"build": KEY_B
+	}
 }
 
 
@@ -438,14 +452,63 @@ func apply_settings(settings_dict: Dictionary) -> void:
 		current_settings[k] = settings_dict[k]
 		
 	# Apply Audio Volumes
+	var m_vol: float = clampf(float(current_settings.get("master_volume", 1.0)), 0.0, 1.0)
+	var s_vol: float = clampf(float(current_settings.get("sfx_volume", 0.8)), 0.0, 1.0)
+	var a_vol: float = clampf(float(current_settings.get("ambient_volume", 0.6)), 0.0, 1.0)
+	
 	if AudioServer.get_bus_count() > 0:
 		var master_idx := AudioServer.get_bus_index("Master")
 		if master_idx >= 0:
-			var m_vol: float = clampf(float(current_settings.get("master_volume", 1.0)), 0.0, 1.0)
 			AudioServer.set_bus_volume_db(master_idx, linear_to_db(m_vol) if m_vol > 0.001 else -80.0)
 			
-	# Apply Display Mode
+	var am = get_node_or_null("/root/AudioManager")
+	if am:
+		if am.has_method("set_master_volume"):
+			am.call("set_master_volume", m_vol)
+		if am.has_method("set_sfx_volume"):
+			am.call("set_sfx_volume", s_vol)
+		if am.has_method("set_ambient_volume"):
+			am.call("set_ambient_volume", a_vol)
+			
+	# Apply Display Mode & Resolution
 	if current_settings.get("fullscreen", false):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	else:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		var res_str: String = str(current_settings.get("resolution", "1280x720"))
+		var parts = res_str.split("x")
+		if parts.size() == 2:
+			var w := int(parts[0])
+			var h := int(parts[1])
+			if w >= 800 and h >= 600:
+				DisplayServer.window_set_size(Vector2i(w, h))
+				
+	# Apply Difficulty Mode
+	var diff: String = str(current_settings.get("difficulty_mode", "adaptive_fuzzy"))
+	var dc = get_node_or_null("/root/DifficultyController")
+	if dc and dc.has_method("set_difficulty_mode"):
+		dc.call("set_difficulty_mode", diff)
+		
+	# Apply Keybindings
+	if current_settings.has("keybindings") and current_settings["keybindings"] is Dictionary:
+		apply_keybindings(current_settings["keybindings"])
+
+
+func apply_keybindings(bindings: Dictionary) -> void:
+	for action_name in bindings:
+		var keycode: int = int(bindings[action_name])
+		if not InputMap.has_action(action_name):
+			InputMap.add_action(action_name)
+		else:
+			var events = InputMap.action_get_events(action_name)
+			for ev in events:
+				if ev is InputEventKey:
+					InputMap.action_erase_event(action_name, ev)
+		var key_ev := InputEventKey.new()
+		key_ev.physical_keycode = keycode as Key
+		key_ev.keycode = keycode as Key
+		InputMap.action_add_event(action_name, key_ev)
+
+
+func get_key_name(keycode: int) -> String:
+	return OS.get_keycode_string(keycode as Key)

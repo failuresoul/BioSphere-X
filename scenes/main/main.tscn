@@ -24,10 +24,10 @@ shadow_color = Color(0, 0, 0, 0.6)
 shadow_size = 12
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
-content_margin_left = 32.0
-content_margin_top = 28.0
-content_margin_right = 32.0
-content_margin_bottom = 28.0
+content_margin_left = 28.0
+content_margin_top = 22.0
+content_margin_right = 28.0
+content_margin_bottom = 22.0
 bg_color = Color(0.05, 0.07, 0.12, 0.98)
 border_width_left = 2
 border_width_top = 2
@@ -192,7 +192,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_secondary")
-text = "⚙ SETTINGS & AUDIO"
+text = "⚙ SETTINGS, AUDIO & CONTROLS"
 
 [node name="QuitButton" type="Button" parent="CenterContainer/VBox/MenuPanel/MenuButtonsVBox"]
 unique_name_in_owner = true
@@ -238,7 +238,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.02, 0.03, 0.06, 0.85)
+color = Color(0.02, 0.03, 0.06, 0.88)
 
 [node name="Center" type="CenterContainer" parent="SettingsModal"]
 layout_mode = 1
@@ -249,34 +249,46 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="SettingsModal/Center"]
-custom_minimum_size = Vector2(460, 420)
+custom_minimum_size = Vector2(540, 520)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
 
-[node name="VBox" type="VBoxContainer" parent="SettingsModal/Center/Panel"]
+[node name="Scroll" type="ScrollContainer" parent="SettingsModal/Center/Panel"]
+custom_minimum_size = Vector2(0, 480)
 layout_mode = 2
-theme_override_constants/separation = 14
+horizontal_scroll_mode = 0
 
-[node name="Header" type="Label" parent="SettingsModal/Center/Panel/VBox"]
+[node name="VBox" type="VBoxContainer" parent="SettingsModal/Center/Panel/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Header" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 15
 text = "// MISSION TELEMETRY // SYSTEM SETTINGS"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="SettingsModal/Center/Panel/VBox"]
+[node name="HSeparator" type="HSeparator" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 layout_mode = 2
 
-[node name="MasterVolHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/VBox"]
+[node name="AudioSectionLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 layout_mode = 2
-
-[node name="Label" type="Label" parent="SettingsModal/Center/Panel/VBox/MasterVolHBox"]
-custom_minimum_size = Vector2(140, 0)
-layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 12
+text = "AUDIO & SYNTHESIZER LEVELS"
+
+[node name="MasterVolHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/MasterVolHBox"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
 text = "Master Volume"
 
-[node name="MasterVolSlider" type="HSlider" parent="SettingsModal/Center/Panel/VBox/MasterVolHBox"]
+[node name="MasterVolSlider" type="HSlider" parent="SettingsModal/Center/Panel/Scroll/VBox/MasterVolHBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -285,24 +297,24 @@ max_value = 1.0
 step = 0.05
 value = 1.0
 
-[node name="MasterVolVal" type="Label" parent="SettingsModal/Center/Panel/VBox/MasterVolHBox"]
+[node name="MasterVolVal" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/MasterVolHBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(45, 0)
+custom_minimum_size = Vector2(40, 0)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 11
 text = "100%"
 horizontal_alignment = 2
 
-[node name="SFXVolHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/VBox"]
+[node name="SFXVolHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="SettingsModal/Center/Panel/VBox/SFXVolHBox"]
-custom_minimum_size = Vector2(140, 0)
+[node name="Label" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/SFXVolHBox"]
+custom_minimum_size = Vector2(130, 0)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "SFX Volume"
+theme_override_font_sizes/font_size = 11
+text = "Sound Effects (SFX)"
 
-[node name="SFXVolSlider" type="HSlider" parent="SettingsModal/Center/Panel/VBox/SFXVolHBox"]
+[node name="SFXVolSlider" type="HSlider" parent="SettingsModal/Center/Panel/Scroll/VBox/SFXVolHBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -311,42 +323,244 @@ max_value = 1.0
 step = 0.05
 value = 0.8
 
-[node name="SFXVolVal" type="Label" parent="SettingsModal/Center/Panel/VBox/SFXVolHBox"]
+[node name="SFXVolVal" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/SFXVolHBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(45, 0)
+custom_minimum_size = Vector2(40, 0)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 11
 text = "80%"
 horizontal_alignment = 2
 
-[node name="FullscreenCheck" type="CheckBox" parent="SettingsModal/Center/Panel/VBox"]
-unique_name_in_owner = true
+[node name="AmbientVolHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Fullscreen Display"
 
-[node name="ScreenShakeCheck" type="CheckBox" parent="SettingsModal/Center/Panel/VBox"]
+[node name="Label" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/AmbientVolHBox"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Ambient Atmospheric"
+
+[node name="AmbientVolSlider" type="HSlider" parent="SettingsModal/Center/Panel/Scroll/VBox/AmbientVolHBox"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.6
+
+[node name="AmbientVolVal" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/AmbientVolHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "60%"
+horizontal_alignment = 2
+
+[node name="HSeparator2" type="HSeparator" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+
+[node name="DisplaySectionLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 12
+text = "DISPLAY & VISUALS"
+
+[node name="ResolutionHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/ResolutionHBox"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Window Resolution"
+
+[node name="ResolutionOption" type="OptionButton" parent="SettingsModal/Center/Panel/Scroll/VBox/ResolutionHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+selected = 0
+item_count = 3
+popup/item_0/text = "1280x720 (Standard HD)"
+popup/item_0/id = 0
+popup/item_1/text = "1600x900 (HD+)"
+popup/item_1/id = 1
+popup/item_2/text = "1920x1080 (Full HD)"
+popup/item_2/id = 2
+
+[node name="FullscreenCheck" type="CheckBox" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Fullscreen Window Mode"
+
+[node name="ScreenShakeCheck" type="CheckBox" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
 button_pressed = true
-text = "Screen Shake & Atmospheric Feedback"
+text = "Screen Shake & Atmospheric Trauma Feedback"
 
-[node name="CameraSmoothCheck" type="CheckBox" parent="SettingsModal/Center/Panel/VBox"]
+[node name="CameraSmoothCheck" type="CheckBox" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 11
 button_pressed = true
 text = "Smooth Camera Tracking"
 
-[node name="HSeparator2" type="HSeparator" parent="SettingsModal/Center/Panel/VBox"]
+[node name="HSeparator3" type="HSeparator" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 layout_mode = 2
 
-[node name="SaveManagementHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/VBox"]
+[node name="GameplaySectionLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "GAMEPLAY & ADAPTIVE DIFFICULTY"
+
+[node name="DifficultyHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/DifficultyHBox"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Threat Scaling"
+
+[node name="DifficultyOption" type="OptionButton" parent="SettingsModal/Center/Panel/Scroll/VBox/DifficultyHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+selected = 0
+item_count = 6
+popup/item_0/text = "Adaptive: Pure Fuzzy Inference (Recommended)"
+popup/item_0/id = 0
+popup/item_1/text = "Adaptive: Rule-Based Tiered"
+popup/item_1/id = 1
+popup/item_2/text = "Fixed Baseline: Easy (0.8x Hazard)"
+popup/item_2/id = 2
+popup/item_3/text = "Fixed Baseline: Normal (Standard Baseline)"
+popup/item_3/id = 3
+popup/item_4/text = "Fixed Baseline: Hard (1.2x Threat)"
+popup/item_4/id = 4
+popup/item_5/text = "Fixed Baseline: Nightmare (1.5x Apex)"
+popup/item_5/id = 5
+
+[node name="HSeparator4" type="HSeparator" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+
+[node name="ControlsSectionLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "CONTROLS & KEY REMAPPING"
+
+[node name="ControlsGrid" type="GridContainer" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="MoveUpLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Move North / Up"
+
+[node name="MoveUpKeyBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "[ W ]"
+
+[node name="MoveDownLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Move South / Down"
+
+[node name="MoveDownKeyBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "[ S ]"
+
+[node name="MoveLeftLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Move West / Left"
+
+[node name="MoveLeftKeyBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "[ A ]"
+
+[node name="MoveRightLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Move East / Right"
+
+[node name="MoveRightKeyBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "[ D ]"
+
+[node name="InteractLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Interact / Activate"
+
+[node name="InteractKeyBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "[ E ]"
+
+[node name="AttackLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Fire Plasma Blaster"
+
+[node name="AttackKeyBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "[ SPACE ]"
+
+[node name="TerminalLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Command Terminal"
+
+[node name="TerminalKeyBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox/ControlsGrid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "[ ~ ]"
+
+[node name="ResetControlsBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.95, 1)
+theme_override_font_sizes/font_size = 10
+text = "↺ Reset Keybindings to Default"
+
+[node name="HSeparator5" type="HSeparator" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+layout_mode = 2
+
+[node name="SaveManagementHBox" type="HBoxContainer" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 layout_mode = 2
 alignment = 1
 
-[node name="DeleteSaveBtn" type="Button" parent="SettingsModal/Center/Panel/VBox/SaveManagementHBox"]
+[node name="DeleteSaveBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox/SaveManagementHBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
@@ -354,7 +568,7 @@ theme_override_font_sizes/font_size = 11
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_danger")
 text = "🗑 Reset / Delete Expedition Save Data"
 
-[node name="SettingsFeedbackLabel" type="Label" parent="SettingsModal/Center/Panel/VBox"]
+[node name="SettingsFeedbackLabel" type="Label" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -362,11 +576,11 @@ theme_override_colors/font_color = Color(0.2, 1, 0.5, 1)
 theme_override_font_sizes/font_size = 11
 horizontal_alignment = 1
 
-[node name="Spacer" type="Control" parent="SettingsModal/Center/Panel/VBox"]
+[node name="Spacer" type="Control" parent="SettingsModal/Center/Panel/Scroll/VBox"]
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
-size_flags_vertical = 3
 
-[node name="CloseSettingsBtn" type="Button" parent="SettingsModal/Center/Panel/VBox"]
+[node name="CloseSettingsBtn" type="Button" parent="SettingsModal/Center/Panel/Scroll/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2

@@ -144,6 +144,18 @@ func _draw() -> void:
 		VisualState.INVESTIGATE:
 			c_eyes = eye_color_investigate
 	
+	# Outer Threat Silhouette Rim (Improves world readability on all planet terrain)
+	var rim_color := Color(c_bio.r, c_bio.g, c_bio.b, 0.40)
+	if is_flash:
+		rim_color = Color(1.0, 0.4, 0.4, 0.85)
+	match enemy_type:
+		VisualEnemyType.SCOUT:
+			draw_arc(Vector2(-2, 0), 16.0, 0, TAU, 16, rim_color, 1.6)
+		VisualEnemyType.ARMORED_BRUTE:
+			draw_arc(Vector2(-1, 0), 22.0, 0, TAU, 20, Color(1.0, 0.25, 0.2, 0.50), 2.8)
+		VisualEnemyType.SPITTER:
+			draw_arc(Vector2(-1, 0), 18.0, 0, TAU, 18, Color(0.15, 0.95, 0.75, 0.45), 2.0)
+	
 	match enemy_type:
 		VisualEnemyType.SCOUT:
 			_draw_scout(c_chitin, c_sheen, c_bio, c_eyes)

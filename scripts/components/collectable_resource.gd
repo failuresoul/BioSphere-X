@@ -1,9 +1,7 @@
 extends Area2D
 class_name CollectableResource
-## Reusable collectable resource item for BioSphere-X.
-## Supports Oxygen Cells, Metal, Energy Crystals, and Scientific Samples.
-## Features configurable quantities, collision detection, proximity visual prompt,
-## instant collection prevention against double-pickup, and collection feedback.
+
+const FloatingCombatTextScript := preload("res://scripts/components/floating_combat_text.gd")
 
 enum ResourceType {
 	OXYGEN_CELL,
@@ -208,6 +206,11 @@ func interact(user: Node2D = null) -> bool:
 # Feedback & Collection Animation
 # ---------------------------------------------------------------------------
 func _play_collection_feedback() -> void:
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "pickup", randf_range(0.98, 1.05))
+	FloatingCombatTextScript.spawn(self, global_position, "+%d %s" % [quantity, get_display_name()], _core_color)
+
 	# Spawn bursting sparkles
 	for i in 16:
 		var ang: float = (float(i) / 16.0) * TAU

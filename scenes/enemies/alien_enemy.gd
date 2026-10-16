@@ -1,8 +1,7 @@
 extends CharacterBody2D
 class_name AlienEnemy
-## Reusable Alien Enemy Controller for BioSphere-X.
-## Supports configurable enemy types (Scout, Armored Brute, Spitter) sharing
-## the same underlying state machine architecture (Idle, Patrol, Investigate, Chase, Attack, Dead).
+
+const FloatingCombatTextScript := preload("res://scripts/components/floating_combat_text.gd")
 ## Features configurable perception, line-of-sight checks, wall obstruction blocking,
 ## melee and ranged attack styles, configurable defeat rewards, and clean corpse cleanup.
 
@@ -866,6 +865,11 @@ func _on_health_damaged(amount: float, _source: Node = null) -> void:
 	var cur: float = health_component.get("current_health") if health_component and "current_health" in health_component else 0.0
 	var mx: float = health_component.get("max_health") if health_component and "max_health" in health_component else 100.0
 	enemy_damaged.emit(amount, cur, mx)
+	
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "laser_hit", randf_range(0.95, 1.1))
+	FloatingCombatTextScript.spawn(self, global_position, "-%d" % int(amount), Color(1.0, 0.45, 0.2))
 
 
 func _on_health_died() -> void:
@@ -873,6 +877,10 @@ func _on_health_died() -> void:
 		return
 	change_state(State.DEAD)
 	
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "enemy_death", randf_range(0.9, 1.05))
+		
 	_spawn_defeat_rewards()
 	
 	enemy_died.emit(self)

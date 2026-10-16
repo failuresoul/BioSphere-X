@@ -1,8 +1,7 @@
 extends CharacterBody2D
 class_name Player
-## Astronaut Player Controller for BioSphere-X.
-## Handles physics movement with normalized diagonal motion, acceleration/deceleration,
-## and maintains clean separation between movement, health, interaction, and visuals.
+
+const FloatingCombatTextScript := preload("res://scripts/components/floating_combat_text.gd")
 
 signal player_died()
 signal player_damaged(amount: float, current_health: float, max_health: float)
@@ -62,12 +61,29 @@ func _connect_component_signals() -> void:
 
 
 var is_dead: bool = false
+var _shake_intensity: float = 0.0
+var _shake_decay: float = 8.0
+
+
+func trigger_screen_shake(amount: float) -> void:
+	var sm = get_node_or_null("/root/SaveManager")
+	if sm and "current_settings" in sm and not bool(sm.current_settings.get("screen_shake", true)):
+		return
+	_shake_intensity = maxf(_shake_intensity, amount)
 
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
 		velocity = Vector2.ZERO
 		return
+	
+	# Update screen shake
+	if camera:
+		if _shake_intensity > 0.0:
+			_shake_intensity = maxf(0.0, _shake_intensity - _shake_decay * delta)
+			camera.offset = Vector2(randf_range(-_shake_intensity, _shake_intensity), randf_range(-_shake_intensity, _shake_intensity))
+		else:
+			camera.offset = Vector2.ZERO
 	
 	var input_vector := _get_input_vector()
 	_apply_movement(input_vector, delta)
@@ -201,6 +217,11 @@ func attack(direction: Vector2 = Vector2.ZERO) -> bool:
 		if vis and vis.has_method("play_attack_recoil"):
 			vis.call("play_attack_recoil", aim_dir)
 		player_attacked.emit(proj, aim_dir)
+		
+		var audio = get_node_or_null("/root/AudioManager")
+		if audio and audio.has_method("play_sfx"):
+			audio.call("play_sfx", "laser_fire", randf_range(0.95, 1.05))
+		trigger_screen_shake(1.5)
 		return true
 	
 	return false
@@ -285,12 +306,19 @@ func _on_health_damaged(amount: float, _source: Node = null) -> void:
 	var cur := get_current_health()
 	var mx := get_max_health()
 	player_damaged.emit(amount, cur, mx)
+	
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "player_hurt")
+	trigger_screen_shake(6.5)
+	FloatingCombatTextScript.spawn(self, global_position, "-%d" % int(amount), Color(1.0, 0.25, 0.25))
 
 
 func _on_health_healed(amount: float) -> void:
 	var cur := get_current_health()
 	var mx := get_max_health()
 	player_healed.emit(amount, cur, mx)
+	FloatingCombatTextScript.spawn(self, global_position, "+%d" % int(amount), Color(0.2, 1.0, 0.4))
 
 
 func _on_health_died() -> void:

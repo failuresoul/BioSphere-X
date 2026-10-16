@@ -876,3 +876,16 @@ func _on_terminal_action2_pressed() -> void:
 				if door and door.has_method("interact"):
 					door.call("interact")
 					_play_mission_success_sound()
+
+
+func _play_mission_success_sound() -> void:
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "mission_complete")
+
+
+func _play_low_oxygen_sound() -> void:
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "oxygen_warning")
+

@@ -181,6 +181,9 @@ func remove_structure_by_id(instance_id: String, refund_ratio: float = 0.5) -> b
 		st.get("name"), instance_id, s_pos.x, s_pos.y, str(refund)
 	])
 	structure_removed.emit(s_id, s_pos, refund)
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "demolish")
 	return true
 
 
@@ -604,6 +607,10 @@ func commit_placement(structure_id: String, grid_pos: Vector2i, callback: Callab
 		
 		print("[ConstructionManager] COMMITTED: '%s' placed at (%d, %d)." % [s_data.get("name"), grid_pos.x, grid_pos.y])
 		structure_placed.emit(structure_id, grid_pos, struct_node)
+		
+		var audio = get_node_or_null("/root/AudioManager")
+		if audio and audio.has_method("play_sfx"):
+			audio.call("play_sfx", "build")
 		
 		# End preview upon successful build
 		cancel_placement_preview()

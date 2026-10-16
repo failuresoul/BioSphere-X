@@ -56,6 +56,11 @@ func _ready() -> void:
 	if sm and sm.has_method("apply_pending_save_if_any"):
 		sm.call("apply_pending_save_if_any")
 	
+	# Start atmospheric ambient space drone
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_ambient"):
+		audio.call("play_ambient", "space_ambient")
+	
 	# Navigation & Grid Debug Visualizer (only if not already added)
 	if not has_node("NavigationDebugVisualizer"):
 		var debug_viz := preload("res://scenes/world/navigation_debug_visualizer.gd").new()
