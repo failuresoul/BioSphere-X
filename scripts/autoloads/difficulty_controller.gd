@@ -185,10 +185,30 @@ var _evaluate_timer: float = 0.0
 var _is_backend_pending: bool = false
 var _last_logged_aggression: float = -1.0
 
+# ---------------------------------------------------------------------------
+# Benchmark Performance Metrics & Comparative Session Tracking
+# ---------------------------------------------------------------------------
+var benchmark_session: Dictionary = {
+	"mode": "adaptive_fuzzy",
+	"deaths": 0,
+	"total_damage_sustained": 0.0,
+	"total_damage_dealt": 0.0,
+	"missions_completed": 0,
+	"missions_failed": 0,
+	"aggression_samples": [],
+	"aggression_changes_count": 0,
+	"min_aggression": 1.0,
+	"max_aggression": 0.0,
+	"start_time": ""
+}
+var benchmark_history: Array[Dictionary] = []
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	benchmark_session["start_time"] = Time.get_datetime_string_from_system()
 	_sync_signals()
+	_connect_event_sources()
 	evaluate_now()
 
 
@@ -232,14 +252,51 @@ func _sync_signals() -> void:
 ## Record damage sustained by player to feed short-term combat pressure.
 func record_player_damage(amount: float) -> void:
 	recent_damage_accumulator = clampf(recent_damage_accumulator + amount, 0.0, 100.0)
+	benchmark_session["total_damage_sustained"] = float(benchmark_session["total_damage_sustained"]) + amount
+
+
+## Record damage dealt by player to enemies.
+func record_damage_dealt(amount: float) -> void:
+	benchmark_session["total_damage_dealt"] = float(benchmark_session["total_damage_dealt"]) + amount
 
 
 ## Record encounter failure (player eliminated).
 func record_failure() -> void:
 	repeated_failures += 1
+	benchmark_session["deaths"] = int(benchmark_session["deaths"]) + 1
+	benchmark_session["missions_failed"] = int(benchmark_session["missions_failed"]) + 1
 	var gs = get_node_or_null("/root/GameState")
 	if gs and gs.has_method("record_failure"):
 		gs.call("record_failure")
+
+
+## Record mission / expedition objective completion.
+func record_mission_completed(_mission_name: String = "") -> void:
+	benchmark_session["missions_completed"] = int(benchmark_session["missions_completed"]) + 1
+
+
+func _connect_event_sources() -> void:
+	var gs = get_node_or_null("/root/GameState")
+	if gs:
+		if gs.has_signal("player_died"):
+			gs.player_died.connect(func():
+				record_failure()
+			)
+		if gs.has_signal("player_damaged"):
+			gs.player_damaged.connect(func(dmg):
+				record_player_damage(float(dmg))
+			)
+
+	var mm = get_node_or_null("/root/MissionManager")
+	if mm:
+		if mm.has_signal("mission_completed"):
+			mm.mission_completed.connect(func(_m, _r):
+				record_mission_completed()
+			)
+		if mm.has_signal("mission_failed"):
+			mm.mission_failed.connect(func(_m, _r):
+				benchmark_session["missions_failed"] = int(benchmark_session["missions_failed"]) + 1
+			)
 
 
 # ---------------------------------------------------------------------------
@@ -494,13 +551,25 @@ func _apply_evaluation(aggression: float, params: Dictionary, source: String, ex
 	last_evaluation_explanation = explanation
 	
 	# Transparent console logging upon notable shifts
-	if absf(current_aggression - _last_logged_aggression) >= 0.05:
-		_last_logged_aggression = current_aggression
-		print("[DifficultyController] Mode: %s | Aggression: %.2f | Intensity: %.2fx | Multipliers: (Speed: %.2fx, Dmg: %.2fx, CD: %.2fx)" % [
-			source, current_aggression, current_encounter_intensity,
-			validated["speed_multiplier"], validated["attack_damage_multiplier"], validated["attack_cooldown_multiplier"]
-		])
-	
+	# Track aggression dynamics in benchmark session
+	var samples: Array = benchmark_session["aggression_samples"]
+	if samples.is_empty():
+		benchmark_session["aggression_changes_count"] = int(benchmark_session["aggression_changes_count"]) + 1
+	elif absf(current_aggression - float(samples[-1].get("aggression", current_aggression))) >= 0.02:
+		benchmark_session["aggression_changes_count"] = int(benchmark_session["aggression_changes_count"]) + 1
+
+	benchmark_session["min_aggression"] = minf(float(benchmark_session["min_aggression"]), current_aggression)
+	benchmark_session["max_aggression"] = maxf(float(benchmark_session["max_aggression"]), current_aggression)
+	samples.append({
+		"time_ms": Time.get_ticks_msec(),
+		"aggression": current_aggression,
+		"intensity": current_encounter_intensity,
+		"health": player_health,
+		"damage": recent_damage_accumulator
+	})
+	if samples.size() > 100:
+		samples.pop_front()
+
 	difficulty_updated.emit(current_aggression, current_encounter_intensity, current_parameters)
 
 
@@ -508,6 +577,8 @@ func _apply_evaluation(aggression: float, params: Dictionary, source: String, ex
 # Public Telemetry & Control API
 # ---------------------------------------------------------------------------
 func set_difficulty_mode(mode: String) -> void:
+	if mode != difficulty_mode:
+		reset_benchmark_session(mode)
 	difficulty_mode = mode
 	evaluate_now()
 
@@ -533,5 +604,242 @@ func get_telemetry() -> Dictionary:
 			"enemy_distance": enemy_distance,
 			"repeated_failures": repeated_failures
 		},
-		"explanation": last_evaluation_explanation
+		"explanation": last_evaluation_explanation,
+		"benchmark": get_benchmark_metrics()
 	}
+
+
+# ---------------------------------------------------------------------------
+# Benchmark & Comparative Analysis Methods
+# ---------------------------------------------------------------------------
+func get_benchmark_metrics() -> Dictionary:
+	var deaths: int = int(benchmark_session.get("deaths", 0))
+	var m_comp: int = int(benchmark_session.get("missions_completed", 0))
+	var m_fail: int = int(benchmark_session.get("missions_failed", 0))
+	var total_m: int = m_comp + m_fail
+	var comp_rate: float = (float(m_comp) / float(maxi(1, total_m))) * 100.0 if total_m > 0 else 0.0
+
+	var samples: Array = benchmark_session.get("aggression_samples", [])
+	var avg_agg: float = current_aggression
+	if not samples.is_empty():
+		var sum_a: float = 0.0
+		for s in samples:
+			sum_a += float(s.get("aggression", 0.60))
+		avg_agg = sum_a / float(samples.size())
+
+	var min_a: float = float(benchmark_session.get("min_aggression", current_aggression))
+	var max_a: float = float(benchmark_session.get("max_aggression", current_aggression))
+	if min_a > max_a:
+		min_a = current_aggression
+		max_a = current_aggression
+
+	return {
+		"mode": difficulty_mode,
+		"deaths": deaths,
+		"damage_sustained": snappedf(float(benchmark_session.get("total_damage_sustained", 0.0)), 0.1),
+		"damage_dealt": snappedf(float(benchmark_session.get("total_damage_dealt", 0.0)), 0.1),
+		"missions_completed": m_comp,
+		"missions_failed": m_fail,
+		"total_missions": total_m,
+		"completion_rate_pct": snappedf(comp_rate, 0.1),
+		"aggression_changes_count": int(benchmark_session.get("aggression_changes_count", 0)),
+		"min_aggression": snappedf(min_a, 0.02),
+		"max_aggression": snappedf(max_a, 0.02),
+		"avg_aggression": snappedf(avg_agg, 0.02),
+		"current_aggression": snappedf(current_aggression, 0.02)
+	}
+
+
+func reset_benchmark_session(new_mode: String = "") -> void:
+	if not benchmark_session.is_empty() and (int(benchmark_session.get("deaths", 0)) > 0 or int(benchmark_session.get("missions_completed", 0)) > 0):
+		benchmark_history.append(benchmark_session.duplicate(true))
+
+	var target_mode: String = new_mode if not new_mode.is_empty() else difficulty_mode
+	benchmark_session = {
+		"mode": target_mode,
+		"deaths": 0,
+		"total_damage_sustained": 0.0,
+		"total_damage_dealt": 0.0,
+		"missions_completed": 0,
+		"missions_failed": 0,
+		"aggression_samples": [],
+		"aggression_changes_count": 0,
+		"min_aggression": 1.0,
+		"max_aggression": 0.0,
+		"start_time": Time.get_datetime_string_from_system()
+	}
+
+
+## Simulates a controlled encounter sequence to test comparative metrics between controllers.
+func simulate_encounter_scenario(mode: String, profile: String, steps: int = 20) -> Dictionary:
+	var saved_mode: String = difficulty_mode
+	var saved_hp: float = player_health
+	var saved_dmg: float = recent_damage_accumulator
+	var saved_dist: float = enemy_distance
+	var saved_fails: int = repeated_failures
+
+	difficulty_mode = mode
+
+	var deaths: int = 0
+	var damage_sustained: float = 0.0
+	var damage_dealt: float = 0.0
+	var sim_hp: float = 100.0
+	var sim_dmg_accum: float = 0.0
+	var sim_fails: int = 0
+	var agg_history: Array[float] = []
+
+	for s in range(steps):
+		var incoming_threat: float = 0.0
+		var outgoing_damage: float = 0.0
+		var current_dist: float = 200.0
+
+		match profile:
+			"struggling":
+				incoming_threat = 24.0 if (s % 3 == 0) else 14.0
+				outgoing_damage = 8.0
+				current_dist = 110.0
+			"dominant":
+				incoming_threat = 4.0 if (s % 4 == 0) else 0.0
+				outgoing_damage = 28.0
+				current_dist = 180.0
+			"variable":
+				incoming_threat = 22.0 if (s < 10 and s % 2 == 0) else (4.0 if s >= 10 else 0.0)
+				outgoing_damage = 18.0
+				current_dist = 140.0 if s < 10 else 320.0
+
+		var cur_agg: float = 0.60
+		var multipliers: Dictionary = {}
+
+		if mode in FIXED_PROFILES:
+			var p: Dictionary = FIXED_PROFILES[mode]
+			cur_agg = float(p["aggression"])
+			multipliers = p["parameters"]
+		else:
+			var in_engine = evaluate_fuzzy(sim_hp, sim_dmg_accum, current_dist, sim_fails)
+			cur_agg = float(in_engine["aggression"])
+			multipliers = in_engine["parameters"]
+
+		agg_history.append(cur_agg)
+
+		var dmg_mult: float = float(multipliers.get("attack_damage_multiplier", 1.0))
+		var cd_mult: float = float(multipliers.get("attack_cooldown_multiplier", 1.0))
+		var actual_incoming: float = incoming_threat * dmg_mult * (1.0 / maxf(0.5, cd_mult))
+
+		sim_hp -= actual_incoming
+		damage_sustained += actual_incoming
+		damage_dealt += outgoing_damage
+		sim_dmg_accum = clampf(sim_dmg_accum + actual_incoming - 5.0, 0.0, 100.0)
+
+		if sim_hp <= 0.0:
+			deaths += 1
+			sim_fails += 1
+			sim_hp = 50.0
+			sim_dmg_accum = 40.0
+
+	var mission_completed: bool = (deaths < 2 and damage_dealt >= float(steps) * 10.0)
+
+	var min_a: float = 1.0
+	var max_a: float = 0.0
+	var sum_a: float = 0.0
+	var changes: int = 0
+	for i in agg_history.size():
+		var a: float = agg_history[i]
+		min_a = minf(min_a, a)
+		max_a = maxf(max_a, a)
+		sum_a += a
+		if i > 0 and absf(a - agg_history[i - 1]) >= 0.02:
+			changes += 1
+
+	var res: Dictionary = {
+		"mode": mode,
+		"profile": profile,
+		"steps": steps,
+		"deaths": deaths,
+		"damage_sustained": snappedf(damage_sustained, 0.1),
+		"damage_dealt": snappedf(damage_dealt, 0.1),
+		"mission_completed": mission_completed,
+		"aggression_history": agg_history,
+		"aggression_changes_count": changes,
+		"min_aggression": snappedf(min_a, 0.02),
+		"max_aggression": snappedf(max_a, 0.02),
+		"avg_aggression": snappedf(sum_a / float(maxi(1, agg_history.size())), 0.02)
+	}
+
+	difficulty_mode = saved_mode
+	player_health = saved_hp
+	recent_damage_accumulator = saved_dmg
+	enemy_distance = saved_dist
+	repeated_failures = saved_fails
+
+	return res
+
+
+## Runs a comprehensive multi-profile comparison comparing Adaptive Fuzzy vs Fixed Normal vs Fixed Hard.
+func run_full_benchmark_comparison() -> Dictionary:
+	var modes: Array[String] = [MODE_ADAPTIVE_FUZZY, MODE_NORMAL, MODE_HARD]
+	var profiles: Array[String] = ["struggling", "dominant", "variable"]
+	var results: Dictionary = {}
+
+	for m in modes:
+		results[m] = {}
+		for p in profiles:
+			results[m][p] = simulate_encounter_scenario(m, p, 20)
+
+	return results
+
+
+func export_benchmark_report_json() -> String:
+	var data := {
+		"timestamp": Time.get_datetime_string_from_system(),
+		"current_session": get_benchmark_metrics(),
+		"full_comparison_matrix": run_full_benchmark_comparison(),
+		"history": benchmark_history
+	}
+	var json_str := JSON.stringify(data, "\t")
+	var dir_path := "user://experiments"
+	DirAccess.make_dir_absolute(dir_path)
+	var timestamp := Time.get_datetime_string_from_system().replace(":", "-")
+	var file_path := "%s/difficulty_benchmark_%s.json" % [dir_path, timestamp]
+	var file := FileAccess.open(file_path, FileAccess.WRITE)
+	if file:
+		file.store_string(json_str)
+		file.close()
+		return file_path
+	return ""
+
+
+func export_benchmark_report_csv() -> String:
+	var dir_path := "user://experiments"
+	DirAccess.make_dir_absolute(dir_path)
+	var timestamp := Time.get_datetime_string_from_system().replace(":", "-")
+	var file_path := "%s/difficulty_benchmark_%s.csv" % [dir_path, timestamp]
+	var file := FileAccess.open(file_path, FileAccess.WRITE)
+	if not file:
+		return ""
+
+	var headers := [
+		"ControllerMode", "PlayerProfile", "Deaths", "DamageSustained", "DamageDealt",
+		"MissionCompleted", "AggressionChangesCount", "MinAggression", "MaxAggression", "AvgAggression"
+	]
+	file.store_line(",".join(headers))
+
+	var matrix := run_full_benchmark_comparison()
+	for m in matrix.keys():
+		for p in matrix[m].keys():
+			var r: Dictionary = matrix[m][p]
+			var row := [
+				str(m),
+				str(p),
+				str(r.get("deaths", 0)),
+				str(r.get("damage_sustained", 0.0)),
+				str(r.get("damage_dealt", 0.0)),
+				str(r.get("mission_completed", false)),
+				str(r.get("aggression_changes_count", 0)),
+				str(r.get("min_aggression", 0.0)),
+				str(r.get("max_aggression", 0.0)),
+				str(r.get("avg_aggression", 0.0))
+			]
+			file.store_line(",".join(row))
+
+	file.close()
+	return file_path

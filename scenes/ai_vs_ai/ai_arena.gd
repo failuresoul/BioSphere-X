@@ -62,14 +62,24 @@ const MAP_PRESETS: Array[String] = [
 	"symmetric",
 	"chokepoints",
 	"open_basin",
-	"labyrinth"
+	"labyrinth",
+	"trappist_1_e",
+	"lhs_1140_b",
+	"kepler_186_f",
+	"proxima_centauri_b",
+	"k2_18_b"
 ]
 
 const MAP_PRESET_LABELS: Array[String] = [
 	"Symmetric Proving Grounds",
 	"Canyon Chokepoints & U-Traps",
 	"Open Crater Basin",
-	"The Labyrinth"
+	"The Labyrinth",
+	"TRAPPIST-1 e (Low Density 9.5%)",
+	"LHS 1140 b (Medium Density 22.8%)",
+	"Kepler-186 f (High Labyrinth 39.4%)",
+	"Proxima Centauri b (Asymmetric 28.2%)",
+	"K2-18 b (Stepping-Stone 34.6%)"
 ]
 
 const ROLES: Array[String] = [
@@ -195,6 +205,7 @@ const ObjectiveBeaconScript := preload("res://scenes/ai_vs_ai/objective_beacon.g
 const MapDataScript := preload("res://scripts/components/map_data.gd")
 const CanyonWallScript := preload("res://scripts/components/canyon_wall.gd")
 const AlienRockScript := preload("res://scripts/components/alien_rock.gd")
+const ControlledPlanetScenariosScript := preload("res://scripts/components/controlled_planet_scenarios.gd")
 
 var _agent_scene := preload("res://scenes/ai_vs_ai/autonomous_agent.tscn")
 var _beacon_scene := preload("res://scenes/ai_vs_ai/objective_beacon.tscn")
@@ -367,8 +378,23 @@ func _build_arena_obstacles() -> void:
 			_build_map_open_basin(container)
 		"labyrinth":
 			_build_map_labyrinth(container)
+		"trappist_1_e", "lhs_1140_b", "kepler_186_f", "proxima_centauri_b", "k2_18_b":
+			_build_controlled_scenario_map(container, current_map)
 		_:
 			_build_map_symmetric(container)
+
+
+func _build_controlled_scenario_map(container: Node2D, scenario_id: String) -> void:
+	var scen: Dictionary = ControlledPlanetScenariosScript.get_scenario(scenario_id)
+	for w in scen.get("walls", []):
+		var pos: Vector2 = w["pos"]
+		var size: Vector2 = w["size"]
+		_add_wall_box(container, pos, size)
+
+	for r in scen.get("rocks", []):
+		var pos: Vector2 = r["pos"]
+		var radius: float = float(r["radius"])
+		_add_rock_cluster(container, pos, radius)
 
 
 func _build_map_symmetric(container: Node2D) -> void:

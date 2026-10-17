@@ -61,6 +61,14 @@ var _lbl_dmg_mult:   Label
 var _lbl_cd_mult:    Label
 var _lbl_diff_mode:  Label
 
+# Adaptive vs Fixed Benchmark Labels
+var _lbl_bench_mode:       Label
+var _lbl_bench_deaths:     Label
+var _lbl_bench_dmg:        Label
+var _lbl_bench_missions:   Label
+var _lbl_bench_agg_shifts: Label
+var _lbl_bench_range:      Label
+
 # Stats labels
 var _lbl_success_rate:  Label
 var _lbl_total_runs:    Label
@@ -241,10 +249,33 @@ func _update_difficulty_panel() -> void:
 	_lbl_cd_mult.text        = "%.2fx" % float(params.get("attack_cooldown_multiplier", 1.0))
 	_lbl_speed_mult.modulate = COL_LABEL
 	_lbl_dmg_mult.modulate   = COL_LABEL
-	_lbl_cd_mult.modulate    = COL_LABEL
-
 	_lbl_diff_mode.text     = mode
 	_lbl_diff_mode.modulate = COL_DIM
+
+	# Update Adaptive vs Fixed Benchmark Telemetry
+	var bm: Dictionary = telem.get("benchmark", {})
+	if is_instance_valid(_lbl_bench_mode):
+		_lbl_bench_mode.text = str(bm.get("mode", mode)).replace("_", " ").capitalize()
+		_lbl_bench_deaths.text = str(bm.get("deaths", 0))
+		_lbl_bench_deaths.modulate = COL_VALUE_GOOD if int(bm.get("deaths", 0)) == 0 else COL_VALUE_BAD
+		_lbl_bench_dmg.text = "%.1f HP" % float(bm.get("damage_sustained", 0.0))
+
+		var comp_count: int = int(bm.get("missions_completed", 0))
+		var total_m: int = int(bm.get("total_missions", 0))
+		var comp_rate: float = float(bm.get("completion_rate_pct", 0.0))
+		if total_m > 0:
+			_lbl_bench_missions.text = "%d / %d (%.0f%%)" % [comp_count, total_m, comp_rate]
+			_lbl_bench_missions.modulate = COL_VALUE_GOOD if comp_rate >= 80.0 else (COL_VALUE_WARN if comp_rate >= 50.0 else COL_VALUE_BAD)
+		else:
+			_lbl_bench_missions.text = "Tracking active expedition"
+			_lbl_bench_missions.modulate = COL_DIM
+
+		_lbl_bench_agg_shifts.text = "%d adaptations" % int(bm.get("aggression_changes_count", 0))
+		_lbl_bench_range.text = "%.2f ⇄ %.2f (avg %.2f)" % [
+			float(bm.get("min_aggression", agg)),
+			float(bm.get("max_aggression", agg)),
+			float(bm.get("avg_aggression", agg))
+		]
 
 
 func _update_stats_panel() -> void:
@@ -398,6 +429,35 @@ func _build_ui() -> void:
 
 	_add_divider(root_vbox)
 
+	# ─ Adaptive vs Fixed Benchmark ──────────────────────────────────────────
+	_add_section_header(root_vbox, "⚖️  ADAPTIVE VS FIXED BENCHMARK")
+	var sec_bm := _add_section_box(root_vbox)
+
+	var bm_btn_row := HBoxContainer.new()
+	bm_btn_row.add_theme_constant_override("separation", 4)
+	sec_bm.add_child(bm_btn_row)
+
+	var btn_fuzzy := _make_small_btn("Fuzzy Adaptive", COL_VALUE_GOOD)
+	btn_fuzzy.pressed.connect(func(): _switch_diff_mode("adaptive_fuzzy"))
+	bm_btn_row.add_child(btn_fuzzy)
+
+	var btn_norm := _make_small_btn("Fixed Normal", COL_HEADER)
+	btn_norm.pressed.connect(func(): _switch_diff_mode("normal"))
+	bm_btn_row.add_child(btn_norm)
+
+	var btn_hard := _make_small_btn("Fixed Hard", COL_VALUE_WARN)
+	btn_hard.pressed.connect(func(): _switch_diff_mode("hard"))
+	bm_btn_row.add_child(btn_hard)
+
+	_lbl_bench_mode       = _add_row(sec_bm, "Active Controller",  "Adaptive Fuzzy")
+	_lbl_bench_deaths     = _add_row(sec_bm, "Player Deaths",      "0")
+	_lbl_bench_dmg        = _add_row(sec_bm, "Damage Sustained",   "0.0 HP")
+	_lbl_bench_missions   = _add_row(sec_bm, "Mission Completion", "—")
+	_lbl_bench_agg_shifts = _add_row(sec_bm, "Aggression Shifts",  "0")
+	_lbl_bench_range      = _add_row(sec_bm, "Aggression Range",   "0.60 ⇄ 0.60")
+
+	_add_divider(root_vbox)
+
 	# ─ Session Statistics ─────────────────────────────────────────────────────
 	_add_section_header(root_vbox, "📊  SESSION STATISTICS")
 	var sec_st := _add_section_box(root_vbox)
@@ -479,3 +539,35 @@ func _add_divider(parent: VBoxContainer) -> void:
 	sty.content_margin_bottom = 1
 	sep.add_theme_stylebox_override("separator", sty)
 	parent.add_child(sep)
+
+
+func _make_small_btn(label: String, col: Color) -> Button:
+	var btn := Button.new()
+	btn.text = label
+	btn.custom_minimum_size = Vector2(0, 22)
+	btn.add_theme_font_size_override("font_size", 9)
+	btn.add_theme_color_override("font_color", col)
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(0.08, 0.14, 0.25, 0.90)
+	s.border_color = col.darkened(0.3)
+	s.border_width_left = 1
+	s.border_width_right = 1
+	s.border_width_top = 1
+	s.border_width_bottom = 1
+	s.corner_radius_top_left = 4
+	s.corner_radius_top_right = 4
+	s.corner_radius_bottom_left = 4
+	s.corner_radius_bottom_right = 4
+	s.content_margin_left = 6
+	s.content_margin_right = 6
+	s.content_margin_top = 2
+	s.content_margin_bottom = 2
+	btn.add_theme_stylebox_override("normal", s)
+	return btn
+
+
+func _switch_diff_mode(mode: String) -> void:
+	var dc = get_node_or_null("/root/DifficultyController")
+	if dc and dc.has_method("set_difficulty_mode"):
+		dc.call("set_difficulty_mode", mode)
+		_refresh_all()

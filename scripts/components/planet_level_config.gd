@@ -229,3 +229,242 @@ static func create_lhs_1140_b() -> Resource:
 	]
 	
 	return cfg
+
+
+static func create_kepler_186_f() -> Resource:
+	var cfg = load("res://scripts/components/planet_level_config.gd").new()
+	cfg.planet_id = "kepler_186_f"
+	cfg.planet_name = "Kepler-186 f"
+	cfg.description = "Habitable zone Earth-sized world (1.17 R_Earth) orbiting red dwarf Kepler-186. Subsurface cavern labyrinth."
+	cfg.unlock_required_planet_id = "lhs_1140_b"
+	cfg.unlock_required_mission_id = "lhs_03_extraction"
+	cfg.unlock_description = "Complete 'SUPER-EARTH RETURN' on LHS 1140 b."
+
+	cfg.ground_color = Color(0.12, 0.16, 0.24)
+	cfg.canyon_wall_color = Color(0.22, 0.28, 0.40)
+	cfg.barrier_color = Color(0.35, 0.65, 0.95, 0.75)
+	cfg.ambient_tint = Color(0.65, 0.78, 0.95)
+	cfg.oxygen_depletion_rate = 1.6
+	cfg.hazard_level = "HAZARDOUS"
+	cfg.thermal_drain_rate = 1.4
+
+	cfg.deposit_specs = [
+		{"pos": Vector2(-750, 450), "type": 0, "radius": 30.0},
+		{"pos": Vector2(750, -450), "type": 0, "radius": 30.0},
+		{"pos": Vector2(-750, -450), "type": 2, "radius": 28.0},
+		{"pos": Vector2(750, 450), "type": 2, "radius": 28.0}
+	]
+
+	cfg.collectable_specs = [
+		{"pos": Vector2(-360, -320), "type": 2, "qty": 4},
+		{"pos": Vector2(360, 320), "type": 2, "qty": 4},
+		{"pos": Vector2(-360, 320), "type": 3, "qty": 3},
+		{"pos": Vector2(360, -320), "type": 3, "qty": 3},
+		{"pos": Vector2(0, -120), "type": 0, "qty": 1},
+		{"pos": Vector2(0, 120), "type": 0, "qty": 1}
+	]
+
+	cfg.enemy_scouts_count = 4
+	cfg.enemy_spitters_count = 3
+	cfg.enemy_brutes_count = 2
+	cfg.has_boss = true
+	cfg.base_aggression = 0.80
+
+	cfg.mission_sequence = [
+		{
+			"id": "kepler_01_explore",
+			"title": "LABYRINTH RECONNAISSANCE",
+			"desc": "Penetrate the subsurface labyrinth and recover peripheral crystal deposits.",
+			"type": 0,
+			"target": 4.0,
+			"rewards": {"crystals": 8, "titanium": 4},
+			"params": {"required_resource": "crystals"},
+			"unit": "Crystals"
+		},
+		{
+			"id": "kepler_02_survive",
+			"title": "SUB-ZERO LABYRINTH COMBAT",
+			"desc": "Withstand alien predators in the freezing cavern tunnels for 20 seconds.",
+			"type": 3,
+			"target": 20.0,
+			"rewards": {"oxygen_refill": 100.0, "biomass": 4},
+			"params": {"duration": 20.0, "fail_on_death": true},
+			"unit": "Seconds"
+		},
+		{
+			"id": "kepler_03_extraction",
+			"title": "CAVERN EVACUATION",
+			"desc": "All labyrinth objectives complete. Return to habitat airlock.",
+			"type": 5,
+			"target": 1.0,
+			"rewards": {"mission_rating": "LABYRINTH MASTER"},
+			"params": {"target_zone": "habitat_airlock"},
+			"unit": "Airlock"
+		}
+	]
+
+	return cfg
+
+
+static func create_proxima_centauri_b() -> Resource:
+	var cfg = load("res://scripts/components/planet_level_config.gd").new()
+	cfg.planet_id = "proxima_centauri_b"
+	cfg.planet_name = "Proxima Centauri b"
+	cfg.description = "Nearest exoplanet to Solar System (4.24 ly). Harsh stellar flare erosion and rugged split-canyon crags."
+	cfg.unlock_required_planet_id = "kepler_186_f"
+	cfg.unlock_required_mission_id = "kepler_03_extraction"
+	cfg.unlock_description = "Complete 'CAVERN EVACUATION' on Kepler-186 f."
+
+	cfg.ground_color = Color(0.24, 0.12, 0.14)
+	cfg.canyon_wall_color = Color(0.44, 0.20, 0.22)
+	cfg.barrier_color = Color(1.0, 0.35, 0.20, 0.80)
+	cfg.ambient_tint = Color(1.0, 0.65, 0.65)
+	cfg.oxygen_depletion_rate = 1.8
+	cfg.hazard_level = "SEVERE"
+	cfg.thermal_drain_rate = 1.5
+
+	cfg.deposit_specs = [
+		{"pos": Vector2(0, -160), "type": 1, "radius": 34.0},
+		{"pos": Vector2(0, -60), "type": 1, "radius": 32.0},
+		{"pos": Vector2(-280, -220), "type": 0, "radius": 28.0},
+		{"pos": Vector2(280, 220), "type": 0, "radius": 28.0}
+	]
+
+	cfg.collectable_specs = [
+		{"pos": Vector2(0, -60), "type": 1, "qty": 4},
+		{"pos": Vector2(-280, -220), "type": 2, "qty": 2},
+		{"pos": Vector2(280, 220), "type": 2, "qty": 2},
+		{"pos": Vector2(-120, 220), "type": 0, "qty": 1},
+		{"pos": Vector2(120, 220), "type": 0, "qty": 1}
+	]
+
+	cfg.enemy_scouts_count = 5
+	cfg.enemy_spitters_count = 4
+	cfg.enemy_brutes_count = 3
+	cfg.has_boss = true
+	cfg.base_aggression = 0.85
+
+	cfg.mission_sequence = [
+		{
+			"id": "proxima_01_flares",
+			"title": "FLARE CRAG TITANIUM",
+			"desc": "Collect 4 titanium units exposed by stellar flare erosion in the central crag.",
+			"type": 0,
+			"target": 4.0,
+			"rewards": {"crystals": 8, "titanium": 8},
+			"params": {"required_resource": "titanium"},
+			"unit": "Titanium"
+		},
+		{
+			"id": "proxima_02_survive",
+			"title": "SUPERFLARE ASSAULT",
+			"desc": "Survive the flare-crazed predator wave for 20 seconds.",
+			"type": 3,
+			"target": 20.0,
+			"rewards": {"oxygen_cells": 4, "energy_refill": 100.0},
+			"params": {"duration": 20.0, "fail_on_death": true},
+			"unit": "Seconds"
+		},
+		{
+			"id": "proxima_03_extraction",
+			"title": "FLARE CRAG EXTRACTION",
+			"desc": "Telemetry recorded. Return to habitat airlock before next superflare cycle.",
+			"type": 5,
+			"target": 1.0,
+			"rewards": {"mission_rating": "FLARE MASTER"},
+			"params": {"target_zone": "habitat_airlock"},
+			"unit": "Airlock"
+		}
+	]
+
+	return cfg
+
+
+static func create_k2_18_b() -> Resource:
+	var cfg = load("res://scripts/components/planet_level_config.gd").new()
+	cfg.planet_id = "k2_18_b"
+	cfg.planet_name = "K2-18 b"
+	cfg.description = "Candidate Hycean ocean world / sub-Neptune (8.63 M_Earth, 2.61 R_Earth) with methane atmosphere and fluid shoals."
+	cfg.unlock_required_planet_id = "proxima_centauri_b"
+	cfg.unlock_required_mission_id = "proxima_03_extraction"
+	cfg.unlock_description = "Complete 'FLARE CRAG EXTRACTION' on Proxima Centauri b."
+
+	cfg.ground_color = Color(0.08, 0.18, 0.24)
+	cfg.canyon_wall_color = Color(0.12, 0.34, 0.44)
+	cfg.barrier_color = Color(0.20, 0.90, 0.80, 0.75)
+	cfg.ambient_tint = Color(0.40, 0.90, 0.85)
+	cfg.oxygen_depletion_rate = 2.0
+	cfg.hazard_level = "VOLATILE"
+	cfg.thermal_drain_rate = 1.2
+
+	cfg.deposit_specs = [
+		{"pos": Vector2(-280, -180), "type": 2, "radius": 32.0},
+		{"pos": Vector2(280, 180), "type": 2, "radius": 32.0},
+		{"pos": Vector2(-180, 0), "type": 0, "radius": 28.0},
+		{"pos": Vector2(180, 0), "type": 0, "radius": 28.0}
+	]
+
+	cfg.collectable_specs = [
+		{"pos": Vector2(-280, -180), "type": 3, "qty": 3},
+		{"pos": Vector2(280, 180), "type": 3, "qty": 3},
+		{"pos": Vector2(-180, 0), "type": 2, "qty": 2},
+		{"pos": Vector2(180, 0), "type": 2, "qty": 2},
+		{"pos": Vector2(0, -80), "type": 0, "qty": 1},
+		{"pos": Vector2(0, 80), "type": 0, "qty": 1}
+	]
+
+	cfg.enemy_scouts_count = 4
+	cfg.enemy_spitters_count = 5
+	cfg.enemy_brutes_count = 2
+	cfg.has_boss = true
+	cfg.base_aggression = 0.90
+
+	cfg.mission_sequence = [
+		{
+			"id": "k2_01_samples",
+			"title": "HYCEAN BIOMASS SALVAGE",
+			"desc": "Retrieve 3 aquatic biomass specimens from the submerged shoal islands.",
+			"type": 1,
+			"target": 3.0,
+			"rewards": {"biomass": 6, "crystals": 6},
+			"params": {"required_resource": "biomass"},
+			"unit": "Biomass"
+		},
+		{
+			"id": "k2_02_survive",
+			"title": "ARCHIPELAGO AMBUSH",
+			"desc": "Survive coordinated aquatic spitter swarm attack for 20 seconds.",
+			"type": 3,
+			"target": 20.0,
+			"rewards": {"oxygen_refill": 100.0, "crystals": 10},
+			"params": {"duration": 20.0, "fail_on_death": true},
+			"unit": "Seconds"
+		},
+		{
+			"id": "k2_03_extraction",
+			"title": "HYCEAN ARCHIPELAGO RETURN",
+			"desc": "Expedition data secured. Return safely to habitat airlock.",
+			"type": 5,
+			"target": 1.0,
+			"rewards": {"mission_rating": "HYCEAN MASTER"},
+			"params": {"target_zone": "habitat_airlock"},
+			"unit": "Airlock"
+		}
+	]
+
+	return cfg
+
+
+static func get_config_by_id(planet_id: String) -> Resource:
+	match planet_id:
+		"lhs_1140_b":
+			return create_lhs_1140_b()
+		"kepler_186_f":
+			return create_kepler_186_f()
+		"proxima_centauri_b":
+			return create_proxima_centauri_b()
+		"k2_18_b":
+			return create_k2_18_b()
+		_:
+			return create_trappist_1_e()
+
