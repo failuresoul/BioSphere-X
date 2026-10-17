@@ -312,7 +312,6 @@ func reset_agent(p_spawn_pos: Vector2 = Vector2.ZERO) -> void:
 	last_metrics = {}
 
 	if collision_shape:
-		collision_shape.disabled = false
 		collision_shape.set_deferred("disabled", false)
 
 	if health_component:

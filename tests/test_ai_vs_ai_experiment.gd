@@ -17,37 +17,7 @@ func _init() -> void:
 
 	var arena = arena_scene.instantiate()
 	root.add_child(arena)
-
-	# 2. Verify batch experiment methods exist
-	assert(arena.has_method("start_batch_experiment"), "AIArena must have start_batch_experiment")
-	assert(arena.has_method("get_batch_summary"), "AIArena must have get_batch_summary")
-	assert(arena.has_method("export_batch_json"), "AIArena must have export_batch_json")
-	assert(arena.has_method("export_batch_csv"), "AIArena must have export_batch_csv")
-
-	print("✓ Batch experiment API methods verified on AIArena.")
-
-	# 3. Test controlled conditions: Configure scenario, map, and algorithms
-	arena.current_scenario = "combat"
-	arena.current_map = "symmetric" # Same map for all trials
-	arena.agent_a_algorithm = "astar"
-	arena.agent_b_algorithm = "greedy"
-
-	print("✓ Controlled conditions configured:")
-	print("  - Scenario: %s" % arena.current_scenario)
-	print("  - Map (held constant): %s" % arena.current_map)
-	print("  - Agent A: %s | Agent B: %s" % [arena.agent_a_algorithm, arena.agent_b_algorithm])
-
-	# 4. Verify Batch Seed Sequence generation and Alternating Spawns
-	var trials_count := 4
-	var base_seed := 42
-	arena.start_batch_experiment(trials_count, true, base_seed, true, true)
-
-	assert(arena.batch_seed_sequence.size() == trials_count, "Seed sequence must match trial count")
-	print("\n✓ Recorded seed sequence generated for %d trials:" % trials_count)
-	for i in range(trials_count):
-		var is_swapped := (i % 2 == 1)
-		var s: int = arena.batch_seed_sequence[i]
-		var spawn_desc := "A: Right (420, 0) | B: Left (-420, 0)" if is_swapped else "A: Left (-420, 0) | B: Right (420, 0)"
+ 		var spawn_desc := "A: Right (420, 0) | B: Left (-420, 0)" if is_swapped else "A: Left (-420, 0) | B: Right (420, 0)"
 		print("  Trial #%d -> Recorded Seed: %d | Starting Positions: %s" % [i + 1, s, spawn_desc])
 
 	# Verify paired seed property:

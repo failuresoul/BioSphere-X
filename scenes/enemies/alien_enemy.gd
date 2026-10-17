@@ -702,8 +702,9 @@ func change_state(new_state: State) -> void:
 			if nav_mgr and nav_mgr.has_method("unregister_active_path"):
 				nav_mgr.call("unregister_active_path", get_instance_id())
 			if collision_shape:
-				collision_shape.disabled = true
 				collision_shape.set_deferred("disabled", true)
+			set_deferred("collision_layer", 0)
+			set_deferred("collision_mask", 0)
 			if visual and visual.has_method("play_death"):
 				visual.call("play_death")
 	

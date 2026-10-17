@@ -685,8 +685,9 @@ func change_state(new_state: State) -> void:
 		State.DEFEATED:
 			velocity = Vector2.ZERO
 			if collision_shape:
-				collision_shape.disabled = true
 				collision_shape.set_deferred("disabled", true)
+			set_deferred("collision_layer", 0)
+			set_deferred("collision_mask", 0)
 			if visual and visual.has_method("play_death"):
 				visual.call("play_death")
 			if health_bar_ui:

@@ -52,8 +52,8 @@ func _ready() -> void:
 	add_to_group("interactable")
 	add_to_group("collectable")
 	
-	collision_layer = 2 # Layer 2 (Interactable)
-	collision_mask = 1  # Layer 1 (Player)
+	set_deferred("collision_layer", 2) # Layer 2 (Interactable)
+	set_deferred("collision_mask", 1)  # Layer 1 (Player)
 	
 	_setup_collision()
 	_setup_prompt_ui()
@@ -69,7 +69,7 @@ func _setup_collision() -> void:
 		var circle := CircleShape2D.new()
 		circle.radius = interaction_radius
 		_collision_shape.shape = circle
-		add_child(_collision_shape)
+		call_deferred("add_child", _collision_shape)
 
 
 func _update_collision_shape() -> void:
@@ -185,8 +185,8 @@ func interact(user: Node2D = null) -> bool:
 		_prompt_label.visible = false
 	if _collision_shape:
 		_collision_shape.set_deferred("disabled", true)
-	monitoring = false
-	monitorable = false
+	set_deferred("monitoring", false)
+	set_deferred("monitorable", false)
 	
 	# Update GameState & Inventory
 	var id_name := get_resource_id_name()

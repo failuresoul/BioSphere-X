@@ -167,7 +167,7 @@ func _spawn_impact_effect(pos: Vector2) -> void:
 		var effect: Node2D = ImpactEffectScript.new()
 		effect.set("color", glow_color)
 		effect.global_position = pos
-		parent.add_child(effect)
+		parent.call_deferred("add_child", effect)
 
 
 func _expire(pos: Vector2) -> void:
@@ -176,6 +176,8 @@ func _expire(pos: Vector2) -> void:
 	_is_expired = true
 	projectile_expired.emit(pos)
 	
+	set_deferred("monitoring", false)
+	set_deferred("monitorable", false)
 	if collision_shape:
 		collision_shape.set_deferred("disabled", true)
 	
