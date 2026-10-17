@@ -164,14 +164,17 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, Color(accent_color, _interaction_burst * 0.6), 2.0)
 	
 	# 7. Holographic Floating Label & Signage
-	var label_col := accent_color if is_player_nearby else Color(accent_color, 0.85)
+	var label_col := accent_color if is_player_nearby else Color(accent_color.r, accent_color.g, accent_color.b, 0.9)
 	var label_str := "[%s] %s" % [station_tag, station_name.to_upper()]
+	# Backing pill for high contrast and readability
+	draw_rect(Rect2(-85, -30, 170, 14), Color(0.03, 0.05, 0.09, 0.82))
+	draw_rect(Rect2(-85, -30, 170, 14), Color(accent_color.r, accent_color.g, accent_color.b, 0.5 if is_player_nearby else 0.25), false, 1.0)
 	draw_string(
 		ThemeDB.fallback_font,
-		Vector2(-60, -20),
+		Vector2(-85, -19),
 		label_str,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		120.0,
+		170.0,
 		9,
 		label_col
 	)

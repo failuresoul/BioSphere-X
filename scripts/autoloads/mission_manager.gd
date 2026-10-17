@@ -70,7 +70,8 @@ func _setup_default_campaign() -> void:
 		3.0,
 		{"oxygen_refill": 100.0, "biomass": 1},
 		{"required_resource": "oxygen_cells"},
-		"Cells"
+		"Cells",
+		"// COMMS LINK ESTABLISHED //\nAURA-7: 'Dropship touchdown confirmed at Sector Alpha on Exoplanet TRAPPIST-1 e. The automated Bio-Hab sanctuary core is online, but atmospheric telemetry detects lethal carbon-sulfur saturation. Outside this base sanctuary dome, your Mark-IV EVA suit life support will drain continuously. Three emergency oxygen canisters were ejected along the canyon corridor during atmospheric descent. Recover them to calibrate life support telemetry!'"
 	)
 	register_mission(m1)
 	
@@ -83,7 +84,8 @@ func _setup_default_campaign() -> void:
 		3.0,
 		{"crystals": 3, "titanium": 2},
 		{"required_resource": "biomass"},
-		"Samples"
+		"Samples",
+		"AURA-7: 'Life support stabilized. Biosensors detect abnormal fungal and xenomorphic spore signatures in the canyon brush. Harvest 3 biological tissue specimens from alien flora or defeated scout organisms so our laboratory can synthesize antidote nanites.'"
 	)
 	register_mission(m2)
 	
@@ -96,7 +98,8 @@ func _setup_default_campaign() -> void:
 		1.0,
 		{"crystals": 5, "energy_refill": 100.0},
 		{"terminal_id": "Alpha-7 Research Terminal"},
-		"Terminal"
+		"Terminal",
+		"AURA-7: 'Biological analysis confirms genetic tampering. Long-range telemetry points to the abandoned Alpha-7 Research Outpost across the North-East canyon passage. Navigate across the terrain and interface with the mainframe terminal to retrieve historical expedition data.'"
 	)
 	register_mission(m3)
 	
@@ -109,7 +112,8 @@ func _setup_default_campaign() -> void:
 		12.0,
 		{"titanium": 4, "oxygen_cells": 2},
 		{"duration": 12.0, "fail_on_death": true},
-		"Seconds"
+		"Seconds",
+		"AURA-7: 'WARNING: Outpost decryption broadcasted an emergency beacon across subterranean fissures! Hostile swarm organisms are converging rapidly on your coordinates. Arm your plasma rifle and maintain defensive perimeter!'"
 	)
 	register_mission(m4)
 	
@@ -122,7 +126,8 @@ func _setup_default_campaign() -> void:
 		1.0,
 		{"crystals": 10, "titanium": 10, "biomass": 10},
 		{"boss_id": "GoliathPrime"},
-		"Apex Threat"
+		"Apex Threat",
+		"AURA-7: 'Seismic anomalies detected in the colossal southern crater basin. An apex alpha xenomorph—designated Goliath Prime—has awakened. It employs predictive combat tactics. Use canyon rock pillars to deflect acid attacks and neutralize the threat!'"
 	)
 	register_mission(m5)
 	
@@ -135,7 +140,8 @@ func _setup_default_campaign() -> void:
 		1.0,
 		{"mission_rating": "EXEMPLARY"},
 		{"target_zone": "habitat_airlock"},
-		"Airlock"
+		"Airlock",
+		"AURA-7: 'Goliath Prime neutralized! Planetary threat suppressed and scientific logs archived. Return to the Bio-Hab Habitat Airlock to secure expedition findings and initialize orbital star map transit to new exoplanetary destinations!'"
 	)
 	register_mission(m6)
 	

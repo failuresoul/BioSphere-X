@@ -53,10 +53,22 @@ extends CanvasLayer
 
 # Waypoint Compass & Survival Field Guide UI
 @onready var waypoint_label: Label = %WaypointLabel
+@onready var biome_telemetry_label: Label = get_node_or_null("%BiomeTelemetryLabel")
 @onready var help_modal_overlay: Control = %HelpModalOverlay
 @onready var help_content_label: RichTextLabel = %HelpContentLabel
 @onready var help_close_btn: Button = %HelpCloseBtn
 var _waypoint_update_timer: float = 0.0
+
+# AI Story & Narrative Transmission UI
+@onready var respawn_base_button: Button = get_node_or_null("%RespawnBaseButton")
+@onready var story_log_button: Button = get_node_or_null("%StoryLogButton")
+@onready var story_modal_overlay: Control = get_node_or_null("%StoryModalOverlay")
+@onready var story_header: Label = get_node_or_null("%StoryHeader")
+@onready var story_sub_header: Label = get_node_or_null("%StorySubHeader")
+@onready var story_content_label: RichTextLabel = get_node_or_null("%StoryContentLabel")
+@onready var story_accept_btn: Button = get_node_or_null("%StoryAcceptBtn")
+@onready var story_guide_btn: Button = get_node_or_null("%StoryGuideBtn")
+@onready var story_close_btn: Button = get_node_or_null("%StoryCloseBtn")
 
 # Mission Telemetry & Feedback UI
 @onready var mission_title_tag: Label = %MissionTitleTag
@@ -149,7 +161,28 @@ func _ready() -> void:
 		help_button.pressed.connect(toggle_help_manual)
 	if help_close_btn:
 		help_close_btn.pressed.connect(close_help_manual)
+	if respawn_base_button:
+		respawn_base_button.pressed.connect(_on_respawn_base_pressed)
+	if story_log_button:
+		story_log_button.pressed.connect(open_story_modal)
+	if story_close_btn:
+		story_close_btn.pressed.connect(close_story_modal)
+	if story_accept_btn:
+		story_accept_btn.pressed.connect(close_story_modal)
+	if story_guide_btn:
+		story_guide_btn.pressed.connect(func():
+			close_story_modal()
+			open_help_manual()
+		)
 	_setup_help_content()
+	
+	# Initial AURA-7 AI Mission Transmission on fresh session launch
+	get_tree().create_timer(0.4).timeout.connect(func():
+		var gs = get_node_or_null("/root/GameState")
+		if gs and not gs.has_meta("intro_story_shown"):
+			gs.set_meta("intro_story_shown", true)
+			open_story_modal()
+	)
 
 
 func _setup_procedural_audio() -> void:
@@ -167,6 +200,11 @@ func _setup_procedural_audio() -> void:
 
 func _process(delta: float) -> void:
 	_pulse_timer += delta * 4.0
+	
+	# Animated pulse glow on active mission badge
+	if mission_state_badge and mission_state_badge.visible:
+		var p_badge := (sin(_pulse_timer * 0.8) + 1.0) * 0.5
+		mission_state_badge.modulate.a = 0.70 + p_badge * 0.30
 	
 	# Update Waypoint Compass tracker
 	_waypoint_update_timer += delta
@@ -317,6 +355,11 @@ func _initialize_hud_values() -> void:
 	_on_resource_changed("titanium", res.get("titanium", 0))
 	_on_resource_changed("biomass", res.get("biomass", 0))
 	_on_resource_changed("oxygen_cells", res.get("oxygen_cells", 0))
+	
+	if biome_telemetry_label:
+		var p_name: String = str(gs.get("selected_planet")) if "selected_planet" in gs and not str(gs.get("selected_planet")).is_empty() else "TRAPPIST-1 e"
+		var rate: float = float(gs.get("oxygen_depletion_rate")) if "oxygen_depletion_rate" in gs else 1.5
+		biome_telemetry_label.text = "%s // SECTOR ALPHA • O2 DRAIN: %.1f/s" % [p_name.to_upper(), rate]
 
 
 # ---------------------------------------------------------------------------
@@ -426,22 +469,47 @@ func _on_interaction_prompt_changed(prompt_text: String) -> void:
 	else:
 		contextual_prompt.visible = true
 		if prompt_label:
-			prompt_label.text = prompt_text
+			var cleaned_text := prompt_text
+			if cleaned_text.begins_with("Press E to "):
+				cleaned_text = cleaned_text.substr(11)
+			elif cleaned_text.begins_with("Press [E] to "):
+				cleaned_text = cleaned_text.substr(13)
+			prompt_label.text = cleaned_text
 
 
 func _on_tutorial_step_changed(step: int, title: String, desc: String, is_complete: bool) -> void:
-	if tutorial_step_label:
-		tutorial_step_label.text = title
-	if tutorial_desc_label:
-		tutorial_desc_label.text = desc
-	if tutorial_progress_label:
-		var p_str := ""
-		for i in 4:
-			p_str += "● " if i <= step else "○ "
-		tutorial_progress_label.text = p_str.strip_edges()
-	
-	if is_complete and tutorial_banner:
+	if not tutorial_banner:
+		return
+		
+	if is_complete:
+		tutorial_banner.visible = true
 		tutorial_banner.modulate = Color(0.3, 1.0, 0.6)
+		if tutorial_step_label:
+			tutorial_step_label.text = title
+		if tutorial_desc_label:
+			tutorial_desc_label.text = desc
+		if tutorial_progress_label:
+			tutorial_progress_label.text = "● ● ● ●"
+		# Smoothly fade out the tutorial banner after 3 seconds so the screen stays clean
+		var tw := create_tween()
+		tw.tween_interval(3.0)
+		tw.tween_property(tutorial_banner, "modulate:a", 0.0, 0.6)
+		tw.tween_callback(func(): 
+			if tutorial_banner: 
+				tutorial_banner.visible = false
+		)
+	else:
+		tutorial_banner.visible = true
+		tutorial_banner.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		if tutorial_step_label:
+			tutorial_step_label.text = title
+		if tutorial_desc_label:
+			tutorial_desc_label.text = desc
+		if tutorial_progress_label:
+			var p_str := ""
+			for i in 4:
+				p_str += "● " if i <= step else "○ "
+			tutorial_progress_label.text = p_str.strip_edges()
 
 
 func _on_game_paused(paused: bool) -> void:
@@ -456,8 +524,84 @@ func _on_game_over() -> void:
 		pause_overlay.visible = false
 	if game_over_overlay:
 		game_over_overlay.visible = true
-		if restart_button:
+		if respawn_base_button:
+			respawn_base_button.grab_focus()
+		elif restart_button:
 			restart_button.grab_focus()
+
+
+func _on_respawn_base_pressed() -> void:
+	if game_over_overlay:
+		game_over_overlay.visible = false
+	if pause_overlay:
+		pause_overlay.visible = false
+	
+	var gs := get_node_or_null("/root/GameState")
+	if gs:
+		gs.is_game_over = false
+		gs.is_paused = false
+		gs.call("refill_oxygen", 100.0)
+		gs.call("heal_player", 100.0)
+	
+	get_tree().paused = false
+	
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		player = get_node_or_null("/root/GameWorld/Player")
+	if player:
+		player.global_position = Vector2.ZERO
+		player.velocity = Vector2.ZERO
+		player.set("is_dead", false)
+		if player.has_node("CollisionShape2D"):
+			player.get_node("CollisionShape2D").set_deferred("disabled", false)
+		var vis = player.get_node_or_null("Visual")
+		if vis:
+			vis.modulate = Color.WHITE
+	
+	_play_mission_success_sound()
+
+
+func toggle_story_modal() -> void:
+	if story_modal_overlay:
+		if story_modal_overlay.visible:
+			close_story_modal()
+		else:
+			open_story_modal()
+
+
+func open_story_modal(custom_text: String = "") -> void:
+	if not story_modal_overlay:
+		return
+	
+	var content := custom_text
+	if content.is_empty():
+		var mm = get_node_or_null("/root/MissionManager")
+		var active = mm.call("get_active_mission") if mm else null
+		if active and "story_log" in active and not str(active.story_log).is_empty():
+			content = str(active.story_log)
+		else:
+			content = "[b]AURA-7 EXPEDITION OS // MISSION LOGS[/b]\n\n"
+			content += "Welcome to Trappist-1 e, Sector Alpha.\n"
+			content += "Atmosphere is hostile with continuous O2 consumption outside sanctuary zones.\n"
+			content += "The Bio-Hab Alpha dome provides 100% life-support recharge.\n\n"
+			content += "Primary Objectives:\n"
+			content += "  1. Recover 3 emergency Oxygen Cells along the south canyon corridor.\n"
+			content += "  2. Harvest biological tissue samples from alien flora/fauna.\n"
+			content += "  3. Interface with the Alpha-7 Outpost terminal.\n"
+			content += "  4. Survive xenomorphic bio-swarm ambush.\n"
+			content += "  5. Track and neutralize Goliath Prime (Apex Predator).\n"
+			content += "  6. Return to Habitat Airlock to initialize orbital star transit."
+	
+	if story_content_label:
+		story_content_label.text = content
+	
+	story_modal_overlay.visible = true
+	_play_mission_success_sound()
+
+
+func close_story_modal() -> void:
+	if story_modal_overlay:
+		story_modal_overlay.visible = false
 
 
 func _on_resume_pressed() -> void:
@@ -542,6 +686,20 @@ func _connect_mission_manager_signals() -> void:
 
 func _on_mission_started(mission: RefCounted) -> void:
 	_update_mission_display(mission)
+	if mission:
+		if feedback_banner:
+			feedback_banner.visible = true
+			feedback_banner.modulate = Color.WHITE
+			_feedback_banner_timer = 4.5
+			if feedback_title_label:
+				feedback_title_label.text = "◈ AURA-7 TRANSMISSION // %s" % str(mission.get("title"))
+				feedback_title_label.modulate = Color(0.15, 0.9, 1.0)
+			if feedback_desc_label:
+				feedback_desc_label.text = str(mission.get("description"))
+			if feedback_rewards_label:
+				feedback_rewards_label.text = "Press [L] for Full Encrypted Comms Log"
+				feedback_rewards_label.modulate = Color(0.25, 0.95, 0.75)
+		_play_mission_success_sound()
 
 
 func _on_mission_progress_updated(mission: RefCounted) -> void:
@@ -701,6 +859,11 @@ func _play_mission_fail_sound() -> void:
 # ---------------------------------------------------------------------------
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		if story_modal_overlay and story_modal_overlay.visible:
+			if event.keycode == KEY_ESCAPE or event.keycode == KEY_L:
+				close_story_modal()
+				get_viewport().set_input_as_handled()
+				return
 		if help_modal_overlay and help_modal_overlay.visible:
 			if event.keycode == KEY_ESCAPE or event.keycode == KEY_H:
 				close_help_manual()
@@ -711,6 +874,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				close_terminal_modal()
 				get_viewport().set_input_as_handled()
 				return
+		elif event.keycode == KEY_L:
+			toggle_story_modal()
+			get_viewport().set_input_as_handled()
+			return
 		elif event.keycode == KEY_H:
 			toggle_help_manual()
 			get_viewport().set_input_as_handled()
@@ -958,7 +1125,15 @@ func _setup_help_content() -> void:
 	manual += "[b][color=#38bdf8]4. ALIEN BESTIARY & COMBAT COUNTERS[/color][/b]\n"
 	manual += "• [color=#f87171]Scouts:[/color] Agile ambushers. Backpedal with thrusters while firing continuously.\n"
 	manual += "• [color=#fb923c]Spitters:[/color] Acid artillery. Strafe laterally to dodge corrosive slime pools.\n"
-	manual += "• [color=#e879f9]Brutes & Goliath Prime:[/color] Heavy armored horrors. Kite through canyon chokepoints and construct defensive perimeter bases."
+	manual += "• [color=#e879f9]Brutes & Goliath Prime:[/color] Heavy armored horrors. Kite through canyon chokepoints and construct defensive perimeter bases.\n\n"
+	
+	manual += "[b][color=#38bdf8]5. ACADEMIC AI ARCHITECTURE & LAB EVALUATION GUIDE[/color][/b]\n"
+	manual += "• [b]Multi-Algorithm Search Suite:[/b] 7 Graph Algorithms (A*, Dijkstra/BFS, DFS, DLS, IDDFS, Bidirectional, Greedy) with AStarGrid2D fallback.\n"
+	manual += "• [b]Mamdani Fuzzy Inference System:[/b] Real-time Dynamic Difficulty Adjustment balancing combat pressure, player vitals, and oxygen into speed/aggression multipliers.\n"
+	manual += "• [b]Adversarial Minimax / Alpha-Beta Pruning:[/b] Powers Goliath Prime Boss decision-making up to depth 4 with predictive heuristic state valuation.\n"
+	manual += "• [b]Constraint Satisfaction Problem (CSP) Engine:[/b] Solves multi-tier spatial, clearance, and inventory constraints for holographic base construction [B].\n"
+	manual += "• [b]Propositional Rule Engine:[/b] Forward-chaining expert system for atmospheric domes, hazard transitions, and mission protocols.\n"
+	manual += "• [b]AI vs AI Autonomous Arena:[/b] Side-by-side benchmarking proving ground with JSON/CSV export, available from Main Menu or [F1] Dev Menu."
 	
 	help_content_label.text = manual
 

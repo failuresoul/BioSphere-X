@@ -201,13 +201,13 @@ func _draw() -> void:
 		draw_circle(cpt, 1.8, Color.WHITE)
 	
 	# 6. Overhead Base Header Signage
-	var sign_color := Color(0.2, 0.85, 1.0, 0.9)
+	var sign_color := Color(0.2, 0.88, 1.0, 0.9)
 	draw_string(
 		ThemeDB.fallback_font,
-		Vector2(-110, -half_h + 20),
+		Vector2(-140, -half_h + 20),
 		"// %s // SECTOR-01 //" % base_name.to_upper(),
 		HORIZONTAL_ALIGNMENT_CENTER,
-		220.0,
+		280.0,
 		10,
 		sign_color
 	)

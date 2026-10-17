@@ -201,6 +201,9 @@ var match_state: MatchState = MatchState.WAITING
 var match_elapsed_time: float = 0.0
 var match_results: Dictionary = {}
 var map_data: RefCounted = null
+# Live match event log (rolling last 5 events)
+var _event_log: Array[String] = []
+var _event_log_timer: float = 0.0
 
 # Node References
 var agent_a: CharacterBody2D = null
@@ -265,6 +268,7 @@ var objective_beacon: Area2D = null
 @onready var b_role_label: Label = get_node_or_null("%B_RoleLabel")
 @onready var b_nodes_label: Label = %B_NodesLabel
 @onready var b_time_label: Label = %B_TimeLabel
+@onready var event_log_label: Label = get_node_or_null("%EventLogLabel")
 
 
 func _ready() -> void:
@@ -447,6 +451,7 @@ func _spawn_agents() -> void:
 	agent_a.call("setup_agent", "Agent A", "team_a", Color(0.12, 0.88, 1.0), agent_a_algorithm, current_scenario, agent_a_role)
 	agent_a.global_position = pos_a
 	agent_a.call("set_map_data", map_data)
+	agent_a.call("set_arena_ref", self)
 	agent_a.connect("agent_died", _on_agent_died)
 
 	agent_b = _agent_scene.instantiate()
@@ -455,6 +460,7 @@ func _spawn_agents() -> void:
 	agent_b.call("setup_agent", "Agent B", "team_b", Color(1.0, 0.55, 0.15), agent_b_algorithm, current_scenario, agent_b_role)
 	agent_b.global_position = pos_b
 	agent_b.call("set_map_data", map_data)
+	agent_b.call("set_arena_ref", self)
 	agent_b.connect("agent_died", _on_agent_died)
 
 	_configure_scenario_targets()
@@ -665,7 +671,10 @@ func _process(delta: float) -> void:
 	if match_state == MatchState.RUNNING:
 		match_elapsed_time += (delta / Engine.time_scale) if Engine.time_scale > 0.0 else delta
 		if timer_label:
-			timer_label.text = "Time: %.1fs / %.0fs" % [match_elapsed_time, match_time_limit]
+			var m: int = int(match_elapsed_time) / 60
+			var s: float = fmod(match_elapsed_time, 60.0)
+			var total_m: int = int(match_time_limit) / 60
+			timer_label.text = "⏱ %02d:%04.1f / %02d:00" % [m, s, total_m]
 
 		if match_elapsed_time >= match_time_limit:
 			_terminate_match("Time Limit Exceeded (Draw)")
@@ -677,6 +686,18 @@ func _process(delta: float) -> void:
 
 	if match_state == MatchState.RUNNING or show_ai_paths:
 		queue_redraw()
+
+
+# ---------------------------------------------------------------------------
+# Live Event Log (Match Commentary)
+# ---------------------------------------------------------------------------
+func _push_event(msg: String) -> void:
+	_event_log.append(msg)
+	if _event_log.size() > 4:
+		_event_log.pop_front()
+	if event_log_label:
+		event_log_label.text = "\n".join(_event_log)
+
 
 
 func _update_arena_pickups(delta: float) -> void:
@@ -702,16 +723,19 @@ func _check_pickup_collection(pos: Vector2, type: String) -> void:
 	for ag in agents:
 		if is_instance_valid(ag) and ag.get("current_state") != AutonomousAgentScript.AgentState.DEAD:
 			if ag.global_position.distance_to(pos) <= PICKUP_RADIUS:
+				var ag_name: String = str(ag.get("agent_name"))
 				if type == "repair":
 					pickup_repair_active = false
 					pickup_repair_cooldown = 15.0
 					if ag.has_method("heal"):
 						ag.call("heal", 35.0)
+					_push_event("💊 %s collected Nanite Repair Core (+35 HP)" % ag_name)
 				elif type == "overcharge":
 					pickup_overcharge_active = false
 					pickup_overcharge_cooldown = 18.0
 					if ag.has_method("apply_overcharge_boost"):
 						ag.call("apply_overcharge_boost", 8.0)
+					_push_event("⚡ %s OVERCHARGED! (+35%% speed & fire rate)" % ag_name)
 				break
 
 
@@ -748,34 +772,62 @@ func _update_telemetry() -> void:
 		var max_a: float = float(agent_a.health_component.max_health)
 		if a_hp_bar:
 			a_hp_bar.max_value = max_a
-			a_hp_bar.value = cur_a
+			a_hp_bar.value = lerpf(a_hp_bar.value, cur_a, 0.35) if absf(a_hp_bar.value - cur_a) > 0.1 else cur_a
 		if a_hp_label:
 			a_hp_label.text = "%d HP" % int(cur_a)
 		if a_role_label:
 			var r_a: String = String(agent_a.get("tactical_role")).capitalize()
 			var t_a: String = String(agent_a.get("current_tactic_status"))
-			a_role_label.text = "[ %s | %s ]" % [r_a, t_a]
+			var over_a: bool = bool(agent_a.get("_overcharge_timer") > 0.0)
+			var seeking_a: String = String(agent_a.get("_seeking_pickup"))
+			if over_a:
+				a_role_label.text = "[ %s | ⚡ OVERCHARGED ]" % r_a
+				a_role_label.modulate = Color(1.0, 0.85, 0.2)
+			elif seeking_a == "repair":
+				a_role_label.text = "[ %s | 💊 SEEKING REPAIR ]" % r_a
+				a_role_label.modulate = Color(0.25, 1.0, 0.5)
+			elif seeking_a == "overcharge":
+				a_role_label.text = "[ %s | ⚡ SEEKING OVERCHARGE ]" % r_a
+				a_role_label.modulate = Color(1.0, 0.95, 0.35)
+			else:
+				a_role_label.text = "[ %s | %s ]" % [r_a, t_a]
+				a_role_label.modulate = Color(0.3, 0.9, 1.0)
 		if a_nodes_label:
 			a_nodes_label.text = "Nodes: %d" % int(agent_a.get("total_nodes_expanded"))
 		if a_time_label:
-			a_time_label.text = "Time: %.1fms" % float(agent_a.get("total_algo_time_ms"))
+			var t_ms: float = float(agent_a.get("total_algo_time_ms"))
+			a_time_label.text = "⚡ %.1fms" % t_ms
 
 	if agent_b and agent_b.get("health_component"):
 		var cur_b: float = float(agent_b.health_component.current_health)
 		var max_b: float = float(agent_b.health_component.max_health)
 		if b_hp_bar:
 			b_hp_bar.max_value = max_b
-			b_hp_bar.value = cur_b
+			b_hp_bar.value = lerpf(b_hp_bar.value, cur_b, 0.35) if absf(b_hp_bar.value - cur_b) > 0.1 else cur_b
 		if b_hp_label:
 			b_hp_label.text = "%d HP" % int(cur_b)
 		if b_role_label:
 			var r_b: String = String(agent_b.get("tactical_role")).capitalize()
 			var t_b: String = String(agent_b.get("current_tactic_status"))
-			b_role_label.text = "[ %s | %s ]" % [r_b, t_b]
+			var over_b: bool = bool(agent_b.get("_overcharge_timer") > 0.0)
+			var seeking_b: String = String(agent_b.get("_seeking_pickup"))
+			if over_b:
+				b_role_label.text = "[ %s | ⚡ OVERCHARGED ]" % r_b
+				b_role_label.modulate = Color(1.0, 0.85, 0.2)
+			elif seeking_b == "repair":
+				b_role_label.text = "[ %s | 💊 SEEKING REPAIR ]" % r_b
+				b_role_label.modulate = Color(0.25, 1.0, 0.5)
+			elif seeking_b == "overcharge":
+				b_role_label.text = "[ %s | ⚡ SEEKING OVERCHARGE ]" % r_b
+				b_role_label.modulate = Color(1.0, 0.95, 0.35)
+			else:
+				b_role_label.text = "[ %s | %s ]" % [r_b, t_b]
+				b_role_label.modulate = Color(1.0, 0.75, 0.3)
 		if b_nodes_label:
 			b_nodes_label.text = "Nodes: %d" % int(agent_b.get("total_nodes_expanded"))
 		if b_time_label:
-			b_time_label.text = "Time: %.1fms" % float(agent_b.get("total_algo_time_ms"))
+			var t_ms: float = float(agent_b.get("total_algo_time_ms"))
+			b_time_label.text = "⚡ %.1fms" % t_ms
 
 
 # ---------------------------------------------------------------------------
@@ -790,6 +842,7 @@ func start_match() -> void:
 
 	match_state = MatchState.RUNNING
 	_set_agents_active(true)
+	_push_event("🟢 MATCH STARTED — %s vs %s" % [agent_a_algorithm.to_upper(), agent_b_algorithm.to_upper()])
 
 	if control_panel:
 		control_panel.visible = false
@@ -870,15 +923,19 @@ func reset_match() -> void:
 	if agent_a:
 		agent_a.reset_agent(pos_a)
 		agent_a.setup_agent("Agent A", "team_a", Color(0.12, 0.88, 1.0), agent_a_algorithm, current_scenario, agent_a_role)
+		agent_a.call("set_arena_ref", self)
 	if agent_b:
 		agent_b.reset_agent(pos_b)
 		agent_b.setup_agent("Agent B", "team_b", Color(1.0, 0.55, 0.15), agent_b_algorithm, current_scenario, agent_b_role)
+		agent_b.call("set_arena_ref", self)
 
 	_configure_scenario_targets()
 	_set_agents_active(false)
 
 	if timer_label:
-		timer_label.text = "Time: 0.0s / %.0fs" % match_time_limit
+		var total_m: int = int(match_time_limit) / 60
+		var total_s: float = fmod(match_time_limit, 60.0)
+		timer_label.text = "⏱ 00:00.0 / %02d:%04.1f" % [total_m, total_s]
 	if match_status_label:
 		match_status_label.text = "STATUS: READY"
 		match_status_label.modulate = Color(0.7, 0.8, 1.0)
@@ -888,6 +945,8 @@ func reset_match() -> void:
 		results_panel.visible = false
 	if export_status_label:
 		export_status_label.text = ""
+	_event_log.clear()
+	_push_event("🚀 Match Ready — Agents deployed to spawn positions")
 
 	match_reset.emit()
 	_update_badges()
@@ -942,6 +1001,8 @@ func _terminate_match(outcome_str: String) -> void:
 		winner = "Agent A"
 	elif "Agent B Won" in outcome_str:
 		winner = "Agent B"
+
+	_push_event("🏆 MATCH OVER — %s" % outcome_str)
 
 	var metrics_a: Dictionary = agent_a.call("get_metrics") if agent_a and agent_a.has_method("get_metrics") else {}
 	var metrics_b: Dictionary = agent_b.call("get_metrics") if agent_b and agent_b.has_method("get_metrics") else {}

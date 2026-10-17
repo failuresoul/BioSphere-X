@@ -64,6 +64,11 @@ var _base_attack_cooldown: float = 0.45
 var _min_standoff: float = 150.0
 var _max_standoff: float = 260.0
 var _lead_aim_factor: float = 0.90
+# Dynamic behavior randomization
+var _tactic_reassess_timer: float = 0.0
+var _repositioning_timer: float = 0.0
+var _aggressive_push: bool = false
+var _flanker_phase: int = 0  # Rotation phase for flanker arc movement
 
 # Navigation State
 var _nav_path: PackedVector2Array = PackedVector2Array()
@@ -72,6 +77,12 @@ var _repath_timer: float = 0.0
 var _is_requesting_path: bool = false
 var _last_target_grid_pos: Vector2i = Vector2i(-999, -999)
 var _map_data_ref: RefCounted = null
+# Arena reference for pickup awareness
+var _arena_ref: Node = null
+var _seeking_pickup: String = ""       # "" | "repair" | "overcharge"
+var _pickup_seek_timer: float = 0.0    # Re-evaluates every N seconds
+var _pickup_cooldown_a: float = 0.0   # personal cooldown after collecting repair
+var _pickup_cooldown_b: float = 0.0   # personal cooldown after collecting overcharge
 
 # Metrics Tracking
 var total_requests: int = 0
@@ -248,6 +259,10 @@ func set_map_data(m_data: RefCounted) -> void:
 	_map_data_ref = m_data
 
 
+func set_arena_ref(arena: Node) -> void:
+	_arena_ref = arena
+
+
 func set_tactical_role(p_role: String) -> void:
 	tactical_role = p_role.to_lower().strip_edges()
 	_apply_role_tuning()
@@ -274,10 +289,18 @@ func reset_agent(p_spawn_pos: Vector2 = Vector2.ZERO) -> void:
 	_hit_flash_timer = 0.0
 	_recoil_offset = Vector2.ZERO
 	_death_fade = 1.0
-	_strafe_timer = 0.0
+	_strafe_timer = randf_range(0.3, 1.5)  # Stagger strafe timers so agents don't sync
 	_evasion_burst_timer = 0.0
 	_overcharge_timer = 0.0
-	current_tactic_status = "ENGAGING"
+	_tactic_reassess_timer = randf_range(0.5, 3.0)  # Stagger initial reassessment
+	_repositioning_timer = randf_range(1.0, 5.0)
+	_aggressive_push = randf() > 0.5
+	_flanker_phase = randi() % 3
+	current_tactic_status = "DEPLOYING"
+	_seeking_pickup = ""
+	_pickup_seek_timer = randf_range(0.5, 2.0)
+	_pickup_cooldown_a = 0.0
+	_pickup_cooldown_b = 0.0
 	_apply_role_tuning()
 
 	total_requests = 0
@@ -356,26 +379,87 @@ func _update_autonomous_behavior(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
 		return
 
-	var target_pos := target_node.global_position
-	var dist_to_target := global_position.distance_to(target_pos)
+	# ── PICKUP SEEKING EVALUATION ──────────────────────────────────────────
+	# Tick personal pickup cooldowns
+	if _pickup_cooldown_a > 0.0:
+		_pickup_cooldown_a -= delta
+	if _pickup_cooldown_b > 0.0:
+		_pickup_cooldown_b -= delta
 
-	# Aim facing direction toward target
+	# Periodically re-evaluate whether to seek a pickup
+	_pickup_seek_timer -= delta
+	if _pickup_seek_timer <= 0.0:
+		_pickup_seek_timer = randf_range(0.6, 1.4)  # Re-check ~every second
+		var best_pickup := _evaluate_best_pickup()
+		if best_pickup != "":
+			if _seeking_pickup != best_pickup:
+				_seeking_pickup = best_pickup
+				_repath_timer = 0.0  # Force immediate repath toward pickup
+				_last_target_grid_pos = Vector2i(-999, -999)
+		else:
+			if _seeking_pickup != "":
+				_seeking_pickup = ""
+				_repath_timer = 0.0  # Force repath back to real target
+				_last_target_grid_pos = Vector2i(-999, -999)
+
+	# If actively seeking a pickup, check if we've collected it (pickup gone or reached)
+	if _seeking_pickup != "" and is_instance_valid(_arena_ref):
+		var still_available := false
+		if _seeking_pickup == "repair":
+			still_available = bool(_arena_ref.get("pickup_repair_active"))
+		elif _seeking_pickup == "overcharge":
+			still_available = bool(_arena_ref.get("pickup_overcharge_active"))
+		if not still_available:
+			# Someone already collected it — abort and return to normal
+			if _seeking_pickup == "repair":
+				_pickup_cooldown_a = 3.0
+			elif _seeking_pickup == "overcharge":
+				_pickup_cooldown_b = 3.0
+			_seeking_pickup = ""
+			_repath_timer = 0.0
+			_last_target_grid_pos = Vector2i(-999, -999)
+	# ───────────────────────────────────────────────────────────────────────
+
+	# Resolve effective target position — pickup overrides real target
+	var effective_target_pos := target_node.global_position
+	if _seeking_pickup != "" and is_instance_valid(_arena_ref):
+		if _seeking_pickup == "repair":
+			effective_target_pos = _arena_ref.get("PICKUP_REPAIR_POS")
+		elif _seeking_pickup == "overcharge":
+			effective_target_pos = _arena_ref.get("PICKUP_OVERCHARGE_POS")
+
+	var dist_to_target := global_position.distance_to(effective_target_pos)
+
+	# Aim facing direction toward effective target
 	if dist_to_target > 1.0:
-		facing_direction = (target_pos - global_position).normalized()
+		facing_direction = (effective_target_pos - global_position).normalized()
 
 	# Repath timing logic
 	_repath_timer -= delta
-	var target_grid := _get_grid_coord(target_pos)
+	var target_grid := _get_grid_coord(effective_target_pos)
 	var needs_repath := _repath_timer <= 0.0 or target_grid != _last_target_grid_pos or _nav_path.is_empty()
 
 	if needs_repath and not _is_requesting_path:
-		_request_path_to(target_pos)
+		_request_path_to(effective_target_pos)
 
 	# Scenario-specific behavior
-	if scenario == "combat":
-		_process_combat_scenario(target_pos, dist_to_target, delta)
+	if _seeking_pickup != "":
+		# While seeking pickup: just navigate, no combat
+		current_state = AgentState.NAVIGATING
+		var pickup_label := "SEEKING REPAIR CORE" if _seeking_pickup == "repair" else "SEEKING OVERCHARGE"
+		current_tactic_status = pickup_label
+		_follow_nav_path(delta)
+		# Still fire at enemies we happen to see while running to pickup (opportunistic)
+		var real_target_pos := target_node.global_position
+		var real_dist := global_position.distance_to(real_target_pos)
+		if real_dist <= attack_range and has_line_of_sight_to(real_target_pos):
+			current_state = AgentState.ATTACKING
+			var fire_dir := _calculate_lead_aim_direction(real_target_pos, real_dist)
+			_try_fire_weapon(fire_dir)
+	elif scenario == "combat":
+		_process_combat_scenario(effective_target_pos, dist_to_target, delta)
 	else:
-		_process_race_scenario(target_pos, delta)
+		_process_race_scenario(effective_target_pos, delta)
 
 
 func _process_combat_scenario(target_pos: Vector2, dist: float, delta: float) -> void:
@@ -394,8 +478,14 @@ func _process_combat_scenario(target_pos: Vector2, dist: float, delta: float) ->
 	# Dynamic lateral strafe flipping timer
 	_strafe_timer -= delta
 	if _strafe_timer <= 0.0:
-		_strafe_timer = randf_range(1.2, 2.6)
+		_strafe_timer = randf_range(1.0, 2.2)
 		_strafe_direction = -_strafe_direction
+
+	# Periodic tactic reassessment — creates non-deterministic behavior variety
+	_tactic_reassess_timer -= delta
+	if _tactic_reassess_timer <= 0.0:
+		_tactic_reassess_timer = randf_range(2.5, 5.5)
+		_aggressive_push = randf() > 0.55  # 45% chance to go aggressive
 
 	# Dynamic tactical role state evaluation
 	var desired_min_standoff := _min_standoff
@@ -404,26 +494,75 @@ func _process_combat_scenario(target_pos: Vector2, dist: float, delta: float) ->
 
 	match tactical_role.to_lower():
 		"assault":
-			current_tactic = "CQB RUSH"
-			desired_min_standoff = 70.0
-			desired_max_standoff = 160.0
+			# Assault: sometimes goes berserk, sometimes controlled burst
+			if _aggressive_push and my_hp_ratio > 0.3:
+				current_tactic = "BERSERK CHARGE"
+				desired_min_standoff = 30.0
+				desired_max_standoff = 90.0
+			else:
+				current_tactic = "CQB RUSH"
+				desired_min_standoff = 70.0
+				desired_max_standoff = 160.0
 		"sniper":
-			current_tactic = "SNIPING"
-			desired_min_standoff = 260.0
-			desired_max_standoff = 380.0
-		"flanker":
-			current_tactic = "EVASIVE FLANK"
-			desired_min_standoff = 150.0
-			desired_max_standoff = 240.0
-		"adaptive", _:
-			if my_hp_ratio < 0.40:
-				current_tactic = "RETREAT & RECOVER"
+			# Sniper: occasionally repositions to a new angle
+			_repositioning_timer -= delta
+			if _repositioning_timer <= 0.0:
+				_repositioning_timer = randf_range(6.0, 12.0)
+				# Brief reposition phase
+				current_tactic = "REPOSITIONING"
+				desired_min_standoff = 140.0
+				desired_max_standoff = 200.0
+			elif _aggressive_push and opp_hp_ratio < 0.4:
+				current_tactic = "EXECUTE SHOT"
+				desired_min_standoff = 200.0
+				desired_max_standoff = 320.0
+			else:
+				current_tactic = "OVERWATCH"
 				desired_min_standoff = 260.0
-				desired_max_standoff = 360.0
-			elif opp_hp_ratio < 0.35 and my_hp_ratio > 0.45:
+				desired_max_standoff = 380.0
+		"flanker":
+			# Flanker: cycles through phases — approach, strafe, withdraw
+			_repositioning_timer -= delta
+			if _repositioning_timer <= 0.0:
+				_repositioning_timer = randf_range(2.0, 4.5)
+				_flanker_phase = (_flanker_phase + 1) % 3
+				_evasion_burst_timer = randf_range(0.4, 0.9)  # Random evasion on phase change
+			match _flanker_phase:
+				0:
+					current_tactic = "EVASIVE FLANK"
+					desired_min_standoff = 120.0
+					desired_max_standoff = 200.0
+				1:
+					current_tactic = "AGGRESSIVE RUSH"
+					desired_min_standoff = 60.0
+					desired_max_standoff = 130.0
+				2:
+					current_tactic = "WITHDRAW & CIRCLE"
+					desired_min_standoff = 220.0
+					desired_max_standoff = 310.0
+				_:
+					current_tactic = "EVASIVE FLANK"
+		"adaptive", _:
+			if my_hp_ratio < 0.30:
+				current_tactic = "EMERGENCY RETREAT"
+				desired_min_standoff = 320.0
+				desired_max_standoff = 460.0
+			elif my_hp_ratio < 0.50:
+				current_tactic = "RETREAT & RECOVER"
+				desired_min_standoff = 230.0
+				desired_max_standoff = 340.0
+			elif opp_hp_ratio < 0.25 and my_hp_ratio > 0.50:
+				current_tactic = "FINISH THEM"
+				desired_min_standoff = 50.0
+				desired_max_standoff = 130.0
+			elif opp_hp_ratio < 0.45 and my_hp_ratio > 0.45:
 				current_tactic = "PRESSING ADVANTAGE"
-				desired_min_standoff = 80.0
-				desired_max_standoff = 170.0
+				desired_min_standoff = 90.0
+				desired_max_standoff = 180.0
+			elif _aggressive_push:
+				current_tactic = "HUNTING"
+				desired_min_standoff = 110.0
+				desired_max_standoff = 200.0
 			else:
 				current_tactic = "BALANCED TACTICS"
 
@@ -475,6 +614,87 @@ func _calculate_lead_aim_direction(target_pos: Vector2, dist: float) -> Vector2:
 func _process_race_scenario(_target_pos: Vector2, delta: float) -> void:
 	current_state = AgentState.NAVIGATING
 	_follow_nav_path(delta)
+
+
+# ---------------------------------------------------------------------------
+# Pickup Utility Evaluation System
+# ---------------------------------------------------------------------------
+func _evaluate_best_pickup() -> String:
+	## Returns "repair", "overcharge", or "" based on tactical need and pickup availability.
+	if not is_instance_valid(_arena_ref):
+		return ""
+
+	var my_hp_ratio := 1.0
+	if health_component and health_component.max_health > 0.0:
+		my_hp_ratio = health_component.current_health / health_component.max_health
+
+	var repair_active: bool = bool(_arena_ref.get("pickup_repair_active"))
+	var overcharge_active: bool = bool(_arena_ref.get("pickup_overcharge_active"))
+	var repair_pos: Vector2 = _arena_ref.get("PICKUP_REPAIR_POS")
+	var overcharge_pos: Vector2 = _arena_ref.get("PICKUP_OVERCHARGE_POS")
+
+	var dist_repair := global_position.distance_to(repair_pos) if repair_active else INF
+	var dist_overcharge := global_position.distance_to(overcharge_pos) if overcharge_active else INF
+
+	# Distance thresholds per scenario: race agents detour more freely, combat agents only go when needed
+	var repair_threshold := 550.0 if scenario == "race" else 420.0
+	var overcharge_threshold := 420.0 if scenario == "race" else 320.0
+
+	# ── Repair Core Utility ────────────────────────────────────────────────
+	var repair_utility := 0.0
+	if repair_active and _pickup_cooldown_a <= 0.0 and dist_repair < repair_threshold:
+		# Urgent need: more valuable the lower HP is
+		var hp_deficit := 1.0 - my_hp_ratio  # 0 = full HP, 1 = dead
+		repair_utility = hp_deficit * 2.5
+
+		# In race: also seek repair if we're ahead and can afford the detour
+		if scenario == "race" and my_hp_ratio > 0.75:
+			repair_utility = 0.0  # Don't bother if healthy in a race
+
+		# Distance penalty: farther = less useful
+		repair_utility -= (dist_repair / repair_threshold) * 0.6
+
+		# Role bonus: adaptive heavily values healing when retreating
+		if tactical_role == "adaptive" and my_hp_ratio < 0.5:
+			repair_utility += 0.5
+
+	# ── Overcharge Cell Utility ────────────────────────────────────────────
+	var overcharge_utility := 0.0
+	if overcharge_active and _pickup_cooldown_b <= 0.0 and dist_overcharge < overcharge_threshold and _overcharge_timer <= 0.0:
+		# Base opportunistic value
+		overcharge_utility = 0.6
+
+		# Distance penalty
+		overcharge_utility -= (dist_overcharge / overcharge_threshold) * 0.5
+
+		# Role bonuses: aggressive roles love overcharge
+		match tactical_role:
+			"assault":
+				overcharge_utility += 0.8  # Assault ALWAYS wants overcharge
+			"flanker":
+				overcharge_utility += 0.5  # Flanker loves speed burst
+			"adaptive":
+				if _aggressive_push:
+					overcharge_utility += 0.4
+			"sniper":
+				overcharge_utility += 0.1  # Snipers care less (they stay still)
+
+		# In race: overcharge is very valuable (speed boost helps reach objective)
+		if scenario == "race":
+			overcharge_utility += 0.5
+
+	# ── Decision: pick highest utility above threshold 0.4 ─────────────────
+	var pick_repair := repair_utility > 0.4
+	var pick_overcharge := overcharge_utility > 0.4
+
+	if pick_repair and pick_overcharge:
+		# Both available: pick whichever is more urgent
+		return "repair" if repair_utility >= overcharge_utility else "overcharge"
+	elif pick_repair:
+		return "repair"
+	elif pick_overcharge:
+		return "overcharge"
+	return ""
 
 
 func _follow_nav_path(delta: float) -> void:

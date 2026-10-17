@@ -2,18 +2,22 @@
 
 A complete, 2D top-down sci-fi survival game set on alien exoplanets, powered by **Godot 4** and an asynchronous **Python AI Backend**.
 
+> 🏆 **ACADEMIC EVALUATION & LAB PRESENTATION**:  
+> For university examiners, laboratory professors, and project evaluation panels, please see the complete [Academic AI Defense & Pitch Guide](file:///e:/Ai%20Project/ACADEMIC_DEFENSE.md). It includes mathematical formulations, time/space complexity matrices, 5-minute viva presentation scripts, and a 3-minute live demonstration checklist.
+
 ---
 
 ## Table of Contents
-1. [Project Overview & Architectural Milestones](#project-overview--architectural-milestones)
-2. [Prerequisites & Quick Start](#prerequisites--quick-start)
-3. [Master Controls & Keybindings](#master-controls--keybindings)
-4. [How to Play: AI vs Player Mode (Complete Survival Guide)](#how-to-play-ai-vs-player-mode-complete-survival-guide)
-5. [How to Play: AI vs AI Simulation Arena (Complete Benchmarking Guide)](#how-to-play-ai-vs-ai-simulation-arena-complete-benchmarking-guide)
-6. [Algorithms Map & Implementation Reference](#algorithms-map--implementation-reference)
-7. [Project Directory Structure](#project-directory-structure)
-8. [Automated Verification & Test Suites](#automated-verification--test-suites)
-9. [System Audit & Technical Specifications](#system-audit--technical-specifications)
+1. [Academic Defense & Lab Evaluation Guide (ACADEMIC_DEFENSE.md)](ACADEMIC_DEFENSE.md)
+2. [Project Overview & Architectural Milestones](#project-overview--architectural-milestones)
+3. [Prerequisites & Quick Start](#prerequisites--quick-start)
+4. [Master Controls & Keybindings](#master-controls--keybindings)
+5. [How to Play: AI vs Player Mode (Complete Survival Guide)](#how-to-play-ai-vs-player-mode-complete-survival-guide)
+6. [How to Play: AI vs AI Simulation Arena (Complete Benchmarking Guide)](#how-to-play-ai-vs-ai-simulation-arena-complete-benchmarking-guide)
+7. [Algorithms Map & Implementation Reference](#algorithms-map--implementation-reference)
+8. [Project Directory Structure](#project-directory-structure)
+9. [Automated Verification & Test Suites](#automated-verification--test-suites)
+10. [System Audit & Technical Specifications](#system-audit--technical-specifications)
 
 ---
 
@@ -99,9 +103,12 @@ All keybindings can be customized in-game under **Main Menu -> Settings -> Contr
 | **Move Right** | `D` | `Right Arrow` | Move astronaut east across surface |
 | **Attack / Fire Rifle** | `Space` | `Left Mouse Button` | Fire plasma pulse rifle toward mouse cursor |
 | **Interact / Collect** | `E` | — | Harvest resources, activate consoles, enter airlocks |
-| **Command Terminal** | `~` (Tilde / Backquote) | — | Open natural language tactical command line |
-| **Inventory & Crafting** | `Tab` | — | Open suit storage, craft items, view upgrades |
+| **Inventory & Crafting** | `I` | `Tab` | Open suit storage, craft items, view upgrades |
 | **Base Construction** | `B` | — | Open structure build catalog & placement grid |
+| **Survival Field Guide** | `H` | — | Open comprehensive in-game manual & encyclopedia |
+| **AI Story Transmission** | `L` | — | Open AURA-7 mission lore logs & comms briefing |
+| **Command Terminal** | `~` (Tilde / Backquote) | — | Open natural language tactical command line |
+| **AI Nav Visualizer** | `F1` | — | Toggle real-time navigation mesh & path debug overlay |
 | **Pause Game** | `Escape` | `P` | Pause world simulation, open settings & save menu |
 
 ---
@@ -118,25 +125,32 @@ When launching BioSphere-X, the Main Menu offers:
 
 ---
 
-### 2. HUD & Vitality Telemetry
-Upon entering the planetary world, your Heads-Up Display provides real-time survival readouts:
-* **Suit Oxygen (Cyan Bar, Top Left)**:
-  * Oxygen constantly depletes at `1.5 units/second` during surface exploration.
-  * If reserves drop below `25%`, an audio alarm sounds and visual warning flashes occur.
-  * If reserves reach `0%`, you suffer `4.0 suffocation damage/second`.
-  * **Replenishment**: Harvest cyan Oxygen Canisters with `E`, use oxygen cells from inventory, enter an Atmospheric Dome base structure, or return to the Habitat Airlock.
-* **Suit Integrity / Health (Crimson Bar, Top Left)**:
-  * Decreases when struck by xenomorph melee strikes or acid projectiles.
-  * Screen shake and directional trauma flash indicate incoming damage.
-  * Restored using medical items, crafted nanite injectors, or resting inside base modules.
-  * Reaching `0 HP` triggers game over.
-* **Weapon Energy (Yellow Bar, Top Left)**:
-  * Powers your plasma pulse rifle. Each discharge consumes energy.
-  * Weapon recharge begins automatically after a brief pause (`0.35s`).
-* **Resource Inventory Counters (Top Center)**:
-  * Displays carried quantities of Energy Crystals, Titanium Alloy, Alien Biomass, and Oxygen Cells.
-* **Mission Objectives Tracker (Top Right)**:
-  * Displays your active expedition directive, progress percentage, and waypoint guidance.
+### 2. HUD & Vitality Telemetry (Redesigned Sci-Fi Interface)
+Upon entering the planetary world, your state-of-the-art Heads-Up Display provides clean, high-contrast survival telemetry without clutter:
+* **Top-Left: EVA Life Support & Biome Diagnostics**:
+  * **❤ VIT (Vitality / Health)**:
+    * Decreases when struck by xenomorph melee strikes or acid projectiles.
+    * Restored with medical nanites, harvested restorative fauna, or resting inside base modules.
+    * Reaching `0 HP` triggers mission failure and game over.
+  * **🫁 O2 (Oxygen Reserves)**:
+    * Constantly depletes at `1.5 units/second` while exploring hostile alien atmospheres.
+    * If reserves drop below `25%`, an audio warning sounds and flashing alerts appear.
+    * Reaching `0%` inflicts rapid suffocation damage (`4.0 HP/sec`).
+    * **Replenishment**: Approach cyan Oxygen Canisters and press `E`, enter the Base Atmospheric Dome safe-zone, or activate Oxygen Stations.
+  * **⚡ PWR (Weapon & Suit Energy)**:
+    * Powers your plasma pulse rifle. Recharges automatically when not firing.
+  * **Biome Telemetry**: Real-time readouts of sector coordinates, environmental hazard level, and atmospheric drain rate.
+* **Top-Right: Action Quick-Dock & Resource Monitor**:
+  * **Quick Actions**: `[F1] NAV`, `🎒 [I] CRAFT`, `🔨 [B] BUILD`, `❓ [H] GUIDE`, `💻 [~] CMD`.
+  * **Resource Counters**: Live counts of carried `⚡ Crystals`, `⛏ Titanium Alloy`, `🧬 Alien Biomass`, and `🫁 Oxygen Cells`.
+* **Lower-Center: Floating Contextual Interaction Prompt**:
+  * Displays a glowing keycap badge `[ E ]` and the contextual action (e.g. `[ E ]  Review Expedition Objectives`, `[ E ]  Harvest Oxygen Canister`, `[ E ]  Access Cargo Storage`) whenever near interactive entities.
+* **Bottom-Center: Mission Directives HUD & Waypoint Compass**:
+  * **Directive Card**: Displays the active mission name, objective category (`[COLLECT OXYGEN]`, `[RECON]`, etc.), and execution status (`● ACTIVE`).
+  * **Progress Bar**: Real-time progress metric with exact count and percentage (e.g. `0 / 3 Cells (0%)`).
+  * **Waypoint Compass**: Real-time dynamic distance and compass bearing to the objective target (e.g. `🧭 TARGET: Oxygen Canister [12m North-East]`).
+* **Bottom Bar: Quick Reference Hotkey Dock**:
+  * Subtle, clean docking bar showing all master controls at a glance.
 
 ---
 
@@ -207,6 +221,70 @@ The primary campaign progresses through six distinct operational phases:
 6. **Expedition Extraction**: Return to the Habitat Module Airlock to secure planetary telemetry and unlock orbital transit.
 
 Once extraction is achieved, access the **Orbital Star Map** to select and travel to new scientific destinations (e.g. **LHS 1140 b**, **Kepler-452 b**, **Gliese 667 Cc**). Each planet introduces distinct gravity, atmospheric hazards, and enemy compositions.
+
+### 8. Step-by-Step Walkthrough: Your First 10 Minutes in BioSphere-X
+
+Follow this exact walkthrough to experience the complete gameplay loop from spawning to planetary mastery:
+
+1. **Spawn & Safe Zone Orientation**:
+   * You spawn in the center of **Bio-Hab Alpha Research Base**, protected by a glowing cyan atmospheric dome.
+   * Take note of your top-left vitality monitor: while inside the dome, **Oxygen Recharges to 100%**.
+   * Approach the in-base stations:
+     * `[OPS] Mission Operations Console`: Press **`E`** to review current expedition directives.
+     * `[INVENTORY] Cargo Storage Vault`: Press **`E`** to store surplus resources or retrieve survival gear.
+     * `[DEPLOY] Habitat Airlock Gate`: Press **`E`** at the south portal to cycle the pressure doors and venture onto the planetary surface.
+
+2. **Phase 1 — Locomotion & Oxygen Survival**:
+   * Use **`W`, `A`, `S`, `D`** to navigate south through the canyon corridor.
+   * Notice your Oxygen gauge draining at `1.5/s`. Look for glowing cyan **Oxygen Canisters** resting near rock outcrops.
+   * Approach a canister and press **`E`** to harvest it, instantly recovering `+30.0 O2`.
+   * Complete the first directive by harvesting 3 Oxygen Cells.
+
+3. **Phase 2 — Economy & In-Field Crafting**:
+   * Harvest magenta **Energy Crystals** and amber **Titanium Alloy** nodes using **`E`**.
+   * Press **`I`** (or `Tab`) to open the **Inventory & Crafting Suite**.
+   * Craft **Nanite Medical Stims** to restore lost health, or upgrade your suit battery capacity.
+
+4. **Phase 3 — Combat Engagement & Tactics**:
+   * Aim with your mouse cursor and discharge your plasma pulse rifle using **`Space`** or **`Left Mouse Button`**.
+   * **Hostile Scouts (Green)**: Fast agile flankers. Backpedal (kite) while firing steady plasma bursts.
+   * **Hostile Brutes (Red)**: Heavy armored melee tanks. Watch for the red windup attack cone, dodge laterally, and fire while they recover.
+   * **Hostile Spitters (Cyan/Purple)**: Ranged artillery. Strafe perpendicular to incoming acid trajectory.
+
+5. **Phase 4 — Base Construction**:
+   * Press **`B`** to open the holographic **Construction Mode**.
+   * Select an **Atmospheric Dome** and position it near a distant mineral field (green holographic silhouette indicates valid CSP placement).
+   * Click **`Left Mouse Button`** to build. Step inside your newly constructed dome — suit oxygen consumption immediately drops to zero!
+   * Erect **Defensive Barricades** across narrow canyon passes to funnel alien swarms.
+
+6. **Phase 5 — Tactical Command Terminal & Outpost Override**:
+   * Press **`~`** (Tilde) to open the tactical command line.
+   * Type `"status report"` or `"refill oxygen"` to interact with the offline NLP engine.
+   * Follow the bottom **Waypoint Compass** (`🧭 TARGET TRACKER`) North-East to locate the abandoned Research Outpost.
+   * Press **`E`** at the outpost mainframe to decrypt alien planetary data.
+
+7. **Phase 6 — Apex Boss & Star Map Travel**:
+   * Decrypting the terminal awakens **Goliath Prime** (Apex Predator).
+   * Utilize canyon wall pillars as cover to absorb Goliath's ranged acid barrage.
+   * Neutralize Goliath Prime, claim rare biomass specimens, and return to the Habitat Airlock Gate.
+   * Access the **Orbital Star Map** to select your next NASA target (e.g. **LHS 1140 b** or **Kepler-452 b**)!
+
+### 4.9 Narrative Arc & The AURA-7 AI Comms System
+
+BioSphere-X features an integrated narrative campaign driven by your orbital synthetic companion, **AURA-7** (*Autonomous Unmanned Reconnaissance Assistant, Gen-7*).
+
+* **Incoming Transmission Modals**: Whenever you unlock or advance an expedition objective, AURA-7 broadcasts priority comms via a holographic orbital modal with audio chime and encrypted mission telemetry. You can click `[Accept Directive]` or press `[H]` to consult your field manual.
+* **Encrypted Mission Logbook (`[L]`)**: Press **`L`** anytime during the mission to bring up the full narrative transmission history. Review classified field notes, xenobiological analyses, and historical logs left by the lost vanguard team.
+* **Six-Act Campaign Storyline**:
+  1. **Act I — Awakening & Life Support**: Restore compromised atmospheric seals and recover scatter-dropped oxygen canisters outside the southern airlock.
+  2. **Act II — Xenobiological Taxonomy**: Harvest crystalline minerals and indigenous bio-flora to analyze alien photosynthetic adaptations.
+  3. **Act III — Outpost Mainframe Breach**: Locate the abandoned Vanguard research facility and decrypt the encrypted telemetry black box.
+  4. **Act IV — Swarm Perimeter Defense**: Stand your ground as local burrowing xenofauna test your thermal defensive grid.
+  5. **Act V — The Goliath Protocol**: Confront the titanic subterranean Apex Guardian, utilizing canyon geography and plasma charge timing.
+  6. **Act VI — Orbital Extraction**: Broadcast planetary viability indices to Earth Command and unlock the interstellar Star Map.
+* **Bio-Hab Sanctuary & Emergency Revive**:
+  * The central Bio-Hab dome maintains an atmospheric purity field (0% O2 loss, full thermal shielding, continuous health regeneration).
+  * Should vitals reach critical zero in the field, AURA-7 activates emergency transponder beacons. Click **`⟲ RESPAWN AT BASE HABITAT SANCTUARY`** to immediately revive at full 100% Health and Oxygen without resetting world discovery.
 
 ---
 

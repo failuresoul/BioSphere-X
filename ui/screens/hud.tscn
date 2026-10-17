@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://bsxhudscreen"]
+[gd_scene load_steps=22 format=3 uid="uid://bsxhudscreen"]
 
 [ext_resource type="Script" path="res://ui/screens/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://ui/components/dev_navigation_menu.tscn" id="2_dev_menu"]
@@ -7,17 +7,123 @@
 [ext_resource type="PackedScene" path="res://ui/screens/planet_selection_screen.tscn" id="5_planet_screen"]
 [ext_resource type="PackedScene" path="res://ui/components/command_terminal.tscn" id="6_cmd_terminal"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vitality"]
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+bg_color = Color(0.03, 0.05, 0.10, 0.96)
+border_width_left = 3
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.12, 0.75, 1.0, 0.88)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0.0, 0.30, 0.70, 0.40)
+shadow_size = 18
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
-content_margin_left = 12.0
-content_margin_top = 10.0
-content_margin_right = 12.0
-content_margin_bottom = 10.0
-bg_color = Color(0.06, 0.08, 0.13, 0.88)
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.03, 0.06, 0.12, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.15, 0.65, 0.95, 0.75)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_prompt"]
+content_margin_left = 18.0
+content_margin_top = 6.0
+content_margin_right = 18.0
+content_margin_bottom = 6.0
+bg_color = Color(0.02, 0.05, 0.10, 0.95)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.12, 0.65, 0.95, 0.5)
+border_color = Color(0.2, 0.9, 0.95, 0.9)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0.1, 0.7, 0.9, 0.35)
+shadow_size = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tutorial"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+bg_color = Color(0.03, 0.07, 0.14, 0.94)
+border_width_left = 2
+border_width_top = 1
+border_width_right = 2
+border_width_bottom = 1
+border_color = Color(0.2, 0.85, 1.0, 0.85)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0.0, 0.35, 0.7, 0.3)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_compact"]
+content_margin_left = 8.0
+content_margin_top = 3.0
+content_margin_right = 8.0
+content_margin_bottom = 3.0
+bg_color = Color(0.06, 0.12, 0.22, 0.90)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.75, 1.0, 0.75)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_story_panel"]
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+bg_color = Color(0.02, 0.05, 0.10, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.15, 0.85, 1.0, 0.85)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0.0, 0.4, 0.8, 0.4)
+shadow_size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_respawn_btn"]
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+bg_color = Color(0.08, 0.40, 0.35, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.95, 0.7, 0.95)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
@@ -66,21 +172,22 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_objective"]
-
-content_margin_left = 16.0
+content_margin_left = 18.0
 content_margin_top = 8.0
-content_margin_right = 16.0
+content_margin_right = 18.0
 content_margin_bottom = 8.0
-bg_color = Color(0.05, 0.07, 0.11, 0.9)
+bg_color = Color(0.02, 0.04, 0.08, 0.95)
 border_width_left = 2
 border_width_top = 1
 border_width_right = 2
 border_width_bottom = 1
-border_color = Color(0.95, 0.75, 0.15, 0.6)
+border_color = Color(1.0, 0.78, 0.2, 0.85)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+shadow_color = Color(0.65, 0.45, 0.05, 0.35)
+shadow_size = 18
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pause_panel"]
 content_margin_left = 32.0
@@ -183,20 +290,22 @@ shadow_color = Color(0.1, 0.8, 0.5, 0.3)
 shadow_size = 12
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dock"]
-content_margin_left = 12.0
-content_margin_top = 3.0
-content_margin_right = 12.0
-content_margin_bottom = 3.0
-bg_color = Color(0.04, 0.07, 0.12, 0.92)
+content_margin_left = 16.0
+content_margin_top = 4.0
+content_margin_right = 16.0
+content_margin_bottom = 4.0
+bg_color = Color(0.02, 0.04, 0.08, 0.95)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.15, 0.60, 0.85, 0.45)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+border_color = Color(0.2, 0.75, 1.0, 0.65)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0.05, 0.4, 0.8, 0.35)
+shadow_size = 12
 
 [node name="HUD" type="CanvasLayer"]
 layer = 10
@@ -225,39 +334,49 @@ color = Color(0.95, 0.15, 0.2, 0)
 [node name="TopLeftMargin" type="MarginContainer" parent="Root"]
 layout_mode = 1
 anchors_preset = 0
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 296.0
-offset_bottom = 138.0
+offset_left = 14.0
+offset_top = 14.0
+offset_right = 345.0
+offset_bottom = 210.0
 
 [node name="VitalityPanel" type="PanelContainer" parent="Root/TopLeftMargin"]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+theme_override_styles/panel = SubResource("StyleBoxFlat_vitality")
 
 [node name="VBox" type="VBoxContainer" parent="Root/TopLeftMargin/VitalityPanel"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 5
 
 [node name="TitleLabel" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 0.9)
+theme_override_colors/font_color = Color(0.15, 0.88, 1, 1)
 theme_override_font_sizes/font_size = 11
-text = "EVA LIFE SUPPORT // MARK-IV"
+text = "◈ EVA LIFE SUPPORT // MARK-IV"
+
+[node name="BiomeTelemetryLabel" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.92, 0.72, 0.78)
+theme_override_font_sizes/font_size = 9
+text = "TRAPPIST-1e // SECTOR ALPHA • HAZARD: MODERATE • O2 DRAIN: 1.5/s"
+
+[node name="HDivider" type="HSeparator" parent="Root/TopLeftMargin/VitalityPanel/VBox"]
+layout_mode = 2
 
 [node name="HealthRow" type="HBoxContainer" parent="Root/TopLeftMargin/VitalityPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="Tag" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/HealthRow"]
-custom_minimum_size = Vector2(30, 0)
+custom_minimum_size = Vector2(76, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.3, 0.4, 1)
-theme_override_font_sizes/font_size = 12
-text = "VIT"
+theme_override_colors/font_color = Color(0.95, 0.28, 0.38, 1)
+theme_override_font_sizes/font_size = 11
+text = "❤ VITALITY"
 
 [node name="HealthBar" type="ProgressBar" parent="Root/TopLeftMargin/VitalityPanel/VBox/HealthRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(140, 14)
+custom_minimum_size = Vector2(128, 16)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -268,10 +387,10 @@ show_percentage = false
 
 [node name="HealthLabel" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/HealthRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 0)
+custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.95, 0.90, 0.90, 1)
+theme_override_font_sizes/font_size = 11
 text = "100 / 100"
 horizontal_alignment = 2
 
@@ -280,15 +399,15 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="Tag" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/OxygenRow"]
-custom_minimum_size = Vector2(30, 0)
+custom_minimum_size = Vector2(76, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.12, 0.8, 1, 1)
-theme_override_font_sizes/font_size = 12
-text = "O2"
+theme_override_colors/font_color = Color(0.10, 0.82, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "🫁 OXYGEN"
 
 [node name="OxygenBar" type="ProgressBar" parent="Root/TopLeftMargin/VitalityPanel/VBox/OxygenRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(140, 14)
+custom_minimum_size = Vector2(128, 16)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -299,10 +418,10 @@ show_percentage = false
 
 [node name="OxygenLabel" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/OxygenRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 0)
+custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.90, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 11
 text = "100%"
 horizontal_alignment = 2
 
@@ -319,15 +438,15 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="Tag" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/EnergyRow"]
-custom_minimum_size = Vector2(30, 0)
+custom_minimum_size = Vector2(76, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.78, 0.15, 1)
-theme_override_font_sizes/font_size = 12
-text = "PWR"
+theme_override_colors/font_color = Color(1, 0.80, 0.14, 1)
+theme_override_font_sizes/font_size = 11
+text = "⚡ POWER"
 
 [node name="EnergyBar" type="ProgressBar" parent="Root/TopLeftMargin/VitalityPanel/VBox/EnergyRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(140, 14)
+custom_minimum_size = Vector2(128, 16)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -338,10 +457,10 @@ show_percentage = false
 
 [node name="EnergyLabel" type="Label" parent="Root/TopLeftMargin/VitalityPanel/VBox/EnergyRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 0)
+custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1.0, 0.95, 0.85, 1)
+theme_override_font_sizes/font_size = 11
 text = "100%"
 horizontal_alignment = 2
 
@@ -352,10 +471,10 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -580.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = 114.0
+offset_left = -460.0
+offset_top = 14.0
+offset_right = -14.0
+offset_bottom = 98.0
 grow_horizontal = 0
 
 [node name="ResourcesPanel" type="PanelContainer" parent="Root/TopRightMargin"]
@@ -368,58 +487,66 @@ theme_override_constants/separation = 6
 
 [node name="HeaderHBox" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 2
 
 [node name="DevNavButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(86, 20)
+custom_minimum_size = Vector2(60, 20)
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_compact")
 theme_override_colors/font_color = Color(0, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 10
-text = "AI NAV [F1]"
+theme_override_font_sizes/font_size = 9
+text = "[F1] NAV"
 
 [node name="InventoryButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 20)
+custom_minimum_size = Vector2(56, 20)
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_compact")
 theme_override_colors/font_color = Color(0.95, 0.8, 0.25, 1)
-theme_override_font_sizes/font_size = 10
-text = "🎒 CRAFT [I]"
+theme_override_font_sizes/font_size = 9
+text = "🎒 [I]"
 
 [node name="BuildMenuButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(85, 20)
+custom_minimum_size = Vector2(58, 20)
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_compact")
 theme_override_colors/font_color = Color(0.2, 0.9, 0.6, 1)
-theme_override_font_sizes/font_size = 10
-text = "🔨 BUILD [B]"
+theme_override_font_sizes/font_size = 9
+text = "🔨 [B]"
 
 [node name="HelpButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(82, 20)
+custom_minimum_size = Vector2(56, 20)
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_compact")
 theme_override_colors/font_color = Color(1, 0.75, 0.2, 1)
-theme_override_font_sizes/font_size = 10
-text = "❓ GUIDE [H]"
+theme_override_font_sizes/font_size = 9
+text = "❓ [H]"
+
+[node name="StoryLogButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(58, 20)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_compact")
+theme_override_colors/font_color = Color(0.2, 0.95, 0.75, 1)
+theme_override_font_sizes/font_size = 9
+text = "📜 [L]"
 
 [node name="TerminalButton" type="Button" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(82, 20)
+custom_minimum_size = Vector2(58, 20)
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_compact")
 theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 10
-text = "💻 CMD [~]"
-
-[node name="TitleLabel" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/HeaderHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 0.9)
-theme_override_font_sizes/font_size = 11
-text = "RESOURCES"
-horizontal_alignment = 2
+theme_override_font_sizes/font_size = 9
+text = "💻 [~]"
 
 [node name="ResourcesGrid" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 alignment = 2
 
 [node name="CrystalsCol" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid"]
@@ -429,14 +556,14 @@ theme_override_constants/separation = 4
 [node name="Icon" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/CrystalsCol"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.4, 1, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "⚡"
 
 [node name="CrystalCount" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/CrystalsCol"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "0"
 
 [node name="TitaniumCol" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid"]
@@ -446,14 +573,14 @@ theme_override_constants/separation = 4
 [node name="Icon" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/TitaniumCol"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.65, 0.15, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "⛏"
 
 [node name="TitaniumCount" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/TitaniumCol"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "0"
 
 [node name="BiomassCol" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid"]
@@ -463,14 +590,14 @@ theme_override_constants/separation = 4
 [node name="Icon" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/BiomassCol"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.15, 0.9, 0.5, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "🧬"
 
 [node name="BiomassCount" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/BiomassCol"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "0"
 
 [node name="OxygenCellsCol" type="HBoxContainer" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid"]
@@ -480,14 +607,14 @@ theme_override_constants/separation = 4
 [node name="Icon" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/OxygenCellsCol"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.12, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 13
-text = "🫧"
+theme_override_font_sizes/font_size = 12
+text = "🫁"
 
 [node name="OxygenCellCount" type="Label" parent="Root/TopRightMargin/ResourcesPanel/VBox/ResourcesGrid/OxygenCellsCol"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "0"
 
 
@@ -498,10 +625,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -240.0
-offset_top = -176.0
-offset_right = 240.0
-offset_bottom = -136.0
+offset_left = -220.0
+offset_top = -180.0
+offset_right = 220.0
+offset_bottom = -142.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -509,45 +636,45 @@ grow_vertical = 0
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+theme_override_styles/panel = SubResource("StyleBoxFlat_prompt")
 
 [node name="HBox" type="HBoxContainer" parent="Root/PromptMargin/ContextualPrompt"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 alignment = 1
 
 [node name="KeyBadge" type="Label" parent="Root/PromptMargin/ContextualPrompt/HBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.1, 0.9, 1, 1)
+theme_override_colors/font_color = Color(0.1, 0.92, 1, 1)
 theme_override_font_sizes/font_size = 11
-text = "[E]"
+text = "[ E ]"
 
 [node name="PromptLabel" type="Label" parent="Root/PromptMargin/ContextualPrompt/HBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.95, 1, 1)
+theme_override_colors/font_color = Color(0.95, 0.98, 1, 1)
 theme_override_font_sizes/font_size = 12
-text = "Press E to Interact"
+text = "Interact"
 
 [node name="TutorialMargin" type="MarginContainer" parent="Root"]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -260.0
+offset_left = -210.0
 offset_top = 16.0
-offset_right = 260.0
-offset_bottom = 85.0
+offset_right = 210.0
+offset_bottom = 74.0
 grow_horizontal = 2
 
 [node name="TutorialBanner" type="PanelContainer" parent="Root/TutorialMargin"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+theme_override_styles/panel = SubResource("StyleBoxFlat_tutorial")
 
 [node name="VBox" type="VBoxContainer" parent="Root/TutorialMargin/TutorialBanner"]
 layout_mode = 2
-theme_override_constants/separation = 3
+theme_override_constants/separation = 2
 
 [node name="HBoxHeader" type="HBoxContainer" parent="Root/TutorialMargin/TutorialBanner/VBox"]
 layout_mode = 2
@@ -556,22 +683,22 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.25, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.25, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 10
 text = "STEP 1/4: LOCOMOTION"
 
 [node name="TutorialProgressLabel" type="Label" parent="Root/TutorialMargin/TutorialBanner/VBox/HBoxHeader"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.75, 0.15, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 text = "● ○ ○ ○"
 
 [node name="TutorialDescLabel" type="Label" parent="Root/TutorialMargin/TutorialBanner/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.90, 0.94, 0.98, 1)
+theme_override_font_sizes/font_size = 10
 text = "Calibrate EVA suit thrusters: Use [W, A, S, D] or Arrow Keys to move."
 
 
@@ -582,10 +709,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -380.0
-offset_top = -130.0
-offset_right = 380.0
-offset_bottom = -34.0
+offset_left = -440.0
+offset_top = -142.0
+offset_right = 440.0
+offset_bottom = -36.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -604,9 +731,9 @@ theme_override_constants/separation = 8
 [node name="MissionTitleTag" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 11
-text = "[MISSION: LIFE SUPPORT RECOVERY]"
+theme_override_colors/font_color = Color(0.18, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "📡 [MISSION: LIFE SUPPORT RECOVERY]"
 
 [node name="ObjectiveTypeBadge" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
@@ -622,15 +749,15 @@ size_flags_horizontal = 3
 [node name="MissionStateBadge" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox/HeaderHBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.9, 0.5, 1)
-theme_override_font_sizes/font_size = 10
-text = "[ACTIVE]"
+theme_override_colors/font_color = Color(0.18, 0.92, 0.52, 1)
+theme_override_font_sizes/font_size = 11
+text = "● ACTIVE"
 
 [node name="ObjectiveLabel" type="Label" parent="Root/BottomObjectiveMargin/ObjectivePanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.93, 0.96, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.88, 0.92, 0.96, 1)
+theme_override_font_sizes/font_size = 12
 text = "Atmosphere toxic. Recover 3 Oxygen Cells from fallen crates or canisters."
 text_overrun_behavior = 3
 
@@ -674,9 +801,9 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -380.0
+offset_left = -480.0
 offset_top = -30.0
-offset_right = 380.0
+offset_right = 480.0
 offset_bottom = -6.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -692,9 +819,9 @@ alignment = 1
 
 [node name="ControlsText" type="Label" parent="Root/ControlsQuickBarMargin/ControlsBarPanel/HBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.88, 1, 0.95)
+theme_override_colors/font_color = Color(0.72, 0.88, 1, 0.92)
 theme_override_font_sizes/font_size = 10
-text = "[WASD] Move • [LMB] Fire/Harvest • [E] Interact • [B] Build • [I] Craft • [H] Guide • [Scroll] Zoom • [ESC] Pause"
+text = "[WASD] Move  •  [Space/LMB] Fire  •  [E] Interact  •  [B] Build  •  [I] Craft  •  [H] Guide  •  [~] Terminal  •  [Scroll] Zoom  •  [ESC] Pause"
 
 [node name="FeedbackMargin" type="MarginContainer" parent="Root"]
 layout_mode = 1
@@ -912,13 +1039,21 @@ autowrap_mode = 2
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
+[node name="RespawnBaseButton" type="Button" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 1, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_respawn_btn")
+text = "⟲ RESPAWN AT BASE HABITAT SANCTUARY"
+
 [node name="RestartButton" type="Button" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_restart_btn")
-text = "REDEPLOY ASTRONAUT (RESTART)"
+text = "↺ RESTART EXPEDITION"
 
 [node name="GameOverMenuButton" type="Button" parent="GameOverOverlay/CenterContainer/GameOverPanel/VBox"]
 unique_name_in_owner = true
@@ -1091,6 +1226,103 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "CLOSE MANUAL [H / ESC]"
+
+[node name="StoryModalOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="StoryModalOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.03, 0.07, 0.90)
+
+[node name="CenterContainer" type="CenterContainer" parent="StoryModalOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="StoryPanel" type="PanelContainer" parent="StoryModalOverlay/CenterContainer"]
+custom_minimum_size = Vector2(580, 400)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_story_panel")
+
+[node name="VBox" type="VBoxContainer" parent="StoryModalOverlay/CenterContainer/StoryPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HeaderHBox" type="HBoxContainer" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox"]
+layout_mode = 2
+
+[node name="StoryHeader" type="Label" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox/HeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.15, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "◈ INCOMING TRANSMISSION // AURA-7 AI"
+
+[node name="StoryCloseBtn" type="Button" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox/HeaderHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 24)
+layout_mode = 2
+text = "✕"
+
+[node name="StorySubHeader" type="Label" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.92, 0.72, 0.9)
+theme_override_font_sizes/font_size = 11
+text = "MISSION CONTROL // DEEP-SPACE SCIENTIFIC EXPEDITION"
+
+[node name="HSeparator" type="HSeparator" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox"]
+layout_mode = 2
+
+[node name="StoryContentLabel" type="RichTextLabel" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/default_color = Color(0.92, 0.95, 0.98, 1)
+theme_override_font_sizes/normal_font_size = 12
+theme_override_font_sizes/bold_font_size = 12
+bbcode_enabled = true
+text = "Transmission content here..."
+
+[node name="ButtonHBox" type="HBoxContainer" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="StoryAcceptBtn" type="Button" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox/ButtonHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 32)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 0.65, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "🚀 ACCEPT DIRECTIVE"
+
+[node name="StoryGuideBtn" type="Button" parent="StoryModalOverlay/CenterContainer/StoryPanel/VBox/ButtonHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 32)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.25, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "❓ FIELD GUIDE [H]"
 
 [node name="DevNavigationMenu" parent="." instance=ExtResource("2_dev_menu")]
 unique_name_in_owner = true

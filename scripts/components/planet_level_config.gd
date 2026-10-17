@@ -54,7 +54,7 @@ static func create_trappist_1_e() -> Resource:
 	cfg.ground_color = Color(0.20, 0.14, 0.22)
 	cfg.canyon_wall_color = Color(0.34, 0.22, 0.32)
 	cfg.ambient_tint = Color(0.88, 0.68, 0.80)
-	cfg.oxygen_depletion_rate = 1.5
+	cfg.oxygen_depletion_rate = 1.0
 	cfg.hazard_level = "MODERATE"
 	cfg.thermal_drain_rate = 1.0
 	
@@ -70,6 +70,7 @@ static func create_trappist_1_e() -> Resource:
 	]
 	
 	cfg.collectable_specs = [
+		{"pos": Vector2(0, 160), "type": 0, "qty": 1},    # Immediate South Airlock Oxygen Cell
 		{"pos": Vector2(100, -120), "type": 0, "qty": 1},  # Oxygen Cells
 		{"pos": Vector2(-320, -320), "type": 0, "qty": 1},
 		{"pos": Vector2(460, 200), "type": 0, "qty": 2},

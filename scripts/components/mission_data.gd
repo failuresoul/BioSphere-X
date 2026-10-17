@@ -31,6 +31,7 @@ var completion_conditions: Dictionary = {}
 var failure_conditions: Dictionary = {}
 var progress_unit_label: String = "Units"
 var fail_reason: String = ""
+var story_log: String = ""
 
 
 func _init(
@@ -41,7 +42,8 @@ func _init(
 	p_target: float = 1.0,
 	p_rewards: Dictionary = {},
 	p_conditions: Dictionary = {},
-	p_unit_label: String = "Units"
+	p_unit_label: String = "Units",
+	p_story_log: String = ""
 ) -> void:
 	id = p_id
 	title = p_title
@@ -54,6 +56,7 @@ func _init(
 	completion_conditions = p_conditions.duplicate(true)
 	progress_unit_label = p_unit_label
 	fail_reason = ""
+	story_log = p_story_log
 
 
 static func create(
@@ -64,10 +67,11 @@ static func create(
 	p_target: float,
 	p_rewards: Dictionary = {},
 	p_conditions: Dictionary = {},
-	p_unit_label: String = "Units"
+	p_unit_label: String = "Units",
+	p_story_log: String = ""
 ) -> RefCounted:
 	var script: GDScript = load("res://scripts/components/mission_data.gd")
-	return script.new(p_id, p_title, p_desc, p_type, p_target, p_rewards, p_conditions, p_unit_label)
+	return script.new(p_id, p_title, p_desc, p_type, p_target, p_rewards, p_conditions, p_unit_label, p_story_log)
 
 
 func is_locked() -> bool:
@@ -160,6 +164,7 @@ func to_dict() -> Dictionary:
 		"id": id,
 		"title": title,
 		"description": description,
+		"story_log": story_log,
 		"objective_type": get_objective_type_name(),
 		"state": state,
 		"target_amount": target_amount,
