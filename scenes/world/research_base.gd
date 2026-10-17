@@ -46,16 +46,31 @@ func _process(delta: float) -> void:
 # Station Assembly
 # ---------------------------------------------------------------------------
 func _build_base_stations() -> void:
-	# 1. Central Life-Support & Oxygen Refill Dome
+	# 1. Central Atmospheric Protective Sanctuary Dome (Centered symmetrically at Vector2.ZERO)
 	oxygen_station = Area2D.new()
 	oxygen_station.name = "BaseCampAtmosphericDome"
 	oxygen_station.set_script(OxygenStationScript)
-	oxygen_station.position = Vector2(-65.0, -35.0)
+	oxygen_station.position = Vector2.ZERO
 	add_child(oxygen_station)
-	oxygen_station.set("station_name", "Habitat Life Support Core")
-	oxygen_station.set("station_type", "station")
-	oxygen_station.set("radius", base_radius)
+	oxygen_station.set("station_name", "Habitat Life Support Sanctuary")
+	oxygen_station.set("station_type", "safe_zone_dome")
+	oxygen_station.set("radius", 160.0)
 	oxygen_station.set("refill_rate", 35.0)
+	oxygen_station.set("show_shield", true)
+	oxygen_station.set("show_center_pod", false)
+	
+	# 1b. Life-Support Refill Console (West station)
+	var o2_pylon = Area2D.new()
+	o2_pylon.name = "OxygenConsole"
+	o2_pylon.set_script(OxygenStationScript)
+	o2_pylon.position = Vector2(-65.0, -35.0)
+	add_child(o2_pylon)
+	o2_pylon.set("station_name", "O2 Refill Core")
+	o2_pylon.set("station_type", "station")
+	o2_pylon.set("radius", 32.0)
+	o2_pylon.set("refill_rate", 50.0)
+	o2_pylon.set("show_shield", false)
+	o2_pylon.set("show_center_pod", true)
 	
 	# 2. Cargo Storage & Inventory Terminal
 	storage_terminal = StorageTerminalScript.new()
@@ -200,14 +215,14 @@ func _draw() -> void:
 		draw_circle(cpt, 4.0, corner_beacon_color)
 		draw_circle(cpt, 1.8, Color.WHITE)
 	
-	# 6. Overhead Base Header Signage
-	var sign_color := Color(0.2, 0.88, 1.0, 0.9)
+	# 6. Overhead Base Header Signage (Subtle Floor Stencil Decal)
+	var sign_color := Color(0.2, 0.88, 1.0, 0.45)
 	draw_string(
 		ThemeDB.fallback_font,
-		Vector2(-140, -half_h + 20),
+		Vector2(-140, -half_h + 16),
 		"// %s // SECTOR-01 //" % base_name.to_upper(),
 		HORIZONTAL_ALIGNMENT_CENTER,
 		280.0,
-		10,
+		9,
 		sign_color
 	)

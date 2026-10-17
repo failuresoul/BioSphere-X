@@ -25,8 +25,8 @@ var _enrage_badge: Label = null
 var _victory_banner: PanelContainer = null
 var _victory_label: Label = null
 
-const BAR_WIDTH: float = 580.0
-const BAR_HEIGHT: float = 16.0
+const BAR_WIDTH: float = 340.0
+const BAR_HEIGHT: float = 8.0
 
 
 func _ready() -> void:
@@ -39,107 +39,104 @@ func _build_ui() -> void:
 	_container = Control.new()
 	_container.name = "BossHealthContainer"
 	_container.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_container.custom_minimum_size = Vector2(0, 90)
 	_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_container)
 	
-	# Background Vignette Ribbon
-	var ribbon := ColorRect.new()
-	ribbon.color = Color(0.04, 0.03, 0.06, 0.85)
-	ribbon.custom_minimum_size = Vector2(640, 74)
-	ribbon.position = Vector2((1280.0 - 640.0) * 0.5, 12.0)
-	_container.add_child(ribbon)
+	# Centered Panel Ribbon (Compact & Responsive)
+	var panel := PanelContainer.new()
+	panel.name = "BossPanel"
+	panel.custom_minimum_size = Vector2(360, 44)
+	panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	panel.offset_left = -180.0
+	panel.offset_top = 8.0
+	panel.offset_right = 180.0
+	panel.offset_bottom = 52.0
 	
-	# Decorative Border
-	var border := ReferenceRect.new()
-	border.position = ribbon.position
-	border.size = ribbon.custom_minimum_size
-	border.border_color = Color(0.55, 0.25, 0.65, 0.60)
-	border.border_width = 1.5
-	border.editor_only = false
-	_container.add_child(border)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.04, 0.03, 0.07, 0.90)
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.border_color = Color(0.65, 0.25, 0.75, 0.70)
+	sb.corner_radius_top_left = 6
+	sb.corner_radius_top_right = 6
+	sb.corner_radius_bottom_right = 6
+	sb.corner_radius_bottom_left = 6
+	sb.content_margin_left = 10
+	sb.content_margin_top = 4
+	sb.content_margin_right = 10
+	sb.content_margin_bottom = 4
+	panel.add_theme_stylebox_override("panel", sb)
+	_container.add_child(panel)
 	
-	# Boss Name Label
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 2)
+	panel.add_child(vbox)
+	
+	var header_hbox := HBoxContainer.new()
+	header_hbox.add_theme_constant_override("separation", 6)
+	vbox.add_child(header_hbox)
+	
 	_name_label = Label.new()
 	_name_label.text = boss_name
-	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_name_label.position = Vector2(0, 16.0)
-	_name_label.custom_minimum_size = Vector2(1280, 20)
-	_name_label.add_theme_font_size_override("font_size", 14)
+	_name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_name_label.add_theme_font_size_override("font_size", 10)
 	_name_label.add_theme_color_override("font_color", Color(1.0, 0.90, 0.95))
-	_container.add_child(_name_label)
+	header_hbox.add_child(_name_label)
 	
-	# Phase / Subtitle Label
 	_phase_label = Label.new()
-	_phase_label.text = "PHASE I: COLOSSAL GUARDIAN"
-	_phase_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_phase_label.position = Vector2(0, 34.0)
-	_phase_label.custom_minimum_size = Vector2(1280, 16)
-	_phase_label.add_theme_font_size_override("font_size", 10)
+	_phase_label.text = "PHASE I: GUARDIAN"
+	_phase_label.add_theme_font_size_override("font_size", 8)
 	_phase_label.add_theme_color_override("font_color", Color(0.85, 0.60, 0.35))
-	_container.add_child(_phase_label)
+	header_hbox.add_child(_phase_label)
 	
-	# Health Bar Frame
-	var bar_x := (1280.0 - BAR_WIDTH) * 0.5
-	var bar_y := 52.0
+	_enrage_badge = Label.new()
+	_enrage_badge.text = "⚡ ENRAGED"
+	_enrage_badge.add_theme_font_size_override("font_size", 8)
+	_enrage_badge.add_theme_color_override("font_color", Color(1.0, 0.2, 0.1))
+	_enrage_badge.visible = false
+	header_hbox.add_child(_enrage_badge)
 	
-	# 1. Background
+	# Bar container
+	var bar_frame := Control.new()
+	bar_frame.custom_minimum_size = Vector2(BAR_WIDTH, BAR_HEIGHT)
+	vbox.add_child(bar_frame)
+	
 	_health_bar_bg = ColorRect.new()
 	_health_bar_bg.color = Color(0.10, 0.08, 0.14, 0.95)
-	_health_bar_bg.position = Vector2(bar_x, bar_y)
 	_health_bar_bg.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
-	_container.add_child(_health_bar_bg)
+	bar_frame.add_child(_health_bar_bg)
 	
-	# 2. Decay / Lag bar
 	_health_bar_decay = ColorRect.new()
 	_health_bar_decay.color = Color(0.95, 0.75, 0.25, 0.85)
-	_health_bar_decay.position = Vector2(bar_x, bar_y)
 	_health_bar_decay.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
-	_container.add_child(_health_bar_decay)
+	bar_frame.add_child(_health_bar_decay)
 	
-	# 3. Primary Health Fill
 	_health_bar_fill = ColorRect.new()
 	_health_bar_fill.color = Color(0.90, 0.20, 0.25, 0.95)
-	_health_bar_fill.position = Vector2(bar_x, bar_y)
 	_health_bar_fill.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
-	_container.add_child(_health_bar_fill)
+	bar_frame.add_child(_health_bar_fill)
 	
-	# 4. Bar Border Frame
-	var bar_border := ReferenceRect.new()
-	bar_border.position = Vector2(bar_x, bar_y)
-	bar_border.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
-	bar_border.border_color = Color(0.90, 0.70, 0.85, 0.80)
-	bar_border.border_width = 1.2
-	bar_border.editor_only = false
-	_container.add_child(bar_border)
-	
-	# Health Text Overlay
 	_health_label = Label.new()
 	_health_label.text = "%d / %d HP" % [int(current_health), int(max_health)]
 	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_health_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_health_label.position = Vector2(bar_x, bar_y)
 	_health_label.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
-	_health_label.add_theme_font_size_override("font_size", 10)
+	_health_label.add_theme_font_size_override("font_size", 8)
 	_health_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	_container.add_child(_health_label)
-	
-	# Enraged Flashing Badge
-	_enrage_badge = Label.new()
-	_enrage_badge.text = "⚡ ENRAGED ⚡"
-	_enrage_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_enrage_badge.position = Vector2(bar_x + BAR_WIDTH + 8.0, bar_y - 2.0)
-	_enrage_badge.add_theme_font_size_override("font_size", 11)
-	_enrage_badge.add_theme_color_override("font_color", Color(1.0, 0.2, 0.1))
-	_enrage_badge.visible = false
-	_container.add_child(_enrage_badge)
+	bar_frame.add_child(_health_label)
 	
 	# Victory Banner
 	_victory_banner = PanelContainer.new()
-	_victory_banner.position = Vector2((1280.0 - 460.0) * 0.5, 100.0)
-	_victory_banner.custom_minimum_size = Vector2(460, 48)
+	_victory_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_victory_banner.offset_left = -160.0
+	_victory_banner.offset_top = 60.0
+	_victory_banner.offset_right = 160.0
+	_victory_banner.offset_bottom = 96.0
+	_victory_banner.custom_minimum_size = Vector2(320, 36)
 	_victory_banner.visible = false
+	_container.add_child(_victory_banner)
 	
 	_victory_label = Label.new()
 	_victory_label.text = "★ ENCOUNTER CLEARED — BOSS DEFEATED ★"

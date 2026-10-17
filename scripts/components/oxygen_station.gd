@@ -18,6 +18,8 @@ signal station_refilled_instant()
 
 @export var refill_rate: float = 30.0
 @export var instant_interact_refill: bool = true
+@export var show_shield: bool = true
+@export var show_center_pod: bool = true
 
 # Visual Palette
 @export var shield_color: Color = Color(0.12, 0.80, 1.00, 0.14)
@@ -148,36 +150,38 @@ func _draw() -> void:
 	var pulse: float = sin(_pulse_time) * 0.5 + 0.5
 	var current_radius: float = radius + (pulse * 2.0 if _player_inside else 0.0)
 	
-	# 1. Atmospheric Protective Field / Dome Fill
-	var fill_color := shield_color
-	if _player_inside:
-		fill_color.a = minf(0.35, shield_color.a + 0.08 + pulse * 0.05)
-	draw_circle(Vector2.ZERO, current_radius, fill_color)
-	
-	# 2. Glowing Hexagonal / Perimeter Ring
-	var perimeter_color := border_color
-	perimeter_color.a = 0.5 + pulse * 0.35
-	draw_arc(Vector2.ZERO, current_radius, 0.0, TAU, 36, perimeter_color, 2.0)
-	
-	# Dashed inner resonance boundary
-	var step_count := 16
-	for i in step_count:
-		var start_a: float = (float(i) / float(step_count)) * TAU
-		var end_a: float = start_a + (TAU / float(step_count)) * 0.55
-		draw_arc(Vector2.ZERO, current_radius - 8.0, start_a, end_a, 4, Color(border_color, 0.3), 1.0)
-	
-	# 3. Ambient Floating Oxygen Nano-Bubbles
-	for b in _bubbles:
-		var t: float = b["life"] / b["max_life"]
-		var c := gas_glow_color
-		c.a = b["alpha"] * (1.0 - t)
-		draw_circle(b["pos"], b["radius"] * (1.0 - t * 0.3), c)
+	if show_shield:
+		# 1. Atmospheric Protective Field / Dome Fill
+		var fill_color := shield_color
+		if _player_inside:
+			fill_color.a = minf(0.35, shield_color.a + 0.08 + pulse * 0.05)
+		draw_circle(Vector2.ZERO, current_radius, fill_color)
+		
+		# 2. Glowing Hexagonal / Perimeter Ring
+		var perimeter_color := border_color
+		perimeter_color.a = 0.5 + pulse * 0.35
+		draw_arc(Vector2.ZERO, current_radius, 0.0, TAU, 36, perimeter_color, 2.0)
+		
+		# Dashed inner resonance boundary
+		var step_count := 16
+		for i in step_count:
+			var start_a: float = (float(i) / float(step_count)) * TAU
+			var end_a: float = start_a + (TAU / float(step_count)) * 0.55
+			draw_arc(Vector2.ZERO, current_radius - 8.0, start_a, end_a, 4, Color(border_color, 0.3), 1.0)
+		
+		# 3. Ambient Floating Oxygen Nano-Bubbles
+		for b in _bubbles:
+			var t: float = b["life"] / b["max_life"]
+			var c := gas_glow_color
+			c.a = b["alpha"] * (1.0 - t)
+			draw_circle(b["pos"], b["radius"] * (1.0 - t * 0.3), c)
 	
 	# 4. Central Life-Support Pod Structure
-	if station_type == "station":
-		_draw_station_pylon(pulse)
-	else:
-		_draw_safe_zone_hub(pulse)
+	if show_center_pod:
+		if station_type == "station":
+			_draw_station_pylon(pulse)
+		else:
+			_draw_safe_zone_hub(pulse)
 
 
 func _draw_station_pylon(pulse: float) -> void:

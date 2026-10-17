@@ -457,6 +457,12 @@ func _on_resource_changed(resource_id: String, count: int) -> void:
 
 
 func _on_objective_changed(new_text: String) -> void:
+	var mm = get_node_or_null("/root/MissionManager")
+	var active = mm.call("get_active_mission") if mm and mm.has_method("get_active_mission") else null
+	if active and "description" in active and not str(active.description).is_empty():
+		if objective_label:
+			objective_label.text = str(active.description)
+		return
 	if objective_label:
 		objective_label.text = new_text
 
@@ -510,6 +516,15 @@ func _on_tutorial_step_changed(step: int, title: String, desc: String, is_comple
 			for i in 4:
 				p_str += "● " if i <= step else "○ "
 			tutorial_progress_label.text = p_str.strip_edges()
+		
+		# Auto-fade out after 4 seconds to maintain a pristine, clean screen
+		var tw_step := create_tween()
+		tw_step.tween_interval(4.0)
+		tw_step.tween_property(tutorial_banner, "modulate:a", 0.0, 0.6)
+		tw_step.tween_callback(func():
+			if tutorial_banner:
+				tutorial_banner.visible = false
+		)
 
 
 func _on_game_paused(paused: bool) -> void:
@@ -1146,13 +1161,13 @@ func _update_waypoint_tracker() -> void:
 	if not player:
 		player = get_node_or_null("/root/GameWorld/Player")
 	if not player:
-		waypoint_label.text = "🧭 TARGET TRACKER: Standby — EVA Suit Initializing..."
+		waypoint_label.text = "🧭 Standby..."
 		return
 	
 	var p_pos: Vector2 = player.global_position
 	var target_info = _find_active_objective_target(p_pos)
 	if target_info.is_empty():
-		waypoint_label.text = "🧭 TARGET TRACKER: Area clear • Explore surface for resources or press [H]"
+		waypoint_label.text = "🧭 Area Clear • Exploring Surface"
 		return
 	
 	var t_pos: Vector2 = target_info.get("pos", Vector2.ZERO)
@@ -1161,12 +1176,12 @@ func _update_waypoint_tracker() -> void:
 	var dist_m: float = diff.length() / 32.0 # 32 pixels per meter
 	
 	if dist_m < 2.0:
-		waypoint_label.text = "🧭 TARGET: ★ AT DESTINATION [%s] — Press [E] to Interact" % t_name
+		waypoint_label.text = "🧭 ★ REACHED: %s" % t_name
 		waypoint_label.modulate = Color(0.3, 1.0, 0.6)
 	else:
 		var arrow: String = _get_compass_arrow(diff.angle())
 		var bearing: String = _get_compass_bearing(diff.angle())
-		waypoint_label.text = "🧭 TARGET: %s %s [%.0fm %s] • Press [H] for Field Guide" % [arrow, t_name, dist_m, bearing]
+		waypoint_label.text = "🧭 %s %s (%.0fm %s)" % [arrow, t_name, dist_m, bearing]
 		waypoint_label.modulate = Color(0.2, 0.95, 0.9)
 
 

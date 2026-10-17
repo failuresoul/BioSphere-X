@@ -163,21 +163,37 @@ func _draw() -> void:
 		var r := 40.0 * (1.0 - _interaction_burst)
 		draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, Color(accent_color, _interaction_burst * 0.6), 2.0)
 	
-	# 7. Holographic Floating Label & Signage
-	var label_col := accent_color if is_player_nearby else Color(accent_color.r, accent_color.g, accent_color.b, 0.9)
-	var label_str := "[%s] %s" % [station_tag, station_name.to_upper()]
-	# Backing pill for high contrast and readability
-	draw_rect(Rect2(-85, -30, 170, 14), Color(0.03, 0.05, 0.09, 0.82))
-	draw_rect(Rect2(-85, -30, 170, 14), Color(accent_color.r, accent_color.g, accent_color.b, 0.5 if is_player_nearby else 0.25), false, 1.0)
-	draw_string(
-		ThemeDB.fallback_font,
-		Vector2(-85, -19),
-		label_str,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		170.0,
-		9,
-		label_col
-	)
+	# 7. Holographic Floating Label & Signage (Clean & Contextual)
+	if is_player_nearby:
+		var label_str := "[%s] %s" % [station_tag, station_name.to_upper()]
+		var pill_w := 140.0
+		var pill_h := 16.0
+		draw_rect(Rect2(-pill_w * 0.5, -28, pill_w, pill_h), Color(0.02, 0.05, 0.10, 0.88))
+		draw_rect(Rect2(-pill_w * 0.5, -28, pill_w, pill_h), Color(accent_color, 0.65 + pulse * 0.25), false, 1.0)
+		draw_string(
+			ThemeDB.fallback_font,
+			Vector2(-pill_w * 0.5, -16),
+			label_str,
+			HORIZONTAL_ALIGNMENT_CENTER,
+			pill_w,
+			9,
+			accent_color
+		)
+	else:
+		# Subtle, sleek holographic tag badge when idle (prevents screen clutter)
+		var badge_str := "[%s]" % station_tag
+		var badge_w := 46.0
+		draw_rect(Rect2(-badge_w * 0.5, -22, badge_w, 12), Color(0.02, 0.05, 0.10, 0.55))
+		draw_rect(Rect2(-badge_w * 0.5, -22, badge_w, 12), Color(accent_color, 0.35), false, 0.8)
+		draw_string(
+			ThemeDB.fallback_font,
+			Vector2(-badge_w * 0.5, -13),
+			badge_str,
+			HORIZONTAL_ALIGNMENT_CENTER,
+			badge_w,
+			8,
+			Color(accent_color, 0.70)
+		)
 	
 	# Floating Feedback Notification
 	if not _feedback_text.is_empty():

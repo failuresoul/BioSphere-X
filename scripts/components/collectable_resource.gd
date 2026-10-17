@@ -152,7 +152,7 @@ func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player") or body is CharacterBody2D:
 		_is_player_near = true
 		if _prompt_label:
-			_prompt_label.visible = true
+			_prompt_label.visible = false
 
 
 func _on_body_exited(body: Node2D) -> void:

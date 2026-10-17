@@ -303,6 +303,9 @@ func get_all_stored_resources() -> Dictionary:
 
 
 func _check_objective_progress() -> void:
+	var mm = get_node_or_null("/root/MissionManager")
+	if mm:
+		return # MissionManager is the single source of truth for all mission objectives
 	if resources.get("crystals", 0) >= 3 and not "Scan" in current_objective:
 		set_objective("PRIMARY GOAL COMPLETE // Scan Research Debris in North-East quadrant.")
 
