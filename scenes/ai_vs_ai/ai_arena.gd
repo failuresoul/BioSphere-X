@@ -8,6 +8,9 @@ signal match_started()
 signal match_paused(is_paused: bool)
 signal match_finished(outcome: Dictionary)
 signal match_reset()
+signal batch_started(total_trials: int)
+signal batch_trial_completed(trial_index: int, total_trials: int, trial_result: Dictionary)
+signal batch_finished(summary: Dictionary)
 
 enum MatchState {
 	WAITING,
@@ -245,6 +248,21 @@ var objective_beacon: Area2D = null
 @onready var b_algo_badge: Label = get_node_or_null("%B_AlgoBadge")
 @onready var scenario_badge: Label = get_node_or_null("%ScenarioBadge")
 @onready var camera: Camera2D = $Camera2D
+
+# Batch Experiment System
+var is_batch_running: bool = false
+var batch_total_trials: int = 4
+var batch_current_trial: int = 0
+var batch_alternate_spawns: bool = true
+var batch_pair_seeds: bool = true
+var batch_base_seed: int = 42
+var batch_seed_sequence: Array[int] = []
+var batch_results_history: Array[Dictionary] = []
+var batch_saved_simulation_speed: float = 1.0
+
+# Batch Experiment UI Reference
+@onready var batch_button: Button = get_node_or_null("%BatchButton")
+var batch_experiment_modal: PanelContainer = null
 
 # Academic Inspector Modal References
 @onready var academic_inspector_modal: PanelContainer = get_node_or_null("%AcademicInspectorModal")
@@ -631,6 +649,19 @@ func _setup_ui() -> void:
 	if copy_defense_btn:
 		copy_defense_btn.pressed.connect(copy_defense_summary)
 
+	# Batch Experiment Modal Initialisation
+	if not batch_experiment_modal:
+		var modal_script = load("res://ui/components/batch_experiment_modal.gd")
+		if modal_script:
+			batch_experiment_modal = modal_script.new()
+			var ui_layer = get_node_or_null("UI")
+			if ui_layer:
+				ui_layer.add_child(batch_experiment_modal)
+				batch_experiment_modal.setup(self)
+
+	if batch_button:
+		batch_button.pressed.connect(toggle_batch_modal)
+
 	if results_panel:
 		results_panel.visible = false
 	if academic_inspector_modal:
@@ -840,6 +871,7 @@ func start_match() -> void:
 	if match_state == MatchState.FINISHED:
 		reset_match()
 
+	seed(random_seed)
 	match_state = MatchState.RUNNING
 	_set_agents_active(true)
 	_push_event("🟢 MATCH STARTED — %s vs %s" % [agent_a_algorithm.to_upper(), agent_b_algorithm.to_upper()])
@@ -911,6 +943,7 @@ func reset_match() -> void:
 	match_state = MatchState.WAITING
 	match_elapsed_time = 0.0
 	match_results.clear()
+	seed(random_seed)
 
 	var pos_a := SPAWN_B_DEFAULT if swap_spawns else SPAWN_A_DEFAULT
 	var pos_b := SPAWN_A_DEFAULT if swap_spawns else SPAWN_B_DEFAULT
@@ -1053,6 +1086,15 @@ func _terminate_match(outcome_str: String) -> void:
 	if audio and audio.has_method("play_sfx"):
 		audio.call("play_sfx", "mission_complete")
 	print("BioSphere-X AI vs AI Match Completed: ", match_results)
+
+	if is_batch_running:
+		batch_results_history.append(match_results.duplicate(true))
+		batch_trial_completed.emit(batch_current_trial, batch_total_trials, match_results)
+		batch_current_trial += 1
+		if batch_current_trial < batch_total_trials:
+			get_tree().create_timer(0.25).timeout.connect(_run_next_batch_trial)
+		else:
+			_finish_batch_experiment()
 
 
 # ---------------------------------------------------------------------------
@@ -1447,3 +1489,246 @@ func _draw_arena_pickups() -> void:
 	else:
 		var pct := 1.0 - (pickup_overcharge_cooldown / 18.0)
 		draw_arc(PICKUP_OVERCHARGE_POS, 24.0, -PI * 0.5, -PI * 0.5 + TAU * pct, 28, Color(1.0, 0.75, 0.2, 0.75), 2.5)
+
+
+# ---------------------------------------------------------------------------
+# Repeatable Batch Experiments Controller API
+# ---------------------------------------------------------------------------
+func toggle_batch_modal() -> void:
+	if not batch_experiment_modal:
+		return
+	if batch_experiment_modal.visible:
+		batch_experiment_modal.close_modal()
+	else:
+		batch_experiment_modal.open_modal()
+
+
+func open_batch_modal() -> void:
+	if batch_experiment_modal:
+		batch_experiment_modal.open_modal()
+
+
+func close_batch_modal() -> void:
+	if batch_experiment_modal:
+		batch_experiment_modal.close_modal()
+
+
+func start_batch_experiment(num_trials: int = 4, alternate_spawns: bool = true, base_seed: int = 42, pair_seeds: bool = true, fast_speed: bool = true) -> void:
+	batch_total_trials = maxi(2, num_trials)
+	batch_alternate_spawns = alternate_spawns
+	batch_pair_seeds = pair_seeds
+	batch_base_seed = base_seed
+	batch_results_history.clear()
+	batch_seed_sequence.clear()
+
+	# Build deterministic recorded seed sequence
+	for i in range(batch_total_trials):
+		if pair_seeds and alternate_spawns:
+			# Every pair shares the identical seed across inverted starting positions
+			var pair_idx: int = i / 2
+			batch_seed_sequence.append(base_seed + pair_idx * 17)
+		else:
+			batch_seed_sequence.append(base_seed + i * 13)
+
+	is_batch_running = true
+	batch_current_trial = 0
+	batch_saved_simulation_speed = simulation_speed
+
+	if fast_speed:
+		_apply_simulation_speed(4.0)
+
+	batch_started.emit(batch_total_trials)
+	_push_event("🧪 STARTING BATCH EXPERIMENT — %d Trials | Map: %s | Base Seed: %d" % [
+		batch_total_trials, current_map.capitalize(), base_seed
+	])
+
+	_run_next_batch_trial()
+
+
+func _run_next_batch_trial() -> void:
+	if not is_batch_running:
+		return
+
+	if batch_current_trial >= batch_total_trials:
+		_finish_batch_experiment()
+		return
+
+	random_seed = batch_seed_sequence[batch_current_trial]
+	if batch_alternate_spawns:
+		swap_spawns = (batch_current_trial % 2 == 1)
+	else:
+		swap_spawns = false
+
+	if seed_spin:
+		seed_spin.value = float(random_seed)
+	if swap_button:
+		swap_button.button_pressed = swap_spawns
+
+	_push_event("▶ Trial %d/%d — Seed: %d | Spawns: %s" % [
+		batch_current_trial + 1,
+		batch_total_trials,
+		random_seed,
+		"A=Right, B=Left" if swap_spawns else "A=Left, B=Right"
+	])
+
+	reset_match()
+	start_match()
+
+
+func stop_batch_experiment() -> void:
+	is_batch_running = false
+	_apply_simulation_speed(batch_saved_simulation_speed)
+	pause_match()
+	_push_event("⏹ Batch experiment stopped by user.")
+
+
+func _finish_batch_experiment() -> void:
+	is_batch_running = false
+	_apply_simulation_speed(batch_saved_simulation_speed)
+	var summary := get_batch_summary()
+	batch_finished.emit(summary)
+	_push_event("🏆 BATCH COMPLETED — %d Trials | A Wins: %d (%.1f%%) | B Wins: %d (%.1f%%)" % [
+		batch_total_trials,
+		int(summary.get("agent_a_wins", 0)),
+		float(summary.get("agent_a_winrate", 0.0)),
+		int(summary.get("agent_b_wins", 0)),
+		float(summary.get("agent_b_winrate", 0.0))
+	])
+
+
+func get_batch_summary() -> Dictionary:
+	if batch_results_history.is_empty():
+		return {}
+
+	var total: int = batch_results_history.size()
+	var a_wins: int = 0
+	var b_wins: int = 0
+	var draws: int = 0
+	var left_spawn_wins: int = 0
+	var right_spawn_wins: int = 0
+	var total_dur: float = 0.0
+	var total_nodes_a: int = 0
+	var total_nodes_b: int = 0
+	var total_dist_a: float = 0.0
+	var total_dist_b: float = 0.0
+
+	for r in batch_results_history:
+		var w: String = r.get("winner", "")
+		var swapped: bool = r.get("swap_spawns", false)
+
+		if w == "Agent A":
+			a_wins += 1
+			if not swapped: left_spawn_wins += 1
+			else: right_spawn_wins += 1
+		elif w == "Agent B":
+			b_wins += 1
+			if not swapped: right_spawn_wins += 1
+			else: left_spawn_wins += 1
+		else:
+			draws += 1
+
+		total_dur += float(r.get("match_duration_seconds", 0.0))
+		var a_metrics: Dictionary = r.get("agent_a", {})
+		var b_metrics: Dictionary = r.get("agent_b", {})
+		total_nodes_a += int(a_metrics.get("total_nodes_expanded", 0))
+		total_nodes_b += int(b_metrics.get("total_nodes_expanded", 0))
+		total_dist_a += float(a_metrics.get("total_distance_traveled", 0.0))
+		total_dist_b += float(b_metrics.get("total_distance_traveled", 0.0))
+
+	var decided: int = maxi(1, a_wins + b_wins)
+	var left_pct: float = (float(left_spawn_wins) / float(decided)) * 100.0
+	var right_pct: float = (float(right_spawn_wins) / float(decided)) * 100.0
+
+	return {
+		"total_trials": total,
+		"agent_a_wins": a_wins,
+		"agent_b_wins": b_wins,
+		"draws": draws,
+		"agent_a_winrate": (float(a_wins) / float(total)) * 100.0,
+		"agent_b_winrate": (float(b_wins) / float(total)) * 100.0,
+		"draw_rate": (float(draws) / float(total)) * 100.0,
+		"left_spawn_wins": left_spawn_wins,
+		"right_spawn_wins": right_spawn_wins,
+		"left_spawn_pct": left_pct,
+		"right_spawn_pct": right_pct,
+		"spawn_bias_delta": left_pct - right_pct,
+		"avg_duration": total_dur / float(total),
+		"avg_nodes_a": float(total_nodes_a) / float(total),
+		"avg_nodes_b": float(total_nodes_b) / float(total),
+		"avg_dist_a": total_dist_a / float(total),
+		"avg_dist_b": total_dist_b / float(total),
+		"map": current_map,
+		"scenario": current_scenario,
+		"algorithm_a": agent_a_algorithm,
+		"algorithm_b": agent_b_algorithm,
+		"trials": batch_results_history
+	}
+
+
+func export_batch_json() -> String:
+	var summary := get_batch_summary()
+	if summary.is_empty():
+		return ""
+	var json_str := JSON.stringify(summary, "\t")
+	var dir_path := "user://experiments"
+	DirAccess.make_dir_absolute(dir_path)
+	var timestamp := Time.get_datetime_string_from_system().replace(":", "-")
+	var file_path := "%s/batch_%s_%s_%s.json" % [dir_path, current_map, current_scenario, timestamp]
+	var file := FileAccess.open(file_path, FileAccess.WRITE)
+	if file:
+		file.store_string(json_str)
+		file.close()
+		var msg := "Saved Batch JSON: %s" % ProjectSettings.globalize_path(file_path)
+		print(msg)
+		return file_path
+	return ""
+
+
+func export_batch_csv() -> String:
+	if batch_results_history.is_empty():
+		return ""
+	var dir_path := "user://experiments"
+	DirAccess.make_dir_absolute(dir_path)
+	var timestamp := Time.get_datetime_string_from_system().replace(":", "-")
+	var file_path := "%s/batch_%s_%s_%s.csv" % [dir_path, current_map, current_scenario, timestamp]
+	var file := FileAccess.open(file_path, FileAccess.WRITE)
+	if not file:
+		return ""
+
+	var headers := [
+		"Trial", "Seed", "Map", "Scenario", "SpawnsSwapped", "Winner", "DurationSeconds", "OutcomeReason",
+		"AgentA_Algo", "AgentA_Nodes", "AgentA_Dist", "AgentA_HP", "AgentA_Dmg",
+		"AgentB_Algo", "AgentB_Nodes", "AgentB_Dist", "AgentB_HP", "AgentB_Dmg"
+	]
+	file.store_line(",".join(headers))
+
+	for i in batch_results_history.size():
+		var r: Dictionary = batch_results_history[i]
+		var a_d: Dictionary = r.get("agent_a", {})
+		var b_d: Dictionary = r.get("agent_b", {})
+		var row := [
+			str(i + 1),
+			str(r.get("random_seed", 0)),
+			str(r.get("map_preset", current_map)),
+			str(r.get("scenario", current_scenario)),
+			str(r.get("swap_spawns", false)),
+			str(r.get("winner", "")),
+			str(r.get("match_duration_seconds", 0.0)),
+			"\"" + str(r.get("outcome", "")).replace("\"", "'") + "\"",
+			str(a_d.get("algorithm", "")),
+			str(a_d.get("total_nodes_expanded", 0)),
+			str(a_d.get("total_distance_traveled", 0.0)),
+			str(a_d.get("remaining_health", 0.0)),
+			str(a_d.get("damage_dealt", 0.0)),
+			str(b_d.get("algorithm", "")),
+			str(b_d.get("total_nodes_expanded", 0)),
+			str(b_d.get("total_distance_traveled", 0.0)),
+			str(b_d.get("remaining_health", 0.0)),
+			str(b_d.get("damage_dealt", 0.0))
+		]
+		file.store_line(",".join(row))
+
+	file.close()
+	var msg := "Saved Batch CSV: %s" % ProjectSettings.globalize_path(file_path)
+	print(msg)
+	return file_path

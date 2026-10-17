@@ -500,6 +500,14 @@ theme_override_colors/font_color = Color(1.0, 0.85, 0.3, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_gold")
 text = "📊 AI Inspector"
 
+[node name="BatchButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 1.0, 0.6, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_emerald")
+text = "🧪 Batch Trials"
+
 [node name="VSep2" type="VSeparator" parent="UI/BottomDock/HBox"]
 layout_mode = 2
 

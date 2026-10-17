@@ -48,6 +48,10 @@ extends CanvasLayer
 @onready var construction_menu: PanelContainer = %ConstructionMenu
 @onready var terminal_button: Button = %TerminalButton
 @onready var help_button: Button = %HelpButton
+@onready var ai_dashboard_button: Button = get_node_or_null("%AIDashboardButton")
+@onready var ai_experiment_dashboard: PanelContainer = get_node_or_null("%AIExperimentDashboard")
+@onready var pf_visualizer_button: Button = get_node_or_null("%PathfindingVisualizerButton")
+@onready var pathfinding_visualizer: Control = get_node_or_null("%PathfindingVisualizer")
 @onready var command_terminal: PanelContainer = %CommandTerminal
 @onready var planet_selection_screen: Control = %PlanetSelectionScreen
 
@@ -161,6 +165,17 @@ func _ready() -> void:
 		help_button.pressed.connect(toggle_help_manual)
 	if help_close_btn:
 		help_close_btn.pressed.connect(close_help_manual)
+	if ai_dashboard_button and ai_experiment_dashboard:
+		ai_dashboard_button.pressed.connect(func():
+			if ai_experiment_dashboard.has_method("toggle_dashboard"):
+				ai_experiment_dashboard.call("toggle_dashboard")
+			else:
+				ai_experiment_dashboard.visible = not ai_experiment_dashboard.visible
+		)
+	if pf_visualizer_button and pathfinding_visualizer:
+		pf_visualizer_button.pressed.connect(func():
+			pathfinding_visualizer.visible = not pathfinding_visualizer.visible
+		)
 	if respawn_base_button:
 		respawn_base_button.pressed.connect(_on_respawn_base_pressed)
 	if story_log_button:
@@ -457,12 +472,14 @@ func _on_resource_changed(resource_id: String, count: int) -> void:
 
 
 func _on_objective_changed(new_text: String) -> void:
-	var mm = get_node_or_null("/root/MissionManager")
-	var active = mm.call("get_active_mission") if mm and mm.has_method("get_active_mission") else null
-	if active and "description" in active and not str(active.description).is_empty():
-		if objective_label:
-			objective_label.text = str(active.description)
-		return
+	# Ignore legacy hardcoded override if MissionManager has an active mission
+	if "Scan Research Debris" in new_text:
+		var mm = get_node_or_null("/root/MissionManager")
+		var active = mm.call("get_active_mission") if mm and mm.has_method("get_active_mission") else null
+		if active and "description" in active and not str(active.description).is_empty():
+			if objective_label:
+				objective_label.text = str(active.description)
+			return
 	if objective_label:
 		objective_label.text = new_text
 

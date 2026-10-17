@@ -25,8 +25,8 @@ var _enrage_badge: Label = null
 var _victory_banner: PanelContainer = null
 var _victory_label: Label = null
 
-const BAR_WIDTH: float = 340.0
-const BAR_HEIGHT: float = 8.0
+const BAR_WIDTH: float = 380.0
+const BAR_HEIGHT: float = 12.0
 
 
 func _ready() -> void:
@@ -42,23 +42,23 @@ func _build_ui() -> void:
 	_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_container)
 	
-	# Centered Panel Ribbon (Compact & Responsive)
+	# Centered Panel Ribbon (Compact & High-Visibility)
 	var panel := PanelContainer.new()
 	panel.name = "BossPanel"
-	panel.custom_minimum_size = Vector2(360, 44)
+	panel.custom_minimum_size = Vector2(400, 52)
 	panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	panel.offset_left = -180.0
+	panel.offset_left = -200.0
 	panel.offset_top = 8.0
-	panel.offset_right = 180.0
-	panel.offset_bottom = 52.0
+	panel.offset_right = 200.0
+	panel.offset_bottom = 60.0
 	
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.04, 0.03, 0.07, 0.90)
+	sb.bg_color = Color(0.04, 0.03, 0.08, 0.95)
 	sb.border_width_left = 1
 	sb.border_width_top = 1
 	sb.border_width_right = 1
 	sb.border_width_bottom = 1
-	sb.border_color = Color(0.65, 0.25, 0.75, 0.70)
+	sb.border_color = Color(0.75, 0.30, 0.85, 0.85)
 	sb.corner_radius_top_left = 6
 	sb.corner_radius_top_right = 6
 	sb.corner_radius_bottom_right = 6
@@ -71,7 +71,7 @@ func _build_ui() -> void:
 	_container.add_child(panel)
 	
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 2)
+	vbox.add_theme_constant_override("separation", 3)
 	panel.add_child(vbox)
 	
 	var header_hbox := HBoxContainer.new()
@@ -81,20 +81,20 @@ func _build_ui() -> void:
 	_name_label = Label.new()
 	_name_label.text = boss_name
 	_name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_name_label.add_theme_font_size_override("font_size", 10)
-	_name_label.add_theme_color_override("font_color", Color(1.0, 0.90, 0.95))
+	_name_label.add_theme_font_size_override("font_size", 12)
+	_name_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.96))
 	header_hbox.add_child(_name_label)
 	
 	_phase_label = Label.new()
 	_phase_label.text = "PHASE I: GUARDIAN"
-	_phase_label.add_theme_font_size_override("font_size", 8)
-	_phase_label.add_theme_color_override("font_color", Color(0.85, 0.60, 0.35))
+	_phase_label.add_theme_font_size_override("font_size", 10)
+	_phase_label.add_theme_color_override("font_color", Color(0.95, 0.70, 0.40))
 	header_hbox.add_child(_phase_label)
 	
 	_enrage_badge = Label.new()
 	_enrage_badge.text = "⚡ ENRAGED"
-	_enrage_badge.add_theme_font_size_override("font_size", 8)
-	_enrage_badge.add_theme_color_override("font_color", Color(1.0, 0.2, 0.1))
+	_enrage_badge.add_theme_font_size_override("font_size", 10)
+	_enrage_badge.add_theme_color_override("font_color", Color(1.0, 0.25, 0.15))
 	_enrage_badge.visible = false
 	header_hbox.add_child(_enrage_badge)
 	
@@ -104,7 +104,7 @@ func _build_ui() -> void:
 	vbox.add_child(bar_frame)
 	
 	_health_bar_bg = ColorRect.new()
-	_health_bar_bg.color = Color(0.10, 0.08, 0.14, 0.95)
+	_health_bar_bg.color = Color(0.12, 0.08, 0.16, 0.95)
 	_health_bar_bg.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
 	bar_frame.add_child(_health_bar_bg)
 	
@@ -114,7 +114,7 @@ func _build_ui() -> void:
 	bar_frame.add_child(_health_bar_decay)
 	
 	_health_bar_fill = ColorRect.new()
-	_health_bar_fill.color = Color(0.90, 0.20, 0.25, 0.95)
+	_health_bar_fill.color = Color(0.95, 0.22, 0.30, 0.98)
 	_health_bar_fill.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
 	bar_frame.add_child(_health_bar_fill)
 	
@@ -123,18 +123,18 @@ func _build_ui() -> void:
 	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_health_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_health_label.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
-	_health_label.add_theme_font_size_override("font_size", 8)
+	_health_label.add_theme_font_size_override("font_size", 10)
 	_health_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	bar_frame.add_child(_health_label)
 	
 	# Victory Banner
 	_victory_banner = PanelContainer.new()
 	_victory_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_victory_banner.offset_left = -160.0
-	_victory_banner.offset_top = 60.0
-	_victory_banner.offset_right = 160.0
-	_victory_banner.offset_bottom = 96.0
-	_victory_banner.custom_minimum_size = Vector2(320, 36)
+	_victory_banner.offset_left = -170.0
+	_victory_banner.offset_top = 66.0
+	_victory_banner.offset_right = 170.0
+	_victory_banner.offset_bottom = 104.0
+	_victory_banner.custom_minimum_size = Vector2(340, 38)
 	_victory_banner.visible = false
 	_container.add_child(_victory_banner)
 	
@@ -145,7 +145,6 @@ func _build_ui() -> void:
 	_victory_label.add_theme_font_size_override("font_size", 13)
 	_victory_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.6))
 	_victory_banner.add_child(_victory_label)
-	_container.add_child(_victory_banner)
 
 
 func set_active(active: bool) -> void:
