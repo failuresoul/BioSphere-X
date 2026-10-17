@@ -1,101 +1,390 @@
-[gd_scene load_steps=6 format=3 uid="uid://bvx24r8u12hda"]
+[gd_scene load_steps=10 format=3 uid="uid://bvx24r8u12hda"]
 
 [ext_resource type="Script" path="res://scenes/ai_vs_ai/ai_arena.gd" id="1_arena"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-content_margin_left = 14.0
-content_margin_top = 10.0
-content_margin_right = 14.0
-content_margin_bottom = 10.0
-bg_color = Color(0.06, 0.08, 0.13, 0.92)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_topbar"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.05, 0.07, 0.12, 0.90)
 border_width_bottom = 2
-border_color = Color(0.12, 0.65, 0.95, 0.5)
+border_color = Color(0.12, 0.65, 0.95, 0.4)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_a"]
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+bg_color = Color(0.04, 0.10, 0.18, 0.85)
+border_width_left = 2
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.12, 0.88, 1.0, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_b"]
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+bg_color = Color(0.18, 0.08, 0.04, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 2
+border_width_bottom = 1
+border_color = Color(1.0, 0.55, 0.15, 0.6)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_bg"]
-bg_color = Color(0.12, 0.12, 0.15, 0.8)
+bg_color = Color(0.08, 0.09, 0.13, 0.9)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_a"]
-bg_color = Color(0.12, 0.88, 1, 1)
+bg_color = Color(0.12, 0.88, 1.0, 1.0)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_b"]
-bg_color = Color(1, 0.55, 0.15, 1)
+bg_color = Color(1.0, 0.55, 0.15, 1.0)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dock"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0.06, 0.08, 0.14, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.15, 0.65, 0.95, 0.5)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
+content_margin_left = 20.0
+content_margin_top = 16.0
+content_margin_right = 20.0
+content_margin_bottom = 16.0
+bg_color = Color(0.05, 0.07, 0.13, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.15, 0.75, 1.0, 0.7)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [node name="AIArena" type="Node2D"]
 script = ExtResource("1_arena")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(0.8, 0.8)
+zoom = Vector2(0.52, 0.52)
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
 
 [node name="UI" type="CanvasLayer" parent="."]
 
 [node name="TopBar" type="PanelContainer" parent="UI"]
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 54.0
+offset_bottom = 68.0
 grow_horizontal = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+theme_override_styles/panel = SubResource("StyleBoxFlat_topbar")
 
 [node name="HBox" type="HBoxContainer" parent="UI/TopBar"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="Title" type="Label" parent="UI/TopBar/HBox"]
+[node name="AgentACard" type="PanelContainer" parent="UI/TopBar/HBox"]
+custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_a")
+
+[node name="VBox" type="VBoxContainer" parent="UI/TopBar/HBox/AgentACard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HeaderRow" type="HBoxContainer" parent="UI/TopBar/HBox/AgentACard/VBox"]
+layout_mode = 2
+
+[node name="A_NameLabel" type="Label" parent="UI/TopBar/HBox/AgentACard/VBox/HeaderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 16
-text = "  BIOSPHERE-X // AI vs AI ARENA"
+theme_override_font_sizes/font_size = 13
+text = "AGENT A [VANGUARD]"
 
-[node name="VSeparator" type="VSeparator" parent="UI/TopBar/HBox"]
-layout_mode = 2
-
-[node name="MatchStatusLabel" type="Label" parent="UI/TopBar/HBox"]
+[node name="A_AlgoBadge" type="Label" parent="UI/TopBar/HBox/AgentACard/VBox/HeaderRow"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 14
-text = "STATUS: READY"
+theme_override_colors/font_color = Color(0.4, 0.95, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "[ A* SEARCH ]"
 
-[node name="VSeparator2" type="VSeparator" parent="UI/TopBar/HBox"]
+[node name="HpRow" type="HBoxContainer" parent="UI/TopBar/HBox/AgentACard/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 8
 
-[node name="TimerLabel" type="Label" parent="UI/TopBar/HBox"]
+[node name="A_HpBar" type="ProgressBar" parent="UI/TopBar/HBox/AgentACard/VBox/HpRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp_a")
+value = 100.0
+show_percentage = false
+
+[node name="A_HpLabel" type="Label" parent="UI/TopBar/HBox/AgentACard/VBox/HpRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(55, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "100 HP"
+horizontal_alignment = 2
+
+[node name="StatsRow" type="HBoxContainer" parent="UI/TopBar/HBox/AgentACard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="A_NodesLabel" type="Label" parent="UI/TopBar/HBox/AgentACard/VBox/StatsRow"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
-theme_override_font_sizes/font_size = 14
-text = "Time: 0.0s / 120s"
+theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 0.9)
+theme_override_font_sizes/font_size = 10
+text = "Nodes: 0"
 
-[node name="Spacer" type="Control" parent="UI/TopBar/HBox"]
+[node name="A_TimeLabel" type="Label" parent="UI/TopBar/HBox/AgentACard/VBox/StatsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 0.9)
+theme_override_font_sizes/font_size = 10
+text = "Time: 0.0ms"
+
+[node name="SpacerLeft" type="Control" parent="UI/TopBar/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SpeedLabelTitle" type="Label" parent="UI/TopBar/HBox"]
+[node name="CenterMatchInfo" type="VBoxContainer" parent="UI/TopBar/HBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="TitleRow" type="HBoxContainer" parent="UI/TopBar/HBox/CenterMatchInfo"]
+layout_mode = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="UI/TopBar/HBox/CenterMatchInfo/TitleRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "BIOSPHERE-X // TACTICAL ARENA"
+horizontal_alignment = 1
+
+[node name="ScenarioBadge" type="Label" parent="UI/TopBar/HBox/CenterMatchInfo/TitleRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 0.7, 1)
+theme_override_font_sizes/font_size = 11
+text = "[ PURSUIT & COMBAT ]"
+
+[node name="StatusRow" type="HBoxContainer" parent="UI/TopBar/HBox/CenterMatchInfo"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="MatchStatusLabel" type="Label" parent="UI/TopBar/HBox/CenterMatchInfo/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "STATUS: READY"
+
+[node name="VSep" type="VSeparator" parent="UI/TopBar/HBox/CenterMatchInfo/StatusRow"]
+layout_mode = 2
+
+[node name="TimerLabel" type="Label" parent="UI/TopBar/HBox/CenterMatchInfo/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "Time: 0.0s / 120s"
+
+[node name="SpacerRight" type="Control" parent="UI/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AgentBCard" type="PanelContainer" parent="UI/TopBar/HBox"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_b")
+
+[node name="VBox" type="VBoxContainer" parent="UI/TopBar/HBox/AgentBCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HeaderRow" type="HBoxContainer" parent="UI/TopBar/HBox/AgentBCard/VBox"]
+layout_mode = 2
+
+[node name="B_NameLabel" type="Label" parent="UI/TopBar/HBox/AgentBCard/VBox/HeaderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.65, 0.2, 1)
+theme_override_font_sizes/font_size = 13
+text = "AGENT B [RIVAL]"
+
+[node name="B_AlgoBadge" type="Label" parent="UI/TopBar/HBox/AgentBCard/VBox/HeaderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 11
+text = "[ GREEDY SEARCH ]"
+
+[node name="HpRow" type="HBoxContainer" parent="UI/TopBar/HBox/AgentBCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="B_HpBar" type="ProgressBar" parent="UI/TopBar/HBox/AgentBCard/VBox/HpRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp_b")
+value = 100.0
+show_percentage = false
+
+[node name="B_HpLabel" type="Label" parent="UI/TopBar/HBox/AgentBCard/VBox/HpRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(55, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "100 HP"
+horizontal_alignment = 2
+
+[node name="StatsRow" type="HBoxContainer" parent="UI/TopBar/HBox/AgentBCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="B_NodesLabel" type="Label" parent="UI/TopBar/HBox/AgentBCard/VBox/StatsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.8, 0.7, 0.9)
+theme_override_font_sizes/font_size = 10
+text = "Nodes: 0"
+
+[node name="B_TimeLabel" type="Label" parent="UI/TopBar/HBox/AgentBCard/VBox/StatsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.8, 0.7, 0.9)
+theme_override_font_sizes/font_size = 10
+text = "Time: 0.0ms"
+
+[node name="BottomDock" type="PanelContainer" parent="UI"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -540.0
+offset_top = -62.0
+offset_right = 540.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_dock")
+
+[node name="HBox" type="HBoxContainer" parent="UI/BottomDock"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="StartButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(85, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
+text = "▶ Start"
+
+[node name="PauseButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(75, 30)
+layout_mode = 2
+text = "Pause"
+
+[node name="ResetButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(75, 30)
+layout_mode = 2
+text = "↺ Reset"
+
+[node name="VSep1" type="VSeparator" parent="UI/BottomDock/HBox"]
+layout_mode = 2
+
+[node name="ConfigButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(105, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+text = "⚙ Match Setup"
+
+[node name="CamButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(115, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.7, 1.0, 1)
+text = "🎥 Cam: Dynamic"
+
+[node name="PathVizButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(95, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 0.9, 1)
+text = "👁 Paths: ON"
+
+[node name="InspectorButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(105, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 1.0, 0.6, 1)
+text = "📊 AI Inspector"
+
+[node name="VSep2" type="VSeparator" parent="UI/BottomDock/HBox"]
+layout_mode = 2
+
+[node name="SpeedLabelTitle" type="Label" parent="UI/BottomDock/HBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 12
-text = "Sim Speed:"
+text = "Speed:"
 
-[node name="SpeedSlider" type="HSlider" parent="UI/TopBar/HBox"]
+[node name="SpeedSlider" type="HSlider" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 size_flags_vertical = 4
 min_value = 0.25
@@ -103,37 +392,48 @@ max_value = 4.0
 step = 0.25
 value = 1.0
 
-[node name="SpeedLabel" type="Label" parent="UI/TopBar/HBox"]
+[node name="SpeedLabel" type="Label" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 0)
 layout_mode = 2
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "1.00x"
 
-[node name="VSeparator3" type="VSeparator" parent="UI/TopBar/HBox"]
+[node name="VSep3" type="VSeparator" parent="UI/BottomDock/HBox"]
 layout_mode = 2
 
-[node name="ExitButton" type="Button" parent="UI/TopBar/HBox"]
+[node name="ExitButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(95, 30)
 layout_mode = 2
-text = "Main Menu "
+text = "⎋ Main Menu"
 
 [node name="ControlPanel" type="PanelContainer" parent="UI"]
-offset_left = 16.0
-offset_top = 66.0
-offset_right = 320.0
-offset_bottom = 440.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -225.0
+offset_right = 180.0
+offset_bottom = 225.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
 
 [node name="VBox" type="VBoxContainer" parent="UI/ControlPanel"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
 [node name="Header" type="Label" parent="UI/ControlPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.95, 0.8, 1)
-theme_override_font_sizes/font_size = 14
-text = "MATCH CONFIGURATION"
+theme_override_font_sizes/font_size = 15
+text = "⚙ MATCH CONFIGURATION"
+horizontal_alignment = 1
 
 [node name="HSeparator" type="HSeparator" parent="UI/ControlPanel/VBox"]
 layout_mode = 2
@@ -147,11 +447,21 @@ text = "Scenario Mode:"
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="MapLabel" type="Label" parent="UI/ControlPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 12
+text = "Tactical Map Preset:"
+
+[node name="MapDropdown" type="OptionButton" parent="UI/ControlPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="AlgoALabel" type="Label" parent="UI/ControlPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.12, 0.88, 1, 1)
 theme_override_font_sizes/font_size = 12
-text = "Agent A Algorithm:"
+text = "Agent A Algorithm (Vanguard):"
 
 [node name="AlgoADropdown" type="OptionButton" parent="UI/ControlPanel/VBox"]
 unique_name_in_owner = true
@@ -161,7 +471,7 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.55, 0.15, 1)
 theme_override_font_sizes/font_size = 12
-text = "Agent B Algorithm:"
+text = "Agent B Algorithm (Rival):"
 
 [node name="AlgoBDropdown" type="OptionButton" parent="UI/ControlPanel/VBox"]
 unique_name_in_owner = true
@@ -169,6 +479,7 @@ layout_mode = 2
 
 [node name="HBoxOptions" type="HBoxContainer" parent="UI/ControlPanel/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 12
 
 [node name="SwapSpawnsToggle" type="CheckButton" parent="UI/ControlPanel/VBox/HBoxOptions"]
 unique_name_in_owner = true
@@ -188,120 +499,12 @@ value = 42.0
 [node name="HSeparator2" type="HSeparator" parent="UI/ControlPanel/VBox"]
 layout_mode = 2
 
-[node name="ActionRow" type="HBoxContainer" parent="UI/ControlPanel/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="StartButton" type="Button" parent="UI/ControlPanel/VBox/ActionRow"]
+[node name="CloseConfigButton" type="Button" parent="UI/ControlPanel/VBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
-size_flags_horizontal = 3
-text = "Start"
-
-[node name="PauseButton" type="Button" parent="UI/ControlPanel/VBox/ActionRow"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Pause"
-
-[node name="ResetButton" type="Button" parent="UI/ControlPanel/VBox/ActionRow"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Reset"
-
-[node name="TelemetryPanel" type="PanelContainer" parent="UI"]
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -68.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
-
-[node name="HBox" type="HBoxContainer" parent="UI/TelemetryPanel"]
-layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="AgentABox" type="HBoxContainer" parent="UI/TelemetryPanel/HBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 12
-
-[node name="Tag" type="Label" parent="UI/TelemetryPanel/HBox/AgentABox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.12, 0.88, 1, 1)
-text = "AGENT A:"
-
-[node name="A_HpBar" type="ProgressBar" parent="UI/TelemetryPanel/HBox/AgentABox"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 16)
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_hp_a")
-value = 100.0
-show_percentage = false
-
-[node name="A_HpLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentABox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "100 HP"
-
-[node name="A_NodesLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentABox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Nodes: 0"
-
-[node name="A_TimeLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentABox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Time: 0.0ms"
-
-[node name="VSep" type="VSeparator" parent="UI/TelemetryPanel/HBox"]
-layout_mode = 2
-
-[node name="AgentBBox" type="HBoxContainer" parent="UI/TelemetryPanel/HBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 12
-
-[node name="Tag" type="Label" parent="UI/TelemetryPanel/HBox/AgentBBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.55, 0.15, 1)
-text = "AGENT B:"
-
-[node name="B_HpBar" type="ProgressBar" parent="UI/TelemetryPanel/HBox/AgentBBox"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 16)
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_hp_b")
-value = 100.0
-show_percentage = false
-
-[node name="B_HpLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentBBox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "100 HP"
-
-[node name="B_NodesLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentBBox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Nodes: 0"
-
-[node name="B_TimeLabel" type="Label" parent="UI/TelemetryPanel/HBox/AgentBBox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Time: 0.0ms"
+theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
+text = "✓ Close & Deploy"
 
 [node name="ResultsPanel" type="PanelContainer" parent="UI"]
 unique_name_in_owner = true
@@ -312,16 +515,16 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -220.0
-offset_top = -140.0
+offset_top = -155.0
 offset_right = 220.0
-offset_bottom = 140.0
+offset_bottom = 155.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
 
 [node name="VBox" type="VBoxContainer" parent="UI/ResultsPanel"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="UI/ResultsPanel/VBox"]
 layout_mode = 2
@@ -337,6 +540,13 @@ theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
 theme_override_font_sizes/font_size = 18
 text = "★ AGENT A WON ★"
 horizontal_alignment = 1
+
+[node name="ViewInspectorBtn" type="Button" parent="UI/ResultsPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 1, 0.7, 1)
+text = "📊 View Academic Defense Report"
 
 [node name="HSeparator" type="HSeparator" parent="UI/ResultsPanel/VBox"]
 layout_mode = 2
@@ -363,3 +573,135 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 11
 autowrap_mode = 3
+
+[node name="AcademicInspectorModal" type="PanelContainer" parent="UI"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -470.0
+offset_top = -285.0
+offset_right = 470.0
+offset_bottom = 285.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
+
+[node name="VBox" type="VBoxContainer" parent="UI/AcademicInspectorModal"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ModalHeader" type="Label" parent="UI/AcademicInspectorModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 0.8, 1)
+theme_override_font_sizes/font_size = 15
+text = "🎓 ACADEMIC AI ALGORITHM BENCHMARK & DEFENSE GUIDE"
+horizontal_alignment = 1
+
+[node name="ModalSubheader" type="Label" parent="UI/AcademicInspectorModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 0.9, 0.8)
+theme_override_font_sizes/font_size = 11
+text = "Formal Computer Science Evaluation & Live Experimental Telemetry for Instructor Defense"
+horizontal_alignment = 1
+
+[node name="HSeparator1" type="HSeparator" parent="UI/AcademicInspectorModal/VBox"]
+layout_mode = 2
+
+[node name="CardsHBox" type="HBoxContainer" parent="UI/AcademicInspectorModal/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="CardA" type="PanelContainer" parent="UI/AcademicInspectorModal/VBox/CardsHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_a")
+
+[node name="VBoxA" type="VBoxContainer" parent="UI/AcademicInspectorModal/VBox/CardsHBox/CardA"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CardATitle" type="Label" parent="UI/AcademicInspectorModal/VBox/CardsHBox/CardA/VBoxA"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.12, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "AGENT A (CYAN) — A* SEARCH"
+
+[node name="CardA_Details" type="RichTextLabel" parent="UI/AcademicInspectorModal/VBox/CardsHBox/CardA/VBoxA"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "Loading..."
+
+[node name="CardB" type="PanelContainer" parent="UI/AcademicInspectorModal/VBox/CardsHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_b")
+
+[node name="VBoxB" type="VBoxContainer" parent="UI/AcademicInspectorModal/VBox/CardsHBox/CardB"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CardBTitle" type="Label" parent="UI/AcademicInspectorModal/VBox/CardsHBox/CardB/VBoxB"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.55, 0.15, 1)
+theme_override_font_sizes/font_size = 13
+text = "AGENT B (AMBER) — GREEDY SEARCH"
+
+[node name="CardB_Details" type="RichTextLabel" parent="UI/AcademicInspectorModal/VBox/CardsHBox/CardB/VBoxB"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "Loading..."
+
+[node name="HSeparator2" type="HSeparator" parent="UI/AcademicInspectorModal/VBox"]
+layout_mode = 2
+
+[node name="DefenseHeader" type="Label" parent="UI/AcademicInspectorModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 12
+text = "📝 Dynamic Academic Analysis & Instructor Presentation Summary:"
+
+[node name="AcademicSummaryLabel" type="RichTextLabel" parent="UI/AcademicInspectorModal/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 95)
+layout_mode = 2
+theme_override_colors/default_color = Color(0.9, 0.95, 1, 0.95)
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "Theoretical analysis loading..."
+
+[node name="ActionsHBox" type="HBoxContainer" parent="UI/AcademicInspectorModal/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CopyDefenseBtn" type="Button" parent="UI/AcademicInspectorModal/VBox/ActionsHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+text = "📋 Copy Defense Summary"
+
+[node name="CopyStatusLabel" type="Label" parent="UI/AcademicInspectorModal/VBox/ActionsHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.4, 1, 0.7, 1)
+theme_override_font_sizes/font_size = 11
+
+[node name="CloseInspectorBtn" type="Button" parent="UI/AcademicInspectorModal/VBox/ActionsHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 30)
+layout_mode = 2
+text = "✕ Close Inspector"

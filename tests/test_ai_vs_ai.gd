@@ -26,9 +26,10 @@ func _ready() -> void:
 	test_simulation_lifecycle_and_speed()
 	test_spawn_swapping_fairness()
 	test_experimental_metrics_and_export()
+	test_map_presets_and_academic_inspector()
 	
 	print("==================================================")
-	print("  ALL AI vs AI TESTS COMPLETED SUCCESSFULLY! [8/8]")
+	print("  ALL AI vs AI TESTS COMPLETED SUCCESSFULLY! [9/9]")
 	print("==================================================")
 	get_tree().quit(0)
 
@@ -262,3 +263,52 @@ func test_experimental_metrics_and_export() -> void:
 
 	arena.queue_free()
 	print("  [PASS] Experimental metrics collection and JSON/CSV data export verified.")
+
+
+func test_map_presets_and_academic_inspector() -> void:
+	print("[TEST 9/9] Verifying tactical map presets, live path visualizer, and academic inspector...")
+	var arena = _arena_scene.instantiate()
+	add_child(arena)
+
+	# 1. Map Presets
+	assert(arena.get("current_map") == "symmetric", "Initial map should be symmetric")
+	
+	arena.call("change_map", "chokepoints")
+	assert(arena.get("current_map") == "chokepoints", "Map should update to chokepoints")
+	assert(arena.get_node_or_null("ArenaObstacles") != null, "ArenaObstacles container must exist")
+
+	arena.call("change_map", "open_basin")
+	assert(arena.get("current_map") == "open_basin", "Map should update to open_basin")
+
+	arena.call("change_map", "labyrinth")
+	assert(arena.get("current_map") == "labyrinth", "Map should update to labyrinth")
+
+	# 2. Path Visualizer Toggle
+	assert(arena.get("show_ai_paths") == true, "Path visualizer should be ON by default")
+	arena.call("toggle_path_visualizer")
+	assert(arena.get("show_ai_paths") == false, "Path visualizer should toggle to OFF")
+	arena.call("toggle_path_visualizer")
+	assert(arena.get("show_ai_paths") == true, "Path visualizer should toggle back to ON")
+
+	# 3. Agent Path Getters
+	assert(arena.agent_a.has_method("get_current_nav_path"), "Agent A must expose get_current_nav_path")
+	assert(arena.agent_a.has_method("get_remaining_path_points"), "Agent A must expose get_remaining_path_points")
+
+	# 4. Academic AI Inspector
+	arena.call("open_academic_inspector")
+	assert(arena.academic_inspector_modal.visible == true, "Academic inspector modal should be visible")
+
+	var report: String = arena.call("generate_academic_defense_report")
+	assert(not report.is_empty(), "Academic defense report must not be empty")
+	assert(report.contains("A* Search") or report.contains("ASTAR"), "Report should reference A* Search")
+	assert(report.contains("Greedy") or report.contains("GREEDY"), "Report should reference Greedy Search")
+	assert(report.contains("O(b^"), "Report should contain Big-O complexity analysis")
+
+	arena.call("copy_defense_summary")
+	assert(arena.copy_status_label.text.contains("Copied"), "Copy status label should indicate success")
+
+	arena.call("close_academic_inspector")
+	assert(arena.academic_inspector_modal.visible == false, "Academic inspector modal should be hidden")
+
+	arena.queue_free()
+	print("  [PASS] Tactical map presets, path visualizer, and academic defense inspector verified.")

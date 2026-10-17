@@ -2,6 +2,7 @@ class_name AutonomousAgent
 extends CharacterBody2D
 
 const FloatingCombatTextScript := preload("res://scripts/components/floating_combat_text.gd")
+const AstronautVisualScript := preload("res://scenes/player/astronaut_visual.gd")
 ## Operates without human input, executing pathfinding through the Python AI backend,
 ## avoiding obstacles, pursuing opponents or objectives, and engaging in decoupled combat.
 
@@ -60,6 +61,7 @@ var _recoil_offset: Vector2 = Vector2.ZERO
 var _death_fade: float = 1.0
 
 # Node References
+@onready var visual: Node2D = get_node_or_null("Visual")
 @onready var health_component: Node = $HealthComponent
 @onready var weapon_component: Node2D = $WeaponComponent
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -75,6 +77,39 @@ func _ready() -> void:
 	
 	spawn_position = global_position
 	_setup_components()
+	_ensure_visual()
+	_apply_visual_styling()
+
+
+func _ensure_visual() -> void:
+	if visual == null:
+		visual = get_node_or_null("Visual")
+	if visual == null:
+		visual = AstronautVisualScript.new()
+		visual.name = "Visual"
+		add_child(visual)
+		move_child(visual, 0)
+
+
+func _apply_visual_styling() -> void:
+	if not visual:
+		return
+	if team_group == "team_a":
+		# Team A: Vanguard Operative (White EVA suit, Cyan trim & emerald visor)
+		visual.set("suit_color", Color(0.93, 0.95, 0.98))
+		visual.set("suit_shadow", Color(0.68, 0.72, 0.80))
+		visual.set("accent_color", accent_color)
+		visual.set("visor_color", Color(0.05, 0.92, 0.65))
+		visual.set("pack_color", Color(0.18, 0.22, 0.28))
+		visual.set("thruster_glow", Color(0.20, 0.85, 1.00, 0.85))
+	else:
+		# Team B: Rival Operative (Sleek dark carbon stealth suit, Amber trim & gold visor)
+		visual.set("suit_color", Color(0.28, 0.29, 0.35))
+		visual.set("suit_shadow", Color(0.16, 0.17, 0.22))
+		visual.set("accent_color", accent_color)
+		visual.set("visor_color", Color(1.00, 0.70, 0.15))
+		visual.set("pack_color", Color(0.14, 0.14, 0.18))
+		visual.set("thruster_glow", Color(1.00, 0.60, 0.15, 0.85))
 
 
 func _setup_components() -> void:
@@ -119,7 +154,9 @@ func setup_agent(p_name: String, p_team: String, p_color: Color, p_algo: String,
 	if weapon_component:
 		weapon_component.set("projectile_color", accent_color)
 		weapon_component.set("muzzle_flash_color", accent_color.lightened(0.3))
-		
+	
+	_ensure_visual()
+	_apply_visual_styling()
 	queue_redraw()
 
 
@@ -168,6 +205,9 @@ func reset_agent(p_spawn_pos: Vector2 = Vector2.ZERO) -> void:
 	if weapon_component and weapon_component.has_method("reset_cooldown"):
 		weapon_component.call("reset_cooldown")
 
+	if visual and visual.has_method("reset_visual"):
+		visual.call("reset_visual")
+
 	queue_redraw()
 
 
@@ -175,6 +215,8 @@ func _physics_process(delta: float) -> void:
 	if current_state == AgentState.DEAD:
 		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
 		move_and_slide()
+		if visual and visual.has_method("update_motion"):
+			visual.call("update_motion", velocity, delta)
 		return
 
 	# Handle visual timers
@@ -185,6 +227,9 @@ func _physics_process(delta: float) -> void:
 
 	_update_autonomous_behavior(delta)
 	move_and_slide()
+	
+	if visual and visual.has_method("update_motion"):
+		visual.call("update_motion", velocity, delta)
 	
 	# Track physical distance traversed
 	var moved := velocity.length() * delta
@@ -232,18 +277,25 @@ func _process_combat_scenario(target_pos: Vector2, dist: float, delta: float) ->
 	var in_range := dist <= attack_range
 
 	if in_range and can_see:
-		# In range with clear line of fire -> Engage and shoot!
 		current_state = AgentState.ATTACKING
-		# Maintain optimal distance: back up slightly if too close, stop if in sweet spot
-		if dist < attack_range * 0.35:
+		# Tactical combat spacing: maintain optimal standoff between 150px and 260px
+		if dist < 160.0:
+			# Too close: backpedal away from opponent to keep spacing
 			var retreat_dir := (global_position - target_pos).normalized()
-			velocity = velocity.move_toward(retreat_dir * (move_speed * 0.6), acceleration * delta)
+			velocity = velocity.move_toward(retreat_dir * move_speed, acceleration * delta)
+		elif dist > 260.0:
+			# Advance closer to stay in effective firing range
+			var advance_dir := (target_pos - global_position).normalized()
+			velocity = velocity.move_toward(advance_dir * move_speed, acceleration * delta)
 		else:
-			velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
+			# In the combat sweet spot: lateral tactical strafing
+			var perp := (target_pos - global_position).normalized().orthogonal()
+			var strafe_dir := perp if team_group == "team_a" else -perp
+			velocity = velocity.move_toward(strafe_dir * (move_speed * 0.55), acceleration * delta)
 
-		_try_fire_weapon((target_pos - global_position).normalized())
+		var fire_dir := (target_pos - global_position).normalized()
+		_try_fire_weapon(fire_dir)
 	else:
-		# Out of range or obstructed by obstacle -> Navigate along path
 		current_state = AgentState.NAVIGATING
 		_follow_nav_path(delta)
 
@@ -322,7 +374,10 @@ func _try_fire_weapon(fire_dir: Vector2) -> void:
 		return
 	if weapon_component.can_attack():
 		_recoil_offset = -fire_dir * 4.0
-		weapon_component.attack(fire_dir, global_position, self)
+		if visual and visual.has_method("play_attack_recoil"):
+			visual.call("play_attack_recoil", fire_dir)
+		var spawn_pos := global_position + fire_dir * 18.0
+		weapon_component.attack(fire_dir, spawn_pos, self)
 		var audio = get_node_or_null("/root/AudioManager")
 		if audio and audio.has_method("play_sfx"):
 			audio.call("play_sfx", "laser_fire", randf_range(0.95, 1.05))
@@ -342,11 +397,13 @@ func has_line_of_sight_to(target_pos: Vector2) -> bool:
 	if not space_state:
 		return true
 
+	var excl: Array[RID] = [get_rid()]
+	if is_instance_valid(target_node) and target_node is CollisionObject2D:
+		excl.append(target_node.get_rid())
+
 	var query := PhysicsRayQueryParameters2D.create(global_position, target_pos)
 	query.collision_mask = 1
-	query.exclude = [self.get_rid()]
-	if is_instance_valid(target_node):
-		query.exclude.append(target_node.get_rid())
+	query.exclude = excl
 
 	var result := space_state.intersect_ray(query)
 	return result.is_empty()
@@ -356,6 +413,24 @@ func _get_grid_coord(pos: Vector2) -> Vector2i:
 	if _map_data_ref and _map_data_ref.has_method("world_to_grid"):
 		return _map_data_ref.call("world_to_grid", pos)
 	return Vector2i(int(floor(pos.x / 32.0)), int(floor(pos.y / 32.0)))
+
+
+func get_current_nav_path() -> PackedVector2Array:
+	return _nav_path
+
+
+func get_nav_path_index() -> int:
+	return _nav_path_index
+
+
+func get_remaining_path_points() -> PackedVector2Array:
+	if _nav_path.is_empty() or _nav_path_index >= _nav_path.size():
+		return PackedVector2Array()
+	var res := PackedVector2Array()
+	res.append(global_position)
+	for i in range(_nav_path_index, _nav_path.size()):
+		res.append(_nav_path[i])
+	return res
 
 
 # ---------------------------------------------------------------------------
@@ -382,6 +457,8 @@ func take_damage(amount: float, source: Node = null) -> bool:
 	if res:
 		damage_taken += amount
 		_hit_flash_timer = 1.0
+		if visual and visual.has_method("play_damage_flash"):
+			visual.call("play_damage_flash")
 		agent_damaged.emit(self, amount, health_component.current_health)
 		FloatingCombatTextScript.spawn(self, global_position, "-%d" % int(amount), Color(1.0, 0.4, 0.4))
 		var audio = get_node_or_null("/root/AudioManager")
@@ -412,6 +489,9 @@ func _on_health_depleted() -> void:
 
 	if collision_shape:
 		collision_shape.set_deferred("disabled", true)
+
+	if visual and visual.has_method("play_death"):
+		visual.call("play_death")
 
 	agent_died.emit(self)
 	var audio = get_node_or_null("/root/AudioManager")
@@ -456,53 +536,34 @@ func _exit_tree() -> void:
 # Procedural Drawing & Mini HUD
 # ---------------------------------------------------------------------------
 func _draw() -> void:
-	var is_dead := (current_state == AgentState.DEAD)
-	var body_color := accent_color.darkened(0.2)
-	var visor_color := accent_color.lightened(0.5)
+	# If dead, don't draw overhead telemetry
+	if current_state == AgentState.DEAD:
+		return
 
-	if _hit_flash_timer > 0.0:
-		body_color = body_color.lerp(Color(1.0, 0.2, 0.2), _hit_flash_timer)
-		visor_color = Color.WHITE
-
-	if is_dead:
-		body_color = Color(0.35, 0.35, 0.35, 0.6)
-		visor_color = Color(0.2, 0.2, 0.2, 0.4)
-
-	# Recoil and Center
-	var center := _recoil_offset
-
-	# Backpack / Jetpack energy core
-	var backpack_pos := center - facing_direction * 11.0
-	draw_circle(backpack_pos, 5.0, body_color.darkened(0.4))
-	if not is_dead:
-		draw_circle(backpack_pos, 2.5, accent_color)
-
-	# Main Torso & Suit
-	draw_circle(center, 13.0, body_color)
-	draw_arc(center, 13.0, 0, TAU, 16, accent_color, 2.0)
-
-	# Visor facing target
-	var visor_pos := center + facing_direction * 7.0
-	draw_circle(visor_pos, 4.5, visor_color)
-
-	# Overhead HUD (Name, Algorithm & Mini Health Bar)
+	# Overhead Floating Team Marker & Mini Health Pip (Clean, No text overlap)
 	var hud_y := -24.0
 	var hp_pct := 1.0
 	if health_component and health_component.max_health > 0.0:
 		hp_pct = clampf(health_component.current_health / health_component.max_health, 0.0, 1.0)
 
-	# Health bar background & fill
-	var bar_w := 34.0
-	var bar_h := 4.0
+	var bar_w := 28.0
+	var bar_h := 3.5
 	var bar_x := -bar_w * 0.5
-	draw_rect(Rect2(bar_x, hud_y, bar_w, bar_h), Color(0.1, 0.1, 0.1, 0.8))
-	var fill_color := accent_color.lerp(Color(1.0, 0.2, 0.2), 1.0 - hp_pct)
-	if is_dead:
-		fill_color = Color(0.3, 0.3, 0.3)
-	draw_rect(Rect2(bar_x, hud_y, bar_w * hp_pct, bar_h), fill_color)
 
-	# Agent Name & Algorithm text
-	var font := ThemeDB.fallback_font
-	var font_size := 9
-	var text_str := "%s [%s]" % [agent_name, algorithm.to_upper()]
-	draw_string(font, Vector2(-bar_w * 0.8, hud_y - 3.0), text_str, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, accent_color.lightened(0.4))
+	# Team indicator diamond
+	var diamond_center := Vector2(0.0, hud_y - 6.0)
+	var pts := PackedVector2Array([
+		diamond_center + Vector2(0, -4),
+		diamond_center + Vector2(4, 0),
+		diamond_center + Vector2(0, 4),
+		diamond_center + Vector2(-4, 0)
+	])
+	draw_colored_polygon(pts, accent_color)
+
+	# Mini health bar background
+	draw_rect(Rect2(bar_x - 1, hud_y - 1, bar_w + 2, bar_h + 2), Color(0.04, 0.05, 0.08, 0.9))
+	draw_rect(Rect2(bar_x, hud_y, bar_w, bar_h), Color(0.12, 0.14, 0.18, 0.95))
+
+	# Dynamic Health Fill
+	var fill_color := accent_color.lerp(Color(1.0, 0.25, 0.25), 1.0 - hp_pct)
+	draw_rect(Rect2(bar_x, hud_y, bar_w * hp_pct, bar_h), fill_color)

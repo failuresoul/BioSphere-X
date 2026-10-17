@@ -8,6 +8,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Any, Dict
 import time
+import sys
+from pathlib import Path
+
+# Ensure ai_backend directory is in sys.path so 'algorithms' is always found
+backend_dir = Path(__file__).resolve().parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
 from algorithms.pathfinding.router import router as pathfinding_router
 from algorithms.adversarial.router import router as adversarial_router

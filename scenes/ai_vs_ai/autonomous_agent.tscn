@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://ci1uvyqkm5uyn"]
+[gd_scene load_steps=6 format=3 uid="uid://ci1uvyqkm5uyn"]
 
 [ext_resource type="Script" path="res://scenes/ai_vs_ai/autonomous_agent.gd" id="1_agent"]
 [ext_resource type="Script" path="res://scripts/components/health_component.gd" id="2_health"]
 [ext_resource type="Script" path="res://scripts/components/weapon_component.gd" id="3_weapon"]
+[ext_resource type="Script" path="res://scenes/player/astronaut_visual.gd" id="4_visual"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_agent"]
 radius = 14.0
@@ -14,6 +15,9 @@ script = ExtResource("1_agent")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_agent")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("4_visual")
 
 [node name="HealthComponent" type="Node" parent="."]
 script = ExtResource("2_health")

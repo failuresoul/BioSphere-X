@@ -212,65 +212,160 @@ Once extraction is achieved, access the **Orbital Star Map** to select and trave
 
 ## How to Play: AI vs AI Simulation Arena (Complete Benchmarking Guide)
 
-The **AI vs AI Simulation Arena** (`scenes/ai_vs_ai/ai_arena.tscn`) is accessible from the Main Menu. It provides an experimental environment where two autonomous agents compete without human intervention.
+The **AI vs AI Simulation Arena** (`scenes/ai_vs_ai/ai_arena.tscn`) is accessible from the Main Menu. It provides an academic research environment where two autonomous agents run independent graph search and pathfinding algorithms side-by-side in real time.
 
 ```
-+------------------------------------------------------------------------------------+
-|  BIOSPHERE-X // AI vs AI ARENA   | STATUS: RUNNING | Time: 14.2s / 120s | Sim: 1.00x|
-+------------------------------------------------------------------------------------+
-| [MATCH CONFIGURATION]            |                                                  |
-| Scenario: Pursuit and Combat     |               [Agent A: A* Search]               |
-| Agent A: A* Search (Optimal)     |                        v                         |
-| Agent B: Greedy Best-First       |           # # #                 # # #            |
-| [x] Swap Spawns  Seed: [42]      |           #   #    [OBJECTIVE]  #   #            |
-|                                  |           # # #                 # # #            |
-| [ Start ] [ Pause ] [ Reset ]    |                        ^                         |
-|                                  |            [Agent B: Greedy Best-First]          |
-+------------------------------------------------------------------------------------+
-| AGENT A: [||||||||||  ] 82 HP | Nodes: 312 | 4.2ms || AGENT B: [||||||     ] 46 HP |
-+------------------------------------------------------------------------------------+
++---------------------------------------------------------------------------------------------------------+
+| [AGENT A (CYAN)] [A* OPTIMAL]      |            BIOSPHERE-X ARENA            |  [AGENT B (AMBER)] [GREEDY]      |
+| [||||||||||||||||||||||||] 100 HP   | STATUS: ENGAGED [CAN_CHOKEPOINTS]       |  [||||||||||||||||       ] 75 HP|
+| Nodes: 184 | Latency: 2.1ms        | Time: 00:14.2 / 120s                    |  Nodes: 436 | Latency: 4.8ms     |
++---------------------------------------------------------------------------------------------------------+
+|                                                                                                         |
+|                  [Agent A (Cyan Vanguard Operative)] ───────► (Active Planned Path)                     |
+|                                     │                                                                   |
+|                      [CONCAVE U-SHAPED CANYON TRAP]                                                     |
+|                                     ▼                                                                   |
+|                     [DATA BEACON / CENTER DAIS]                                                         |
+|                                     ▲                                                                   |
+|                  [Agent B (Amber Rival Operative)]  ───────► (Active Planned Path)                      |
+|                                                                                                         |
++---------------------------------------------------------------------------------------------------------+
+| [ ▶ Start ] [ ⏸ Pause ] [ ↺ Reset ] | [ ⚙ Match Setup ] [ 🎥 Cam ] [ 👁 Paths: ON ] [ 📊 AI Inspector ] |
++---------------------------------------------------------------------------------------------------------+
 ```
 
 ---
 
-### 1. Step-by-Step Match Setup
+### 1. Step-by-Step Match Setup & Controls
 1. **Launch the Arena**: From the Main Menu, click **🤖 AI vs AI SIMULATION ARENA**.
-2. **Select Scenario Mode**:
-   * **Pursuit and Combat**: Agent A and Agent B spawn at opposite ends of a symmetric maze. Both agents navigate around obstacles, track line-of-sight, maintain combat spacing, and fire plasma rifles at each other. The match ends when one agent is eliminated.
-   * **Race to Objective**: Weapons are disabled. A pulsing Data Beacon spawns at the exact center of the arena. Both agents compete to navigate through obstacle chokepoints and reach the beacon first.
-3. **Assign Algorithms Independently**:
-   * Choose any of the 7 algorithms for **Agent A** (e.g. `A* Search (Optimal)`).
-   * Choose any of the 7 algorithms for **Agent B** (e.g. `Greedy Best-First Search`).
-4. **Configure Trial Controls**:
-   * **Swap Spawns**: Invert the starting quadrants of Agent A and Agent B to verify that one side's terrain does not create an unfair bias.
-   * **Seed SpinBox**: Set a fixed numeric seed (e.g. `42`) to guarantee identical obstacle layouts and deterministic runs across comparison trials.
-   * **Simulation Speed Slider**: Scale the time factor from `0.25x` (slow-motion frame-by-frame analysis) up to `4.00x` (rapid batch testing).
-5. **Run the Simulation**:
-   * Click **Start** to launch the match.
-   * Click **Pause** (or press `Escape`) to freeze the agents and inspect positions.
-   * Click **Reset** to return both agents to their starting positions with full health and clear telemetry.
+2. **Open Match Setup (`⚙ Match Setup`)**:
+   * **Scenario Mode**:
+     * **Pursuit and Combat**: Agents navigate around obstacles, track line-of-sight, maintain combat spacing (160–260px engagement sweet spot), and fire plasma rifles. Match ends upon agent elimination.
+     * **Race to Objective**: Weapons are disabled. A glowing Data Beacon is situated at the arena center. Agents race across the terrain to reach it first.
+   * **Tactical Map Preset**: Select between 4 distinct experimental environments:
+     * **Symmetric Proving Grounds**: Balanced tournament arena with central pillars and symmetric flanking corridors.
+     * **Canyon Chokepoints & U-Traps**: Concave barrier traps designed to demonstrate why greedy heuristics get stuck in local minima while A* navigates around.
+     * **Open Crater Basin**: Sparse rock cover demonstrating raw heuristic search speed and directional pruning.
+     * **The Labyrinth**: Dense grid maze with deep branching factor ($d \ge 25$) demonstrating search tree depth and memory bounds.
+   * **Assign Algorithms Independently**:
+     * Assign any of the 7 algorithms to **Agent A** (e.g. `A* Search (Optimal)`).
+     * Assign any of the 7 algorithms to **Agent B** (e.g. `Greedy Best-First Search`).
+   * **Spawn Swapping**: Toggle **Swap Spawns** to flip starting positions, ensuring complete experimental fairness.
+   * **Deterministic Seed**: Adjust the numeric seed (e.g. `42`) for identical, reproducible trials across benchmarks.
+3. **Bottom Dock Interactive Controls**:
+   * **`▶ Start`**: Deploys agents and begins autonomous execution.
+   * **`⏸ Pause`** (or `Escape`): Freezes simulation instantly for frame-by-frame inspection.
+   * **`↺ Reset`**: Clears path trees, restores full agent health, and resets positions to spawn pads.
+   * **`🎥 Cam: Dynamic / Overview`**: Toggles between smooth midpoint tracking with adaptive combat zoom (`0.70x`–`1.35x`) and full arena overview.
+   * **`👁 Paths: ON / OFF`**: Toggles live real-time rendering of planned paths and waypoint nodes on the arena floor.
+   * **`📊 AI Inspector`**: Opens the comprehensive Academic AI Inspector dialog displaying theoretical classifications and live benchmark telemetry.
+   * **Simulation Speed Slider**: Scale time factor dynamically from `0.25x` (slow-motion analysis) up to `4.00x` (rapid batch runs).
 
 ---
 
-### 2. Live Telemetry HUD & Visual Feedback
-* **Agent A (Cyan)** vs **Agent B (Amber/Orange)**.
-* **Real-Time HP Gauges**: Shows current health points and percentage.
-* **Nodes Expanded Counter**: Measures search efficiency — the total number of graph nodes inspected by the algorithm.
-* **Execution Time (ms)**: Measures algorithmic latency — the cumulative time in milliseconds spent computing paths.
-* **Floating Combat Numbers**: When an agent takes damage, animated red damage numbers rise and fade in world-space.
-* **Procedural Sound**: Firing sounds (`laser_fire`), impact sounds (`laser_hit`), and death sounds (`enemy_death`) trigger dynamically.
+### 2. Live AI Path & Search Visualizer
+When **`👁 Paths: ON`** is enabled, the simulation renders the internal algorithmic decisions directly on the arena floor:
+* **Agent A Route (Cyan Glow)**: Draws a polyline along all remaining path waypoints for Agent A, terminating at the current target.
+* **Agent B Route (Amber Glow)**: Draws a polyline along all remaining path waypoints for Agent B.
+* **Pulsing Waypoint Nodes**: Glowing node rings illuminate each graph coordinate along the route, with a pulsing halo on the destination goal.
+* **Combat Targeting Vector**: In Combat mode, a subtle red dashed line indicates when an agent has acquired clear line-of-sight to the opponent.
 
 ---
 
-### 3. Match Outcomes & Scientific Data Export
-When a match concludes, a victory banner announces the winner (e.g. `★ AGENT A WON (ELIMINATION) ★` or `★ AGENT B WON (OBJECTIVE REACHED) ★`).
+### 3. Academic AI Inspector & Defense Report
+Clicking **`📊 AI Inspector`** (or clicking **`📊 View Academic Defense Report`** after a match) opens a dedicated side-by-side analysis window:
+* **Theoretical Classification**:
+  * Category (Informed Heuristic vs Uninformed Blind)
+  * Cost Evaluation Function $f(n)$
+  * Heuristic Admissibility Guarantee ($h(n) \le h^*(n)$)
+  * Optimality & Completeness proofs
+  * Big-O Time Complexity ($O(b^d)$)
+  * Big-O Space Complexity ($O(b^d)$ vs $O(bd)$)
+* **Live Realized Telemetry**:
+  * Nodes Expanded: Number of search tree states inspected.
+  * Algorithmic Latency: Cumulative time spent computing paths in milliseconds.
+  * Physical Distance Traveled: Measured in arena pixels.
+  * Path Efficiency Ratio: $\frac{\text{Straight-Line Euclidean Displacement}}{\text{Actual Traveled Distance}} \times 100\%$
+* **Dynamic Presentation Summary**: Automatically synthesizes an oral defense explanation analyzing *why* the winning algorithm succeeded on the chosen terrain.
+* **`📋 Copy Defense Summary`**: Copies the complete theoretical report to your system clipboard for instant pasting into presentation slides or lab reports.
 
-You can export complete trial telemetry by clicking:
-* **Export JSON**: Saves a full structured experiment log to `user://experiments/match_<scenario>_<timestamp>.json` containing:
-  * Algorithm configurations, random seed, spawn swap setting, match duration.
-  * Total path requests, total nodes expanded, average time per request (ms).
-  * Total distance traveled (px), damage dealt, and damage taken.
-* **Export CSV**: Appends a row to `user://experiments/match_<scenario>_<timestamp>.csv` formatted for direct import into Pandas, Excel, or R for comparative plotting.
+---
+
+### 4. Scientific Data Export (JSON & CSV)
+Every match automatically logs comprehensive experimental data:
+* **Export JSON**: Saves a full structured experiment record to `user://experiments/match_<scenario>_<timestamp>.json`.
+* **Export CSV**: Appends a row to `user://experiments/match_<scenario>_<timestamp>.csv` including:
+  * `Timestamp`, `Scenario`, `Map`, `RandomSeed`, `SwapSpawns`, `DurationSeconds`, `Outcome`, `Winner`.
+  * `AgentA_Algo`, `AgentA_Requests`, `AgentA_NodesExpanded`, `AgentA_AlgoTimeMs`, `AgentA_DistanceTraveled`, `AgentA_RemainingHP`, `AgentA_DamageDealt`.
+  * `AgentB_Algo`, `AgentB_Requests`, `AgentB_NodesExpanded`, `AgentB_AlgoTimeMs`, `AgentB_DistanceTraveled`, `AgentB_RemainingHP`, `AgentB_DamageDealt`.
+
+---
+
+## Teacher Presentation Guide & Oral Defense Cheat Sheet
+
+This section provides the exact theoretical concepts, demonstration procedures, and answers to likely questions when presenting BioSphere-X to your computer science / artificial intelligence instructor.
+
+### 1. Algorithm Complexity & Theoretical Guarantees Matrix
+
+| Algorithm | Category | Cost Function $f(n)$ | Admissibility $h(n) \le h^*(n)$ | Complete? | Optimal? | Time Complexity | Space Complexity |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **A\* Search** | Informed | $f(n) = g(n) + h(n)$ | Admissible (Euclidean) | Yes | Yes | $O(b^d)$ | $O(b^d)$ (Stores all nodes) |
+| **Greedy Best-First** | Informed | $f(n) = h(n)$ | Non-admissible (ignores $g$) | No (can loop) | No | $O(b^m)$ | $O(b^m)$ |
+| **Breadth-First (BFS)** | Uninformed | $f(n) = \text{depth}(n)$ | N/A | Yes | Yes (uniform cost) | $O(b^d)$ | $O(b^d)$ (Exponential memory) |
+| **Depth-First (DFS)** | Uninformed | $f(n) = -\text{depth}(n)$ | N/A | No (in infinite graphs) | No | $O(b^m)$ | $O(bm)$ (Linear memory) |
+| **Depth-Limited (DLS)** | Uninformed | DFS with cutoff $l$ | N/A | No (if $d > l$) | No | $O(b^l)$ | $O(bl)$ |
+| **Iterative Deepening (IDDFS)**| Uninformed | Iterative DLS ($l=0..d$) | N/A | Yes | Yes (uniform cost) | $O(b^d)$ | $O(bd)$ (Linear space!) |
+| **Bidirectional Search** | Dual Frontier| Start $\rightarrow \leftarrow$ Goal | Preserved if heuristics admissible | Yes | Yes | $O(b^{d/2})$ | $O(b^{d/2})$ (Exponential speedup) |
+
+*Where $b$ = effective branching factor (up to 8 for diagonal grids), $d$ = shallowest goal depth, $m$ = maximum search tree depth, $l$ = depth cutoff limit.*
+
+---
+
+### 2. Three Live Demonstrations to Show Your Teacher
+
+#### Experiment A: The Concave Obstacle Trap (Greedy vs A*)
+1. In **Match Setup**, select **Scenario: Pursuit and Combat** and **Map: Canyon Chokepoints & U-Traps**.
+2. Set **Agent A** = `A* Search (Optimal)` and **Agent B** = `Greedy Best-First Search`.
+3. Toggle **`👁 Paths: ON`** and click **Start**.
+4. **What to Point Out to the Teacher**:
+   * Agent B (Greedy) looks only at Euclidean distance to the goal ($h(n)$). Because entering the mouth of the concave U-trap reduces straight-line distance, Greedy aggressively plunges into the pocket and gets trapped against the back wall. It must expand dozens of extra nodes before it backtracks.
+   * Agent A (A*) evaluates both accumulated path cost $g(n)$ and estimated remaining distance $h(n)$. It recognizes that moving deep into the concave pocket increases $g(n)$ without providing an exit, so it cleanly routes around the outer perimeter.
+   * Open **`📊 AI Inspector`** to show the teacher the difference in **Nodes Expanded** and **Path Efficiency Ratio**.
+
+#### Experiment B: The Memory vs Optimality Trade-Off (BFS vs IDDFS)
+1. Select **Map: The Labyrinth** and **Scenario: Race to Objective**.
+2. Set **Agent A** = `Breadth-First Search (BFS)` and **Agent B** = `Iterative Deepening DFS (IDDFS)`.
+3. Click **Start**.
+4. **What to Point Out to the Teacher**:
+   * Both algorithms reach the objective in the exact same optimal number of steps.
+   * However, BFS must store every node in its frontier queue, yielding an exponential memory footprint of $O(b^d)$.
+   * IDDFS repeatedly runs depth-limited searches, keeping only the active branch in memory. Its memory footprint is strictly linear $O(bd)$.
+   * Explain that the re-computation overhead of IDDFS is merely $\frac{b}{b-1}$, meaning IDDFS is vastly superior for memory-constrained autonomous rovers.
+
+#### Experiment C: Directional Heuristic Pruning (BFS vs A*)
+1. Select **Map: Open Crater Basin** and **Scenario: Race to Objective**.
+2. Set **Agent A** = `A* Search (Optimal)` and **Agent B** = `Breadth-First Search (BFS)`.
+3. Click **Start**.
+4. **What to Point Out to the Teacher**:
+   * In an open environment without walls, BFS blindly expands outward in expanding concentric circles, wasting CPU time on hundreds of nodes directed away from the goal.
+   * A* uses its Euclidean heuristic to prioritize nodes pointing toward the objective, narrowing the search frontier into a pencil-thin beam.
+   * Point out the **Execution Time (ms)** and **Nodes Expanded** counters on the top HUD to prove A*'s computational efficiency.
+
+---
+
+### 3. Likely Teacher Questions & Exact Answers
+
+* **Q1: "Why is A* guaranteed to be optimal in your simulation?"**
+  * **Answer**: "A* is mathematically guaranteed to be optimal because our heuristic function $h(n)$ uses 2D Euclidean distance, which satisfies both admissibility ($h(n) \le h^*(n)$) and consistency (triangle inequality: $h(n) \le c(n, a, n') + h(n')$). Because Euclidean distance is the straight-line distance, it never overestimates the true traversal cost on a grid."
+
+* **Q2: "Why did you implement Bidirectional Search, and what is its time complexity?"**
+  * **Answer**: "Bidirectional search replaces a single search tree of depth $d$ with two smaller search trees of depth $d/2$ originating from the start and goal simultaneously. The time complexity drops from $O(b^d)$ to $O(b^{d/2} + b^{d/2})$, which is an exponential reduction in state expansions."
+
+* **Q3: "How does the boss alien AI make decisions?"**
+  * **Answer**: "Goliath Prime uses the **Minimax algorithm with Alpha-Beta Pruning** evaluated to a depth of 4 plies. It evaluates board utility based on astronaut distance, player health percentage, weapon cooldown state, and cover positioning. Alpha-Beta pruning discards branches where the minimum score of the maximizing player is already worse than the maximum score achieved elsewhere, cutting average branch evaluations from $O(b^d)$ down to $O(b^{d/2})$."
+
+* **Q4: "Why use Fuzzy Logic for game difficulty instead of hardcoded numbers?"**
+  * **Answer**: "Human gameplay skills are continuous and non-linear. Traditional hardcoded thresholds cause abrupt 'rubber-banding' difficulty spikes. Our Mamdani Fuzzy Inference System evaluates player health, accuracy, and failure rate across trapezoidal membership sets (Low, Medium, High). Centroid defuzzification calculates a smooth, continuous aggression index between 0.10 and 1.00 that dynamically tunes enemy speed, damage, and cooldown multipliers without noticeable jarring transitions."
 
 ---
 

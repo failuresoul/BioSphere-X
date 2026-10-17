@@ -8,14 +8,55 @@ signal response_received(endpoint: String, success: bool, data: Dictionary)
 
 @export var base_url: String = "http://127.0.0.1:8000"
 @export var timeout_seconds: float = 2.0
-@export var auto_check_on_ready: bool = false
+@export var auto_check_on_ready: bool = true
+@export var auto_start_backend: bool = true
 
 var is_backend_available: bool = false
+var _spawned_backend_pid: int = 0
+var _has_attempted_autostart: bool = false
 
 
 func _ready() -> void:
 	if auto_check_on_ready:
 		check_health()
+
+
+func _exit_tree() -> void:
+	if _spawned_backend_pid > 0:
+		OS.kill(_spawned_backend_pid)
+		_spawned_backend_pid = 0
+
+
+# ---------------------------------------------------------------------------
+# Backend Process Lifecycle
+# ---------------------------------------------------------------------------
+func try_start_backend() -> bool:
+	if is_backend_available or _spawned_backend_pid > 0:
+		return true
+
+	var project_path := ProjectSettings.globalize_path("res://")
+	var venv_python := project_path.path_join("ai_backend/.venv/Scripts/python.exe")
+	var python_bin := ""
+
+	if FileAccess.file_exists(venv_python):
+		python_bin = venv_python
+	else:
+		python_bin = "python"
+
+	var args := PackedStringArray([
+		"-m", "uvicorn", "ai_backend.main:app",
+		"--host", "127.0.0.1",
+		"--port", "8000"
+	])
+
+	var pid := OS.create_process(python_bin, args, false)
+	if pid > 0:
+		_spawned_backend_pid = pid
+		print("[AIClient] Successfully spawned Python AI Backend process (PID: %d)" % pid)
+		return true
+	else:
+		print("[AIClient] Unable to spawn Python AI Backend process.")
+		return false
 
 
 # ---------------------------------------------------------------------------
@@ -27,6 +68,19 @@ func check_health(callback: Callable = Callable()) -> void:
 		if available != is_backend_available:
 			is_backend_available = available
 			backend_availability_changed.emit(is_backend_available)
+		
+		# If offline and autostart enabled, attempt background spawn once
+		if not available and auto_start_backend and not _has_attempted_autostart:
+			_has_attempted_autostart = true
+			if try_start_backend():
+				var tree := get_tree()
+				if tree:
+					var timer := tree.create_timer(1.8)
+					timer.timeout.connect(func():
+						check_health(callback)
+					)
+					return
+
 		if callback.is_valid():
 			callback.call(res)
 	)
