@@ -428,9 +428,9 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -540.0
+offset_left = -585.0
 offset_top = -62.0
-offset_right = 540.0
+offset_right = 585.0
 offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -438,12 +438,12 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_dock")
 
 [node name="HBox" type="HBoxContainer" parent="UI/BottomDock"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 6
 alignment = 1
 
 [node name="StartButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(85, 30)
+custom_minimum_size = Vector2(75, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_emerald")
@@ -451,7 +451,7 @@ text = "▶ Start"
 
 [node name="PauseButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(75, 30)
+custom_minimum_size = Vector2(70, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.8, 0.2, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_amber")
@@ -459,7 +459,7 @@ text = "Pause"
 
 [node name="ResetButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(75, 30)
+custom_minimum_size = Vector2(70, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_cyan")
@@ -470,43 +470,51 @@ layout_mode = 2
 
 [node name="ConfigButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(105, 30)
+custom_minimum_size = Vector2(95, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_cyan")
-text = "⚙ Match Setup"
+text = "⚙ Setup"
 
 [node name="CamButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(115, 30)
+custom_minimum_size = Vector2(105, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.7, 1.0, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_purple")
-text = "🎥 Cam: Dynamic"
+text = "🎥 Cam"
 
 [node name="PathVizButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(95, 30)
+custom_minimum_size = Vector2(90, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.9, 0.9, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_cyan")
-text = "👁 Paths: ON"
+text = "👁 Paths"
 
 [node name="InspectorButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(105, 30)
+custom_minimum_size = Vector2(95, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(1.0, 0.85, 0.3, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_gold")
-text = "📊 AI Inspector"
+text = "📊 Inspector"
 
 [node name="BatchButton" type="Button" parent="UI/BottomDock/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(110, 30)
+custom_minimum_size = Vector2(100, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 1.0, 0.6, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_emerald")
-text = "🧪 Batch Trials"
+text = "🧪 Batch"
+
+[node name="AutoExportButton" type="Button" parent="UI/BottomDock/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(105, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.25, 1.0, 0.65, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_cyan")
+text = "💾 Auto: ON"
 
 [node name="VSep2" type="VSeparator" parent="UI/BottomDock/HBox"]
 layout_mode = 2
@@ -670,22 +678,22 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = -155.0
-offset_right = 220.0
-offset_bottom = 155.0
+offset_left = -250.0
+offset_top = -180.0
+offset_right = 250.0
+offset_bottom = 180.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
 
 [node name="VBox" type="VBoxContainer" parent="UI/ResultsPanel"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="UI/ResultsPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 15
 text = "MATCH COMPLETED"
 horizontal_alignment = 1
 
@@ -693,13 +701,13 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 1, 0.6, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 17
 text = "★ AGENT A WON ★"
 horizontal_alignment = 1
 
 [node name="ViewInspectorBtn" type="Button" parent="UI/ResultsPanel/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 32)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 1, 0.7, 1)
 text = "📊 View Academic Defense Report"
@@ -707,9 +715,34 @@ text = "📊 View Academic Defense Report"
 [node name="HSeparator" type="HSeparator" parent="UI/ResultsPanel/VBox"]
 layout_mode = 2
 
+[node name="ActionRow" type="HBoxContainer" parent="UI/ResultsPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="RematchButton" type="Button" parent="UI/ResultsPanel/VBox/ActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.2, 0.95, 0.7, 1)
+text = "↺ Rematch"
+
+[node name="CopyExportPathButton" type="Button" parent="UI/ResultsPanel/VBox/ActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+text = "📋 Copy Path"
+
+[node name="CloseResultsButton" type="Button" parent="UI/ResultsPanel/VBox/ActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+text = "✕ Close"
+
 [node name="ExportRow" type="HBoxContainer" parent="UI/ResultsPanel/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="ExportJSONButton" type="Button" parent="UI/ResultsPanel/VBox/ExportRow"]
 unique_name_in_owner = true
@@ -726,8 +759,8 @@ text = "Export CSV"
 [node name="ExportStatusLabel" type="Label" parent="UI/ResultsPanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.25, 1.0, 0.65, 1)
+theme_override_font_sizes/font_size = 10
 autowrap_mode = 3
 
 [node name="AcademicInspectorModal" type="PanelContainer" parent="UI"]

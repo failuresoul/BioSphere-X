@@ -338,8 +338,17 @@ func _aggression_color(t: float) -> Color:
 # ─────────────────────────────────────────────────────────────────────────────
 func _build_ui() -> void:
 	custom_minimum_size = Vector2(PANEL_WIDTH, 0)
-	size_flags_horizontal = Control.SIZE_SHRINK_END
-	size_flags_vertical   = Control.SIZE_SHRINK_BEGIN
+	anchors_preset = Control.PRESET_TOP_RIGHT
+	anchor_left = 1.0
+	anchor_top = 0.0
+	anchor_right = 1.0
+	anchor_bottom = 1.0
+	offset_left = -PANEL_WIDTH - 16.0
+	offset_top = 16.0
+	offset_right = -16.0
+	offset_bottom = -16.0
+	grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	grow_vertical = Control.GROW_DIRECTION_BOTH
 
 	var root_style := StyleBoxFlat.new()
 	root_style.bg_color            = Color(0.04, 0.07, 0.13, 0.97)
@@ -358,9 +367,17 @@ func _build_ui() -> void:
 	root_style.content_margin_bottom = 14
 	add_theme_stylebox_override("panel", root_style)
 
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode   = ScrollContainer.SCROLL_MODE_AUTO
+	add_child(scroll)
+
 	var root_vbox := VBoxContainer.new()
+	root_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root_vbox.add_theme_constant_override("separation", 7)
-	add_child(root_vbox)
+	scroll.add_child(root_vbox)
 
 	# Header row
 	var hdr := HBoxContainer.new()
@@ -466,6 +483,32 @@ func _build_ui() -> void:
 	_lbl_successes     = _add_row(sec_st, "Successes",          "0")
 	_lbl_failures      = _add_row(sec_st, "Failures",           "0")
 	_lbl_match_outcome = _add_row(sec_st, "Last Match Outcome", "—")
+
+	_add_divider(root_vbox)
+
+	# ─ Automated Telemetry & Benchmark Export ────────────────────────────────
+	_add_section_header(root_vbox, "💾  AUTOMATIC TELEMETRY EXPORT")
+	var sec_export := _add_section_box(root_vbox)
+
+	var btn_exp_bench := _make_small_btn("📊 Export Difficulty Benchmark (CSV/JSON)", Color(0.25, 0.95, 0.65))
+	btn_exp_bench.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sec_export.add_child(btn_exp_bench)
+
+	var export_feedback_lbl := Label.new()
+	export_feedback_lbl.text = "Logs automatically saved to user://experiments/trials_log.csv"
+	export_feedback_lbl.add_theme_font_size_override("font_size", 9)
+	export_feedback_lbl.add_theme_color_override("font_color", Color(0.40, 0.85, 0.60, 0.9))
+	export_feedback_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	sec_export.add_child(export_feedback_lbl)
+
+	btn_exp_bench.pressed.connect(func():
+		var dc = get_node_or_null("/root/DifficultyController")
+		if dc and dc.has_method("export_benchmark_report_csv"):
+			var csv_p: String = dc.call("export_benchmark_report_csv")
+			var json_p: String = dc.call("export_benchmark_report_json")
+			export_feedback_lbl.text = "✓ Exported to:\n%s\n%s" % [csv_p, json_p]
+			export_feedback_lbl.modulate = Color(0.3, 1.0, 0.6)
+	)
 
 	_add_divider(root_vbox)
 

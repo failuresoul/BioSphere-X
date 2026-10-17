@@ -189,6 +189,7 @@ const ALGO_THEORY: Dictionary = {
 @export var random_seed: int = 42
 @export var dynamic_camera_enabled: bool = true
 @export var show_ai_paths: bool = true
+@export var auto_export_enabled: bool = true
 
 # Dynamic Battlefield Pickups
 const PICKUP_REPAIR_POS := Vector2(0.0, -145.0)
@@ -206,6 +207,7 @@ const MapDataScript := preload("res://scripts/components/map_data.gd")
 const CanyonWallScript := preload("res://scripts/components/canyon_wall.gd")
 const AlienRockScript := preload("res://scripts/components/alien_rock.gd")
 const ControlledPlanetScenariosScript := preload("res://scripts/components/controlled_planet_scenarios.gd")
+const ExperimentExportManagerScript := preload("res://scripts/components/experiment_export_manager.gd")
 
 var _agent_scene := preload("res://scenes/ai_vs_ai/autonomous_agent.tscn")
 var _beacon_scene := preload("res://scenes/ai_vs_ai/objective_beacon.tscn")
@@ -246,6 +248,11 @@ var objective_beacon: Area2D = null
 @onready var export_csv_btn: Button = %ExportCSVButton
 @onready var export_status_label: Label = %ExportStatusLabel
 @onready var exit_button: Button = %ExitButton
+@onready var auto_export_btn: Button = get_node_or_null("%AutoExportButton")
+@onready var rematch_btn: Button = get_node_or_null("%RematchButton")
+@onready var close_results_btn: Button = get_node_or_null("%CloseResultsButton")
+@onready var copy_export_path_btn: Button = get_node_or_null("%CopyExportPathButton")
+var last_export_info: Dictionary = {}
 
 # Enhanced Sci-Fi & Academic UI References
 @onready var control_panel: Control = get_node_or_null("%ControlPanel")
@@ -688,12 +695,54 @@ func _setup_ui() -> void:
 	if batch_button:
 		batch_button.pressed.connect(toggle_batch_modal)
 
+	if auto_export_btn:
+		_update_auto_export_button()
+		auto_export_btn.pressed.connect(func():
+			auto_export_enabled = not auto_export_enabled
+			_update_auto_export_button()
+			_push_event("💾 Auto-Export: %s" % ("ENABLED" if auto_export_enabled else "DISABLED"))
+		)
+
+	if rematch_btn:
+		rematch_btn.pressed.connect(func():
+			if results_panel:
+				results_panel.visible = false
+			reset_match()
+			start_match()
+		)
+
+	if close_results_btn:
+		close_results_btn.pressed.connect(func():
+			if results_panel:
+				results_panel.visible = false
+		)
+
+	if copy_export_path_btn:
+		copy_export_path_btn.pressed.connect(func():
+			var p: String = str(last_export_info.get("csv_log_path", "user://experiments/trials_log.csv"))
+			DisplayServer.clipboard_set(ProjectSettings.globalize_path(p))
+			if export_status_label:
+				export_status_label.text = "✓ Copied log path to clipboard!"
+				export_status_label.modulate = Color(0.3, 1.0, 0.6)
+		)
+
 	if results_panel:
 		results_panel.visible = false
 	if academic_inspector_modal:
 		academic_inspector_modal.visible = false
 
 	_update_badges()
+
+
+func _update_auto_export_button() -> void:
+	if not auto_export_btn:
+		return
+	if auto_export_enabled:
+		auto_export_btn.text = "💾 Auto-Export: ON"
+		auto_export_btn.add_theme_color_override("font_color", Color(0.25, 1.0, 0.65))
+	else:
+		auto_export_btn.text = "💾 Auto-Export: OFF"
+		auto_export_btn.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 
 
 func _update_cam_button_text() -> void:
@@ -1103,6 +1152,15 @@ func _terminate_match(outcome_str: String) -> void:
 	if results_panel:
 		results_panel.visible = true
 
+	# Automatic Result Export (CSV & JSON)
+	if auto_export_enabled:
+		last_export_info = ExperimentExportManagerScript.auto_export_trial(match_results)
+		match_results["export_info"] = last_export_info
+		if export_status_label:
+			export_status_label.text = "✓ Auto-Exported: %s (CSV & JSON logged)" % str(last_export_info.get("trial_id", ""))
+			export_status_label.modulate = Color(0.25, 1.0, 0.65)
+		_push_event("💾 Trial auto-exported: %s" % str(last_export_info.get("trial_id", "")))
+
 	# Refresh Academic Inspector if currently open
 	if academic_inspector_modal and academic_inspector_modal.visible:
 		open_academic_inspector()
@@ -1114,6 +1172,8 @@ func _terminate_match(outcome_str: String) -> void:
 	print("BioSphere-X AI vs AI Match Completed: ", match_results)
 
 	if is_batch_running:
+		if auto_export_enabled:
+			ExperimentExportManagerScript.auto_export_trial(match_results, "batch_trial_%d" % (batch_current_trial + 1))
 		batch_results_history.append(match_results.duplicate(true))
 		batch_trial_completed.emit(batch_current_trial, batch_total_trials, match_results)
 		batch_current_trial += 1
@@ -1613,6 +1673,9 @@ func _finish_batch_experiment() -> void:
 	_apply_simulation_speed(batch_saved_simulation_speed)
 	var summary := get_batch_summary()
 	batch_finished.emit(summary)
+	if auto_export_enabled:
+		export_batch_json()
+		export_batch_csv()
 	_push_event("🏆 BATCH COMPLETED — %d Trials | A Wins: %d (%.1f%%) | B Wins: %d (%.1f%%)" % [
 		batch_total_trials,
 		int(summary.get("agent_a_wins", 0)),
