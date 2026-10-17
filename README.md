@@ -2,13 +2,16 @@
 
 A complete, 2D top-down sci-fi survival game set on alien exoplanets, powered by **Godot 4** and an asynchronous **Python AI Backend**.
 
-> 🏆 **ACADEMIC EVALUATION & LAB PRESENTATION**:  
-> For university examiners, laboratory professors, and project evaluation panels, please see the complete [Academic AI Defense & Pitch Guide](file:///e:/Ai%20Project/ACADEMIC_DEFENSE.md). It includes mathematical formulations, time/space complexity matrices, 5-minute viva presentation scripts, and a 3-minute live demonstration checklist.
+> 📚 **COMPREHENSIVE 0-TO-END DOCUMENTATION SUITE**:
+> * 🎮 [**AI vs Player Architectural & Gameplay Guide (0 to End)**](AI_VS_PLAYER_GUIDE.md) — Comprehensive technical deep dive into astronaut kinematics, enemy state machines, fuzzy logic difficulty pacing, boss Minimax/Alpha-Beta decision trees, and offline NLP command terminal.
+> * 🤖 [**AI vs AI Simulation Arena Guide (0 to End)**](AI_VS_AI_GUIDE.md) — Multi-agent benchmarking, A*/Theta*/BFS/Dijkstra/JPS pathfinding comparison, batch experiment runner, controlled planet scenarios, and automated CSV/JSON trial export.
+> * 📜 [**Complete Game Rules & Survival Operations Manual**](GAME_RULES_AND_MANUAL.md) — Exhaustive player manual covering life support, resource mining economy, crafting recipes, base construction CSP rules, NASA exoplanetary star map, and combat protocols.
+> * 🏆 [**Academic AI Defense & Pitch Guide**](ACADEMIC_DEFENSE.md) — Mathematical formulations, time/space complexity matrices, 5-minute viva presentation scripts, and live demonstration checklist for university evaluation panels.
 
 ---
 
 ## Table of Contents
-1. [Academic Defense & Lab Evaluation Guide (ACADEMIC_DEFENSE.md)](ACADEMIC_DEFENSE.md)
+1. [Comprehensive Documentation Suite](#comprehensive-documentation-suite)
 2. [Project Overview & Architectural Milestones](#project-overview--architectural-milestones)
 3. [Prerequisites & Quick Start](#prerequisites--quick-start)
 4. [Master Controls & Keybindings](#master-controls--keybindings)
@@ -114,6 +117,10 @@ All keybindings can be customized in-game under **Main Menu -> Settings -> Contr
 ---
 
 ## How to Play: AI vs Player Mode (Complete Survival Guide)
+
+> 📖 **DETAILED GUIDES**:
+> * For the exhaustive architectural blueprint covering kinematics, enemy FSMs, fuzzy logic, boss Minimax decision trees, and offline NLP terminal, see [**AI vs Player Architectural & Gameplay Guide (0 to End)**](AI_VS_PLAYER_GUIDE.md).
+> * For the comprehensive player survival manual, crafting recipes, base construction CSP rules, and NASA exoplanetary star map, see [**Complete Game Rules & Survival Manual**](GAME_RULES_AND_MANUAL.md).
 
 ### 1. Game Start & The Main Menu
 When launching BioSphere-X, the Main Menu offers:
@@ -290,7 +297,10 @@ BioSphere-X features an integrated narrative campaign driven by your orbital syn
 
 ## How to Play: AI vs AI Simulation Arena (Complete Benchmarking Guide)
 
-The **AI vs AI Simulation Arena** (`scenes/ai_vs_ai/ai_arena.tscn`) is accessible from the Main Menu. It provides an academic research environment where two autonomous agents run independent graph search and pathfinding algorithms side-by-side in real time.
+> 🔬 **DETAILED ARENA GUIDE**:
+> * For the exhaustive algorithmic breakdown of A*, Theta*, Greedy BFS, Dijkstra, and JPS, mathematical complexity proofs, batch experiment automation, and telemetry logs, see [**AI vs AI Simulation Arena Guide (0 to End)**](AI_VS_AI_GUIDE.md).
+
+The **AI vs AI Simulation Arena** (`scenes/ai_vs_ai/ai_arena.tscn`) is accessible from the Main Menu. It provides an academic research environment where two autonomous agents run independent graph search and pathfinding algorithms side-by-side in real time. It features a **Batch Experiment Runner**, **Controlled Planet Scenarios Catalog**, and **Automated CSV/JSON Telemetry Export**.
 
 ```
 +---------------------------------------------------------------------------------------------------------+
@@ -579,6 +589,8 @@ BioSphere-X/
 │   │   └── save_manager.gd           # Versioned Persistence & Settings
 │   └── components/                   # Reusable Component Nodes
 │       ├── collectable_resource.gd   # Interactive Resource Pickups
+│       ├── controlled_planet_scenarios.gd # NASA Benchmark Scenarios Catalog
+│       ├── experiment_export_manager.gd # Automated CSV/JSON Trial Logging
 │       ├── floating_combat_text.gd   # Animated Combat Floating Numbers
 │       ├── health_component.gd       # Vitality & Damage Mitigation
 │       ├── map_data.gd               # 2D Grid Cell Classification
@@ -586,19 +598,29 @@ BioSphere-X/
 │       └── weapon_component.gd       # Plasma Pulse Rifle Controller
 │
 ├── ui/                               # User Interface Components & Screens
-│   ├── components/                   # Command Terminal, Construction & Inventory
+│   ├── components/                   # Batch Experiments, Visualizer, Terminal, HUD
+│   │   ├── batch_experiment_modal.gd # Automated Batch Trial Runner
+│   │   ├── pathfinding_visualizer.gd # Real-Time Path & Search Grid Canvas
+│   │   ├── command_terminal.gd       # Natural Language Processing Terminal
+│   │   └── construction_menu.gd      # Base Building Hologram & CSP Menu
 │   └── screens/                      # Main HUD, Level Loading, Planet Selection
 │
-├── tests/                            # Automated Headless Test Suites (30+ Suites)
+├── tests/                            # Automated Headless Test Suites (35+ Suites)
 │   ├── test_full_player_journey.tscn # End-to-End Complete Player Journey Test
 │   ├── test_polish_and_performance.tscn # Multi-Enemy Stress & Audio Test
 │   ├── test_save_load_pause.tscn     # Persistence & Pause Freezing Test
 │   ├── test_command_parser.tscn      # Offline NLP Command Terminal Test
 │   ├── test_logic_world_interactions.tscn # Production Rule World Test
+│   ├── test_controlled_planet_scenarios.gd # NASA Scenario Catalog Suite
+│   ├── test_automatic_export.gd      # CSV & JSON Auto-Export Suite
 │   └── test_ai_vs_ai.tscn            # AI vs AI Arena Lifecycle Test
 │
+├── ACADEMIC_DEFENSE.md               # Viva & Professor Presentation Script
+├── AI_VS_PLAYER_GUIDE.md             # Complete 0-to-End AI vs Player Technical Guide
+├── AI_VS_AI_GUIDE.md                 # Complete 0-to-End AI vs AI Simulation & Benchmark Guide
+├── GAME_RULES_AND_MANUAL.md          # Complete Player Survival Rulebook & Manual
 ├── project.godot                     # Godot 4 Project Configuration File
-└── README.md                         # Project Documentation
+└── README.md                         # Project Master Hub Documentation
 ```
 
 ---
