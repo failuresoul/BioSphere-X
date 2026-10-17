@@ -5,43 +5,47 @@ A complete, 2D top-down sci-fi survival game set on alien exoplanets, powered by
 ---
 
 ## Table of Contents
-1. [Overview & Project Journey](#overview--project-journey)
-2. [How to Launch and Play](#how-to-launch-and-play)
-3. [Controls & Keybindings](#controls--keybindings)
-4. [Gameplay Systems & Player Guide](#gameplay-systems--player-guide)
-5. [Algorithms Map & Implementation Guide](#algorithms-map--implementation-guide)
-6. [AI vs AI Simulation Arena](#ai-vs-ai-simulation-arena)
+1. [Project Overview & Architectural Milestones](#project-overview--architectural-milestones)
+2. [Prerequisites & Quick Start](#prerequisites--quick-start)
+3. [Master Controls & Keybindings](#master-controls--keybindings)
+4. [How to Play: AI vs Player Mode (Complete Survival Guide)](#how-to-play-ai-vs-player-mode-complete-survival-guide)
+5. [How to Play: AI vs AI Simulation Arena (Complete Benchmarking Guide)](#how-to-play-ai-vs-ai-simulation-arena-complete-benchmarking-guide)
+6. [Algorithms Map & Implementation Reference](#algorithms-map--implementation-reference)
 7. [Project Directory Structure](#project-directory-structure)
 8. [Automated Verification & Test Suites](#automated-verification--test-suites)
-9. [System Audit & Known Limitations](#system-audit--known-limitations)
+9. [System Audit & Technical Specifications](#system-audit--technical-specifications)
 
 ---
 
-## Overview & Project Journey
+## Project Overview & Architectural Milestones
 
-BioSphere-X was designed and built from the ground up to unite polished real-time 60+ FPS sci-fi survival gameplay with classical and modern Artificial Intelligence algorithms. 
+BioSphere-X unites a real-time, responsive 60+ FPS sci-fi survival experience with classical and modern Artificial Intelligence algorithms. The application operates via a decoupled architecture:
 
-### Summary of Completed Journey (Prompts 1 – 30)
-* **Prompt 1–3: Core Architecture & Player Mechanics** — Developed astronaut kinematics, 8-directional normalized movement, acceleration/friction damping, camera smoothing, and asynchronous HTTP client for Python AI integration.
-* **Prompt 4–6: Procedural World Generation & Tile Systems** — Multi-tile terrain generator using simplex noise and cellular automata, classifying walkable crust, natural walls, rocks, and craters.
-* **Prompt 7–9: Vitality & Survival Economy** — Atmospheric oxygen depletion, suffocation hazard, health damage/healing, energy weapons recharge, and collectable resource pickups with particle chimes.
-* **Prompt 10–12: Multi-Algorithm Pathfinding & Navigation** — Implemented 7 distinct pathfinding algorithms in Python with native GDScript fallback, coordinate grid transformers, and line-of-sight raycasting.
-* **Prompt 13–15: Alien Enemy Archetypes & State Machines** — Developed modular AI state machines (Idle, Patrol, Investigate, Chase, Attack, Dead) powering Scouts, Armored Brutes, and Ranged Spitters.
-* **Prompt 16–18: Apex Boss AI & Adversarial Decision Making** — Created Goliath Prime with Minimax and Alpha-Beta Pruning tactical action selection, telegraph windup cones, and enrage thresholds.
-* **Prompt 19–21: Dynamic Difficulty & Fuzzy Inference** — Integrated a Mamdani Fuzzy Inference System defuzzifying combat pressure, recent player damage, and distress signals to govern fair encounter multipliers.
-* **Prompt 22–24: Base Building & CSP Layout Placement** — Developed Constraint Satisfaction Problem (CSP) solver enforcing spatial boundaries, clearance buffers, resource costs, and grid occupancy.
-* **Prompt 25: Exoplanet Catalog & Progression** — Implemented real NASA/Caltech exoplanetary scientific catalog (TRAPPIST-1 e, LHS 1140 b, Kepler-452 b, etc.) with planetary unlocks and loading transitions.
-* **Prompt 26: Logic-Based World Interactions** — Created a forward-chaining propositional production rule engine for atmospheric safe zones, sample unlock thresholds, and return terminal protocols.
-* **Prompt 27: Natural Language Command Terminal** — Built an offline, zero-paid-dependency natural language parser extracting intents and slots for voice/typed astronaut commands with strict validation.
-* **Prompt 28: Save/Load, Pause System & Menus** — Built versioned JSON save/load persistence, atomic file transactions, corruption recovery, and oxygen/timer pause freezing.
-* **Prompt 29: Visuals, Procedural Audio, Accessibility & Performance** — Developed a 16-bit 22.05 kHz PCM procedural audio synthesizer (10 SFX + ambient space drone), enemy threat silhouette rims, camera screen shake, floating combat text, keyboard remapping, and sub-millisecond multi-enemy performance profiling.
-* **Prompt 30: Final Integration, Release Verification & Polish** — Full project audit, unified AI vs AI Arena styling and audio feedback, comprehensive end-to-end player journey test suite, and release documentation.
+* **Godot 4 Frontend**: Handles 2D graphics rendering, kinematics physics, player controls, audio synthesis, camera screen shake, UI dialogs, and local game state.
+* **Python FastAPI AI Backend**: An asynchronous analytical microservice providing algorithmic computation for pathfinding, adversarial boss decision trees, fuzzy difficulty pacing, constraint satisfaction layout, natural language processing, and automated planning.
+* **Offline Resilience**: If the Python backend is offline, the game automatically falls back to internal GDScript implementations with zero stutter, freezes, or crashes.
+
+### Development Milestones Overview
+* **Milestone 1: Core Architecture & Player Kinematics** — Developed astronaut movement physics with normalized diagonal velocity, acceleration/friction damping, camera smoothing, and asynchronous HTTP client communication.
+* **Milestone 2: Procedural World Generation & Tile Systems** — Multi-tile terrain generator using simplex noise and cellular automata, classifying walkable crust, natural walls, rocks, and crater hazards.
+* **Milestone 3: Vitality & Survival Economy** — Atmospheric oxygen depletion, suffocation damage, health restoration, energy weapons recharge, and collectable resource pickups with particle effects.
+* **Milestone 4: Multi-Algorithm Pathfinding & Navigation** — Implemented 7 pathfinding algorithms in Python with native GDScript fallback, coordinate grid transformers, and line-of-sight raycasting.
+* **Milestone 5: Alien Enemy Archetypes & State Machines** — Developed modular AI state machines (Idle, Patrol, Investigate, Chase, Attack, Dead) powering Scouts, Armored Brutes, and Ranged Spitters.
+* **Milestone 6: Apex Boss AI & Adversarial Decision Making** — Created Goliath Prime with Minimax and Alpha-Beta Pruning action selection, telegraph windup cones, and enrage phases.
+* **Milestone 7: Dynamic Difficulty & Fuzzy Inference** — Integrated a Mamdani Fuzzy Inference System defuzzifying combat pressure, recent player damage, and distress signals to govern fair encounter multipliers.
+* **Milestone 8: Base Building & CSP Layout Placement** — Developed Constraint Satisfaction Problem (CSP) solver enforcing spatial boundaries, clearance buffers, resource costs, and grid occupancy.
+* **Milestone 9: Exoplanet Catalog & Progression** — Implemented real NASA/Caltech exoplanetary scientific catalog (TRAPPIST-1 e, LHS 1140 b, Kepler-452 b, etc.) with planetary unlocks and loading transitions.
+* **Milestone 10: Logic-Based World Interactions** — Created a forward-chaining propositional production rule engine for atmospheric safe zones, sample unlock thresholds, and return terminal protocols.
+* **Milestone 11: Natural Language Command Terminal** — Built an offline, zero-paid-dependency natural language parser extracting intents and slots for voice/typed astronaut commands with strict validation.
+* **Milestone 12: Save/Load, Pause System & Menus** — Built versioned JSON save/load persistence, atomic file transactions, corruption recovery, and oxygen/timer pause freezing.
+* **Milestone 13: Visuals, Procedural Audio, Accessibility & Performance** — Developed a 16-bit 22.05 kHz PCM procedural audio synthesizer (10 SFX + ambient space drone), enemy threat silhouette rims, camera screen shake, floating combat text, keyboard remapping, and sub-millisecond multi-enemy performance profiling.
+* **Milestone 14: Final Integration & Release-Ready Verification** — Full project audit, unified AI vs AI Arena styling and audio feedback, comprehensive end-to-end player journey test suite, and release documentation.
 
 ---
 
-## How to Launch and Play
+## Prerequisites & Quick Start
 
-### Prerequisites
+### System Requirements
 1. **Godot Engine 4.x** (Standard official build, 4.0+)
 2. **Python 3.10+** (Python 3.13 tested and supported)
 
@@ -63,8 +67,8 @@ pip install -r requirements.txt
 # Start the FastAPI server on port 8000
 uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
-* Interactive API Documentation (Swagger UI): `http://127.0.0.1:8000/docs`
-* Health Check Endpoint: `http://127.0.0.1:8000/health`
+* **Interactive API Documentation (Swagger UI)**: `http://127.0.0.1:8000/docs`
+* **Health Check Endpoint**: `http://127.0.0.1:8000/health`
 
 > **Note on Offline Operation**: If the Python backend is not started, BioSphere-X automatically degrades gracefully to internal GDScript algorithms (e.g. native A*, in-engine fuzzy logic, local CSP validator, built-in rule engine). Gameplay never crashes or freezes when offline.
 
@@ -74,7 +78,6 @@ uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 * **Option A (Godot Editor)**: Open Godot 4, click **Import**, select `project.godot` in this repository, and press **F5** (Run Project).
 * **Option B (Direct Console Executable)**:
   ```powershell
-  # Windows Console Example:
   godot --path "e:\Ai Project"
   ```
 * **Option C (Run in Headless Test Mode)**:
@@ -84,34 +87,118 @@ uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 
 ---
 
-## Controls & Keybindings
+## Master Controls & Keybindings
 
-All keybindings can be rebound directly in-game under **Main Menu -> Settings -> Controls** or **Pause Menu -> Settings**. Keybindings persist in `user://biosphere_x_settings.json`.
+All keybindings can be customized in-game under **Main Menu -> Settings -> Controls** or **Pause Menu -> Settings**. Keybindings persist in `user://biosphere_x_settings.json`.
 
-| Action | Default Key | Alternate Input | Description |
+| Action | Primary Input | Secondary Input | In-Game Purpose |
 | :--- | :--- | :--- | :--- |
-| **Move Up** | `W` | `Up Arrow` | Move astronaut north |
-| **Move Down** | `S` | `Down Arrow` | Move astronaut south |
-| **Move Left** | `A` | `Left Arrow` | Move astronaut west |
-| **Move Right** | `D` | `Right Arrow` | Move astronaut east |
-| **Attack / Fire Laser** | `Space` | `Left Mouse Button` | Fire plasma pulse rifle toward cursor |
+| **Move Up** | `W` | `Up Arrow` | Move astronaut north across surface |
+| **Move Down** | `S` | `Down Arrow` | Move astronaut south across surface |
+| **Move Left** | `A` | `Left Arrow` | Move astronaut west across surface |
+| **Move Right** | `D` | `Right Arrow` | Move astronaut east across surface |
+| **Attack / Fire Rifle** | `Space` | `Left Mouse Button` | Fire plasma pulse rifle toward mouse cursor |
 | **Interact / Collect** | `E` | — | Harvest resources, activate consoles, enter airlocks |
-| **Command Terminal** | `~` (Tilde / Backquote) | — | Toggle natural language astronaut CLI |
+| **Command Terminal** | `~` (Tilde / Backquote) | — | Open natural language tactical command line |
 | **Inventory & Crafting** | `Tab` | — | Open suit storage, craft items, view upgrades |
 | **Base Construction** | `B` | — | Open structure build catalog & placement grid |
 | **Pause Game** | `Escape` | `P` | Pause world simulation, open settings & save menu |
 
 ---
 
-## Gameplay Systems & Player Guide
+## How to Play: AI vs Player Mode (Complete Survival Guide)
 
-### 1. Vitality & Survival
-* **Oxygen (Cyan Bar)**: Consumed at 1.5 units/s during surface exploration. Warning alerts sound at $\le 25\%$. If oxygen reaches 0, you take 4.0 suffocation damage/s. Refill at atmospheric stations, oxygen canisters, or within Habitat Safe Zones.
-* **Health (Crimson Bar)**: Decreases upon taking physical or venom attacks from xenomorphs. Restored using medical items or atmospheric regeneration. Reaching 0 triggers game over.
-* **Energy (Yellow Bar)**: Powers your suit's plasma rifle. Depletes per shot and recharges automatically after a short delay.
+### 1. Game Start & The Main Menu
+When launching BioSphere-X, the Main Menu offers:
+* **New Game**: Initializes a new expedition starting on the habitable exoplanet **TRAPPIST-1 e**.
+* **Continue**: Loads your saved expedition (vitals, inventory, missions, structures, and planet progression).
+* **AI vs AI Simulation Arena**: Opens the autonomous multi-agent proving grounds.
+* **Settings**: Adjust Master/SFX/Ambient audio volumes, window resolution, fullscreen, screen shake, difficulty mode, and keybindings.
+* **Quit**: Safely exits the game.
 
-### 2. Campaign Mission Progression
-Expeditions follow a structured, story-driven progression sequence:
+---
+
+### 2. HUD & Vitality Telemetry
+Upon entering the planetary world, your Heads-Up Display provides real-time survival readouts:
+* **Suit Oxygen (Cyan Bar, Top Left)**:
+  * Oxygen constantly depletes at `1.5 units/second` during surface exploration.
+  * If reserves drop below `25%`, an audio alarm sounds and visual warning flashes occur.
+  * If reserves reach `0%`, you suffer `4.0 suffocation damage/second`.
+  * **Replenishment**: Harvest cyan Oxygen Canisters with `E`, use oxygen cells from inventory, enter an Atmospheric Dome base structure, or return to the Habitat Airlock.
+* **Suit Integrity / Health (Crimson Bar, Top Left)**:
+  * Decreases when struck by xenomorph melee strikes or acid projectiles.
+  * Screen shake and directional trauma flash indicate incoming damage.
+  * Restored using medical items, crafted nanite injectors, or resting inside base modules.
+  * Reaching `0 HP` triggers game over.
+* **Weapon Energy (Yellow Bar, Top Left)**:
+  * Powers your plasma pulse rifle. Each discharge consumes energy.
+  * Weapon recharge begins automatically after a brief pause (`0.35s`).
+* **Resource Inventory Counters (Top Center)**:
+  * Displays carried quantities of Energy Crystals, Titanium Alloy, Alien Biomass, and Oxygen Cells.
+* **Mission Objectives Tracker (Top Right)**:
+  * Displays your active expedition directive, progress percentage, and waypoint guidance.
+
+---
+
+### 3. Surface Exploration & Resource Harvesting
+Wander the procedural alien terrain using `W`, `A`, `S`, `D`. Glowing surface items can be harvested by approaching them and pressing **`E`**:
+* **Energy Crystals (Magenta Glow)**: Power base modules and advanced plasma weapon crafting.
+* **Titanium Alloy (Amber Glow)**: Essential structural metal for base construction and barricades.
+* **Scientific Biomass (Emerald Glow)**: Alien flora and fauna specimens required for research progression.
+* **Oxygen Cells (Cyan Glow)**: Restores `30.0` units of suit oxygen immediately upon harvest.
+
+---
+
+### 4. Combat Tactics & Enemy Archetypes
+Aim with your mouse cursor and fire plasma bolts with `Space` or `Left Mouse Button`. Enemies exhibit distinct behaviors and visual threat silhouettes:
+* **Scout (Neon Lime/Amber Arc)**:
+  * Fast, agile predator with high movement speed.
+  * Attempts to flank the astronaut and perform rapid melee bites.
+  * *Tactic*: Keep moving backward (kiting) and fire quick pulses before it closes distance.
+* **Armored Brute (Crimson Carapace Arc)**:
+  * Large, heavily armored creature with high health and knockback resistance.
+  * Features a heavy ground slam attack with an area-of-effect telegraph cone.
+  * *Tactic*: Maintain distance; do not trade melee hits. Bait its slam animation, then punish during its recovery cooldown.
+* **Ranged Spitter (Cyan Venom Halo)**:
+  * Stationary or slow-moving artillery alien with bioluminescent acid glands.
+  * Fires ballistic acid globs that travel toward the player's predicted position.
+  * *Tactic*: Dodge perpendicular to the incoming acid trajectory and eliminate from mid-range.
+* **Goliath Prime (Apex Boss)**:
+  * Neutralizing Goliath Prime is required in the late campaign.
+  * Controlled by a **Minimax / Alpha-Beta Pruning decision tree** that predicts player maneuvers 4 moves ahead.
+  * Uses sweeping melee strikes, shockwave stomps, and acid bombardments. Enters an enrage phase below 40% HP.
+  * *Tactic*: Utilize natural wall pillars as cover to absorb ranged projectiles and kite around chokepoints.
+
+---
+
+### 5. Base Construction & Fortification
+Press **`B`** to enter Construction Mode. A holographic placement blueprint appears:
+* **Structure Catalog**:
+  * **Photovoltaic Array (Solar)**: Restores base power and auxiliary energy reserves.
+  * **Atmospheric Dome**: Projects an oxygenated sanctuary dome. Inside this radius, suit oxygen consumption is **completely halted**, and reserves recharge safely.
+  * **Research Outpost**: Contains scientific terminals that decrypt planetary data.
+  * **Defensive Barricade**: Physical fortifications that block hostile line-of-sight and navigational pathfinding.
+* **Placement Rules**:
+  * **Green Blueprint**: Valid placement satisfying all spatial, domain, and economic constraints. Click `Left Mouse Button` to construct.
+  * **Red Blueprint**: Invalid placement. The floating tooltip explains the violation (e.g. *Insufficient Resources*, *Terrain Obstacle*, *Outside Authorized Build Zone*, or *Too Close to Existing Structure*).
+  * Right-click or press `ESC` to exit construction mode.
+  * Press **Demolish Mode** to dismantle existing structures and recoup `50%` of construction materials.
+
+---
+
+### 6. Natural Language Tactical Command Terminal
+Press **`~`** (Tilde) to open the in-game command terminal. You can type natural-language instructions; the built-in offline NLP parser interprets your intent safely:
+* `"collect oxygen"` / `"refill oxygen"` — Safely replenishes suit oxygen from carried canisters or nearby stations.
+* `"show inventory"` / `"check inventory"` — Summarizes all resources and crafted components in suit storage.
+* `"check vitals"` / `"status report"` — Reports exact numeric health, oxygen, and energy status.
+* `"return to base"` — Calculates and sets navigation trajectory toward the Habitat Airlock (only allowed when out of combat).
+* `"find research station"` — Scans map telemetry and sets a waypoint to the nearest outpost console.
+* `"help"` — Lists all recognized command templates and syntax rules.
+
+---
+
+### 7. Campaign Progression & Star Map Unlocks
+The primary campaign progresses through six distinct operational phases:
 1. **Life Support Recovery**: Harvest oxygen cells from surface deposits to stabilize suit telemetry.
 2. **Field Specimens**: Collect alien biomass and mineral samples from dangerous biomes.
 3. **Outpost Override**: Discover and hack the abandoned scientific research terminal.
@@ -119,101 +206,148 @@ Expeditions follow a structured, story-driven progression sequence:
 5. **Goliath Protocol**: Track and neutralize the apex predator Goliath Prime.
 6. **Expedition Extraction**: Return to the Habitat Module Airlock to secure planetary telemetry and unlock orbital transit.
 
-### 3. Base Construction & Placement
-Press **`B`** to open the structure catalog:
-* **Photovoltaic Array (Solar)**: Restores auxiliary power and supplies energy grids.
-* **Atmospheric Dome**: Projects an oxygenated sanctuary where oxygen consumption drops to zero.
-* **Research Station**: Houses data terminals and unlocks advanced crafting tiers.
-* **Defensive Barricade**: Blocks enemy line-of-sight and navigational pathfinding.
-* *Placement Validation*: Placement conforms to strict territorial bounds, minimum structure clearances, and resource costs. Right-click or press `ESC` to cancel.
-
-### 4. AI Command Terminal
-Press **`~`** (Tilde) to open the tactical command line. The offline NLP parser understands natural language queries, such as:
-* `"collect oxygen"` / `"refill oxygen"` — Replenishes suit oxygen from carried canisters or nearby stations.
-* `"show inventory"` / `"check inventory"` — Displays current minerals, crystals, and canisters.
-* `"check vitals"` / `"status report"` — Summarizes health, suit integrity, and oxygen reserves.
-* `"return to base"` — Sets navigational trajectory to the Habitat Airlock (if outside combat).
-* `"find research station"` — Locates the nearest terminal and sets a waypoint.
-* `"help"` — Lists all recognized command patterns.
+Once extraction is achieved, access the **Orbital Star Map** to select and travel to new scientific destinations (e.g. **LHS 1140 b**, **Kepler-452 b**, **Gliese 667 Cc**). Each planet introduces distinct gravity, atmospheric hazards, and enemy compositions.
 
 ---
 
-## Algorithms Map & Implementation Guide
+## How to Play: AI vs AI Simulation Arena (Complete Benchmarking Guide)
 
-BioSphere-X implements a wide array of core AI and Computer Science algorithms. Each algorithm is modularized, thoroughly tested, and mapped below:
+The **AI vs AI Simulation Arena** (`scenes/ai_vs_ai/ai_arena.tscn`) is accessible from the Main Menu. It provides an experimental environment where two autonomous agents compete without human intervention.
 
-### 1. Multi-Algorithm Pathfinding & Navigation
+```
++------------------------------------------------------------------------------------+
+|  BIOSPHERE-X // AI vs AI ARENA   | STATUS: RUNNING | Time: 14.2s / 120s | Sim: 1.00x|
++------------------------------------------------------------------------------------+
+| [MATCH CONFIGURATION]            |                                                  |
+| Scenario: Pursuit and Combat     |               [Agent A: A* Search]               |
+| Agent A: A* Search (Optimal)     |                        v                         |
+| Agent B: Greedy Best-First       |           # # #                 # # #            |
+| [x] Swap Spawns  Seed: [42]      |           #   #    [OBJECTIVE]  #   #            |
+|                                  |           # # #                 # # #            |
+| [ Start ] [ Pause ] [ Reset ]    |                        ^                         |
+|                                  |            [Agent B: Greedy Best-First]          |
++------------------------------------------------------------------------------------+
+| AGENT A: [||||||||||  ] 82 HP | Nodes: 312 | 4.2ms || AGENT B: [||||||     ] 46 HP |
++------------------------------------------------------------------------------------+
+```
+
+---
+
+### 1. Step-by-Step Match Setup
+1. **Launch the Arena**: From the Main Menu, click **🤖 AI vs AI SIMULATION ARENA**.
+2. **Select Scenario Mode**:
+   * **Pursuit and Combat**: Agent A and Agent B spawn at opposite ends of a symmetric maze. Both agents navigate around obstacles, track line-of-sight, maintain combat spacing, and fire plasma rifles at each other. The match ends when one agent is eliminated.
+   * **Race to Objective**: Weapons are disabled. A pulsing Data Beacon spawns at the exact center of the arena. Both agents compete to navigate through obstacle chokepoints and reach the beacon first.
+3. **Assign Algorithms Independently**:
+   * Choose any of the 7 algorithms for **Agent A** (e.g. `A* Search (Optimal)`).
+   * Choose any of the 7 algorithms for **Agent B** (e.g. `Greedy Best-First Search`).
+4. **Configure Trial Controls**:
+   * **Swap Spawns**: Invert the starting quadrants of Agent A and Agent B to verify that one side's terrain does not create an unfair bias.
+   * **Seed SpinBox**: Set a fixed numeric seed (e.g. `42`) to guarantee identical obstacle layouts and deterministic runs across comparison trials.
+   * **Simulation Speed Slider**: Scale the time factor from `0.25x` (slow-motion frame-by-frame analysis) up to `4.00x` (rapid batch testing).
+5. **Run the Simulation**:
+   * Click **Start** to launch the match.
+   * Click **Pause** (or press `Escape`) to freeze the agents and inspect positions.
+   * Click **Reset** to return both agents to their starting positions with full health and clear telemetry.
+
+---
+
+### 2. Live Telemetry HUD & Visual Feedback
+* **Agent A (Cyan)** vs **Agent B (Amber/Orange)**.
+* **Real-Time HP Gauges**: Shows current health points and percentage.
+* **Nodes Expanded Counter**: Measures search efficiency — the total number of graph nodes inspected by the algorithm.
+* **Execution Time (ms)**: Measures algorithmic latency — the cumulative time in milliseconds spent computing paths.
+* **Floating Combat Numbers**: When an agent takes damage, animated red damage numbers rise and fade in world-space.
+* **Procedural Sound**: Firing sounds (`laser_fire`), impact sounds (`laser_hit`), and death sounds (`enemy_death`) trigger dynamically.
+
+---
+
+### 3. Match Outcomes & Scientific Data Export
+When a match concludes, a victory banner announces the winner (e.g. `★ AGENT A WON (ELIMINATION) ★` or `★ AGENT B WON (OBJECTIVE REACHED) ★`).
+
+You can export complete trial telemetry by clicking:
+* **Export JSON**: Saves a full structured experiment log to `user://experiments/match_<scenario>_<timestamp>.json` containing:
+  * Algorithm configurations, random seed, spawn swap setting, match duration.
+  * Total path requests, total nodes expanded, average time per request (ms).
+  * Total distance traveled (px), damage dealt, and damage taken.
+* **Export CSV**: Appends a row to `user://experiments/match_<scenario>_<timestamp>.csv` formatted for direct import into Pandas, Excel, or R for comparative plotting.
+
+---
+
+## Algorithms Map & Implementation Reference
+
+Every algorithm in BioSphere-X is modularized, covered by unit tests, and accessible in both Python and GDScript:
+
+### 1. Pathfinding & Graph Search
 * **`A* Search (Optimal Euclidean & Manhattan)`**
-  * *Implementation*: `ai_backend/algorithms/pathfinding/astar.py` and `scripts/components/map_data.gd`
-  * *Where Used*: Standard enemy pathfinding, boss pursuit, and AI Arena Agent navigation.
+  * *Python Backend*: `ai_backend/algorithms/pathfinding/astar.py`
+  * *Godot Integration*: `scripts/components/map_data.gd` and `scripts/autoloads/navigation_manager.gd`
+  * *Role*: Primary pathfinding algorithm for enemies, bosses, and autonomous agents. Guarantees shortest path under admissible heuristics.
 * **`Greedy Best-First Search`**
-  * *Implementation*: `ai_backend/algorithms/pathfinding/greedy_best_first.py`
-  * *Where Used*: Fast exploration behavior; AI vs AI Arena comparison trials.
+  * *Python Backend*: `ai_backend/algorithms/pathfinding/greedy_best_first.py`
+  * *Role*: Expands nodes closest to the goal using heuristic distance alone. Extremely fast, but not guaranteed to find the shortest path.
 * **`Breadth-First Search (BFS)`**
-  * *Implementation*: `ai_backend/algorithms/pathfinding/bfs.py`
-  * *Where Used*: Unweighted shortest-hop verification and arena navigation benchmarking.
+  * *Python Backend*: `ai_backend/algorithms/pathfinding/bfs.py`
+  * *Role*: Unweighted shortest-path exploration expanding node frontiers uniformly.
 * **`Depth-First Search (DFS)`**
-  * *Implementation*: `ai_backend/algorithms/pathfinding/dfs.py`
-  * *Where Used*: Maze exploration testing and deep path branching studies.
+  * *Python Backend*: `ai_backend/algorithms/pathfinding/dfs.py`
+  * *Role*: Deep graph exploration used in maze benchmarks and connectivity checks.
 * **`Depth-Limited Search (DLS)`**
-  * *Implementation*: `ai_backend/algorithms/pathfinding/dls.py`
-  * *Where Used*: Bounded tactical horizon path planning.
+  * *Python Backend*: `ai_backend/algorithms/pathfinding/dls.py`
+  * *Role*: Bounded depth exploration that halts search beyond a predefined depth limit.
 * **`Iterative Deepening DFS (IDDFS)`**
-  * *Implementation*: `ai_backend/algorithms/pathfinding/iddfs.py`
-  * *Where Used*: Memory-efficient complete search without heuristic bias.
+  * *Python Backend*: `ai_backend/algorithms/pathfinding/iddfs.py`
+  * *Role*: Combines the optimality of BFS with the $O(bd)$ minimal memory footprint of DFS.
 * **`Bidirectional Search`**
-  * *Implementation*: `ai_backend/algorithms/pathfinding/bidirectional.py`
-  * *Where Used*: Dual-frontier simultaneous search between start and goal nodes.
+  * *Python Backend*: `ai_backend/algorithms/pathfinding/bidirectional.py`
+  * *Role*: Simultaneous search expanding forward from the start node and backward from the goal until frontiers intersect.
+
+---
 
 ### 2. Adversarial Decision-Making (Boss AI)
-* **`Minimax Algorithm & Alpha-Beta Pruning`**
-  * *Implementation*: `ai_backend/algorithms/adversarial/boss_adversarial.py`
-  * *Connected In*: `scenes/enemies/boss_alien.gd`
-  * *Where Used*: Goliath Prime evaluates future board states (player distance, health, cooldowns, arena cover) up to depth 4 to select optimal actions: Melee Smash, Venom Spit, Ground Slam, or Defensive Repositioning.
+* **`Minimax Algorithm with Alpha-Beta Pruning`**
+  * *Python Backend*: `ai_backend/algorithms/adversarial/boss_adversarial.py`
+  * *Godot Integration*: `scenes/enemies/boss_alien.gd`
+  * *Role*: Goliath Prime evaluates future combat states up to depth 4, maximizing boss advantage while minimizing player utility. Pruning discards non-optimal subtrees, selecting between Melee Smash, Acid Artillery, Ground Slam, and Tactical Repositioning.
 
-### 3. Dynamic Pacing & Adaptive Difficulty (FIS)
-* **`Mamdani Fuzzy Inference System with Centroid Defuzzification`**
-  * *Implementation*: `ai_backend/algorithms/fuzzy/fuzzy_difficulty.py`
-  * *Connected In*: `scripts/autoloads/difficulty_controller.gd`
-  * *Where Used*: Reads continuous input variables (`player_health`, `recent_damage`, `enemy_distance`, `repeated_failures`), evaluates 11 fuzzy inference rules, and defuzzifies into aggression multipliers (0.35x to 1.40x) governing enemy movement speed, attack damage, and cooldown intervals.
+---
+
+### 3. Dynamic Pacing & Adaptive Difficulty
+* **`Mamdani Fuzzy Inference System (FIS) with Centroid Defuzzification`**
+  * *Python Backend*: `ai_backend/algorithms/fuzzy/fuzzy_difficulty.py`
+  * *Godot Integration*: `scripts/autoloads/difficulty_controller.gd`
+  * *Role*: Evaluates 4 continuous gameplay variables (`player_health`, `recent_damage`, `enemy_distance`, `repeated_failures`) across 11 fuzzy inference rules, defuzzifying into continuous aggression multipliers (0.35x to 1.40x) governing enemy movement speed, attack damage, and cooldown intervals.
+
+---
 
 ### 4. Constraint Satisfaction Problem (CSP Base Construction)
 * **`Backtracking Search with Forward Checking & MRV (Minimum Remaining Values)`**
-  * *Implementation*: `ai_backend/algorithms/csp/placement_csp.py`
-  * *Connected In*: `scripts/components/placement_constraint_validator.gd` and `scripts/autoloads/construction_manager.gd`
-  * *Where Used*: Evaluates structure placement candidates against economic constraints, map boundaries, natural obstacles, cell overlaps, and minimum spacing buffers before allowing placement.
-
-### 5. Knowledge Representation & Production Rules
-* **`Forward-Chaining Inference Engine`**
-  * *Implementation*: `ai_backend/algorithms/logic/rule_inference.py`
-  * *Connected In*: `scripts/autoloads/game_rule_engine.gd`
-  * *Where Used*: Operates on explicit world facts (`player_in_safe_zone`, `oxygen_ratio`, `samples_collected`, `boss_defeated`) to derive gameplay conclusions: suppressing low oxygen alarms in domes, unlocking extraction objectives, and enabling return airlock consoles.
-
-### 6. Natural Language Processing (Command Parsing)
-* **`Offline Intent Classification & Slot Extraction`**
-  * *Implementation*: `ai_backend/algorithms/nlp/command_parser.py`
-  * *Connected In*: `ui/components/command_terminal.gd`
-  * *Where Used*: Tokenizes and normalizes typed inputs, matches regular expressions and synonym sets, handles ambiguous words with clarifying suggestions, and outputs structured intent payloads to the game engine.
-
-### 7. Digital Signal Processing (Procedural Audio Synthesizer)
-* **`16-Bit 22.05 kHz PCM Waveform Synthesis`**
-  * *Implementation*: `scripts/autoloads/audio_manager.gd`
-  * *Where Used*: Generates zero-dependency sound effects (`laser_fire`, `laser_hit`, `player_hurt`, `enemy_death`, `pickup`, `oxygen_warning`, `mission_complete`, `ui_click`, `build`, `demolish`) and looping 55 Hz/110 Hz atmospheric drone audio purely in memory without external audio files.
+  * *Python Backend*: `ai_backend/algorithms/csp/placement_csp.py`
+  * *Godot Integration*: `scripts/components/placement_constraint_validator.gd` and `scripts/autoloads/construction_manager.gd`
+  * *Role*: Treats structure placement as a CSP where variables are structure locations, domains are 2D grid coordinates, and constraints include grid boundaries, authorized build zones, non-overlapping footprints, natural terrain clearance, and resource costs.
 
 ---
 
-## AI vs AI Simulation Arena
+### 5. Knowledge Representation & Production Rules
+* **`Forward-Chaining Propositional Rule Engine`**
+  * *Python Backend*: `ai_backend/algorithms/logic/rule_inference.py`
+  * *Godot Integration*: `scripts/autoloads/game_rule_engine.gd`
+  * *Role*: Evaluates world facts (`player_in_safe_zone`, `oxygen_ratio`, `samples_collected`, `boss_defeated`) against conditional IF-THEN rules, deriving higher-order gameplay states (e.g. suppressing low oxygen alarms in domes, unlocking extraction objectives, enabling airlock return consoles).
 
-Launch directly from the **Main Menu -> AI vs AI Arena** (`scenes/ai_vs_ai/ai_arena.tscn`).
+---
 
-The Simulation Arena offers an experimental proving ground with identical sci-fi HUD styling to the main game:
-* **Scenarios**:
-  * *Pursuit & Combat*: Agents navigate obstacles, maintain tactical spacing, and engage in ranged plasma combat.
-  * *Race to Objective*: Symmetrical competition to reach a pulsing central data beacon through maze corridors.
-* **Algorithm Selection**: Independently assign any of the 7 pathfinding algorithms to Agent A and Agent B.
-* **Fair Comparison Tools**: Toggle **Swap Spawns** to invert starting quadrants; fix the random seed for deterministic reproducibility.
-* **Live Telemetry & Floating Combat Text**: Real-time display of nodes expanded, computation time in milliseconds, distance traveled, damage dealt, and floating damage numbers.
-* **Data Export**: Export match metrics to structured **JSON** and **CSV** files in `user://experiments/`.
+### 6. Natural Language Processing (Command Parsing)
+* **`Offline Intent Classification & Slot Extraction`**
+  * *Python Backend*: `ai_backend/algorithms/nlp/command_parser.py`
+  * *Godot Integration*: `ui/components/command_terminal.gd`
+  * *Role*: Normalizes player natural language strings, applies regular expression patterns and synonym dictionaries, validates parameters, and outputs structured intent payloads to the game engine without external network dependencies.
+
+---
+
+### 7. Digital Signal Processing (Procedural Audio Synthesizer)
+* **`16-Bit 22.05 kHz PCM Waveform Synthesis`**
+  * *Godot Integration*: `scripts/autoloads/audio_manager.gd`
+  * *Role*: Synthesizes uncompressed audio streams directly in memory using frequency modulation, low-frequency oscillators, white noise, and exponential decay envelopes, providing 10 distinct sound effects and looping atmospheric drone audio.
 
 ---
 
@@ -297,37 +431,37 @@ Run from the root directory:
 ```
 * **Results**: `121 passed in 1.01s` (adversarial, csp, fuzzy, nlp_parser, pathfinding, rule_engine).
 
-### 2. Complete Player Journey Test (Prompt 30)
+### 2. End-to-End Player Journey Test Suite
 ```powershell
 godot --headless --path "e:\Ai Project" --scene "res://tests/test_full_player_journey.tscn"
 ```
 * **Results**: `39 / 39 Passed, 0 Failed` (Movement, Resources, Oxygen/Health, Missions, Combat, Base Building, Planet Unlocks, Save/Quit/Reload Roundtrip).
 
-### 3. Polish, Audio & Performance Test (Prompt 29)
+### 3. Visuals, Audio & Performance Benchmark Suite
 ```powershell
 godot --headless --path "e:\Ai Project" --scene "res://tests/test_polish_and_performance.tscn"
 ```
 * **Results**: `50 / 50 Passed, 0 Failed` (Synthesized PCM buffers, voice pooling, threat silhouettes, screen shake, keyboard remapping, and 15-enemy stress benchmark at 0.14 ms/frame).
 
-### 4. Save/Load, Pause & Menus Test (Prompt 28)
+### 4. Save/Load & Menus Integration Test Suite
 ```powershell
 godot --headless --path "e:\Ai Project" --scene "res://tests/test_save_load_pause.tscn"
 ```
 * **Results**: `46 / 46 Passed, 0 Failed` (Schema validation, corrupt file recovery, non-duplication of structures, pause oxygen freeze).
 
-### 5. AI Command Terminal Test (Prompt 27)
+### 5. Natural Language Command Terminal Test Suite
 ```powershell
 godot --headless --path "e:\Ai Project" --scene "res://tests/test_command_parser.tscn"
 ```
 * **Results**: `73 / 73 Passed, 0 Failed` (Structured intent extraction, safety guarantees, ambiguous word clarification).
 
-### 6. Logic-Based World Interactions Test (Prompt 26)
+### 6. Logic-Based World Interactions Test Suite
 ```powershell
 godot --headless --path "e:\Ai Project" --scene "res://tests/test_logic_world_interactions.tscn"
 ```
 * **Results**: `47 / 47 Passed, 0 Failed` (Sanctuary dome oxygen protection, sample quota unlock, boss item terminal gate).
 
-### 7. AI vs AI Simulation Arena Test
+### 7. AI vs AI Simulation Arena Test Suite
 ```powershell
 godot --headless --path "e:\Ai Project" --scene "res://tests/test_ai_vs_ai.tscn"
 ```
@@ -335,7 +469,7 @@ godot --headless --path "e:\Ai Project" --scene "res://tests/test_ai_vs_ai.tscn"
 
 ---
 
-## System Audit & Known Limitations
+## System Audit & Technical Specifications
 
 ### Fully Functional Systems
 * **Complete Player Journey**: Exploring, resource gathering, vitals maintenance, combat, mission progression, structure placement, exoplanet star map unlocks, and save/load persistence all verified working end-to-end.
@@ -344,7 +478,7 @@ godot --headless --path "e:\Ai Project" --scene "res://tests/test_ai_vs_ai.tscn"
 * **Keyboard Remapping & Settings**: Rebinding keys dynamically updates Godot's `InputMap` and persists across game restarts.
 * **AI vs AI Arena**: Complete head-to-head benchmarking environment with matching sci-fi UI styling, audio feedback, and data export.
 
-### Known Limitations
+### Technical Notes & Specifications
 * **Audio in Headless Mode**: When running Godot with the `--headless` flag on Linux/Windows servers, audio output hardware is bypassed by Godot's dummy audio driver; procedural audio buffers synthesize in memory and emit signals properly, but physical sound output requires running in standard graphical mode.
 * **Display Resolution Scaling**: Changing the display resolution setting in the options menu applies in windowed mode; when Fullscreen mode is toggled, display sizing is managed directly by the operating system display server.
 * **Single Active Command Terminal**: The command terminal is designed for single-operator typed natural language input; concurrent network terminal sessions are not supported.
