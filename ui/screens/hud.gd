@@ -47,8 +47,16 @@ extends CanvasLayer
 @onready var build_menu_button: Button = %BuildMenuButton
 @onready var construction_menu: PanelContainer = %ConstructionMenu
 @onready var terminal_button: Button = %TerminalButton
+@onready var help_button: Button = %HelpButton
 @onready var command_terminal: PanelContainer = %CommandTerminal
 @onready var planet_selection_screen: Control = %PlanetSelectionScreen
+
+# Waypoint Compass & Survival Field Guide UI
+@onready var waypoint_label: Label = %WaypointLabel
+@onready var help_modal_overlay: Control = %HelpModalOverlay
+@onready var help_content_label: RichTextLabel = %HelpContentLabel
+@onready var help_close_btn: Button = %HelpCloseBtn
+var _waypoint_update_timer: float = 0.0
 
 # Mission Telemetry & Feedback UI
 @onready var mission_title_tag: Label = %MissionTitleTag
@@ -137,6 +145,11 @@ func _ready() -> void:
 			else:
 				command_terminal.visible = not command_terminal.visible
 		)
+	if help_button:
+		help_button.pressed.connect(toggle_help_manual)
+	if help_close_btn:
+		help_close_btn.pressed.connect(close_help_manual)
+	_setup_help_content()
 
 
 func _setup_procedural_audio() -> void:
@@ -154,6 +167,12 @@ func _setup_procedural_audio() -> void:
 
 func _process(delta: float) -> void:
 	_pulse_timer += delta * 4.0
+	
+	# Update Waypoint Compass tracker
+	_waypoint_update_timer += delta
+	if _waypoint_update_timer >= 0.1:
+		_waypoint_update_timer = 0.0
+		_update_waypoint_tracker()
 	
 	# Fade screen damage vignette
 	if _damage_flash_alpha > 0.0:
@@ -682,10 +701,20 @@ func _play_mission_fail_sound() -> void:
 # ---------------------------------------------------------------------------
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if terminal_modal_overlay and terminal_modal_overlay.visible:
+		if help_modal_overlay and help_modal_overlay.visible:
+			if event.keycode == KEY_ESCAPE or event.keycode == KEY_H:
+				close_help_manual()
+				get_viewport().set_input_as_handled()
+				return
+		elif terminal_modal_overlay and terminal_modal_overlay.visible:
 			if event.keycode == KEY_ESCAPE or event.keycode == KEY_E:
 				close_terminal_modal()
 				get_viewport().set_input_as_handled()
+				return
+		elif event.keycode == KEY_H:
+			toggle_help_manual()
+			get_viewport().set_input_as_handled()
+			return
 		elif (event.keycode == KEY_I or event.keycode == KEY_TAB) and inventory_dialog:
 			if inventory_dialog.has_method("toggle_visibility"):
 				inventory_dialog.call("toggle_visibility")
@@ -878,14 +907,268 @@ func _on_terminal_action2_pressed() -> void:
 					_play_mission_success_sound()
 
 
-func _play_mission_success_sound() -> void:
-	var audio = get_node_or_null("/root/AudioManager")
-	if audio and audio.has_method("play_sfx"):
-		audio.call("play_sfx", "mission_complete")
+
+# ---------------------------------------------------------------------------
+# Survival Field Guide Manual & Waypoint Compass Navigation
+# ---------------------------------------------------------------------------
+func toggle_help_manual() -> void:
+	if help_modal_overlay:
+		if help_modal_overlay.visible:
+			close_help_manual()
+		else:
+			open_help_manual()
 
 
-func _play_low_oxygen_sound() -> void:
-	var audio = get_node_or_null("/root/AudioManager")
-	if audio and audio.has_method("play_sfx"):
-		audio.call("play_sfx", "oxygen_warning")
+func open_help_manual() -> void:
+	if help_modal_overlay:
+		help_modal_overlay.visible = true
+	_play_mission_success_sound()
+
+
+func close_help_manual() -> void:
+	if help_modal_overlay:
+		help_modal_overlay.visible = false
+
+
+func _setup_help_content() -> void:
+	if not help_content_label:
+		return
+	
+	var manual := ""
+	manual += "[b][color=#38bdf8]1. MISSION DIRECTIVES & WAYPOINT TRACKER[/color][/b]\n"
+	manual += "• Look at the [b]Waypoint Compass[/b] docked at the bottom of the screen. The glowing arrow points directly toward your active target!\n"
+	manual += "• Real-time distance and cardinal bearings (e.g. 18m North) update as you explore.\n"
+	manual += "• Directives: Recover Oxygen ➔ Harvest Biomass ➔ Outpost Override ➔ Defend Swarms ➔ Defeat Goliath Prime.\n\n"
+	
+	manual += "[b][color=#38bdf8]2. OXYGEN & VITALITY MANAGEMENT[/color][/b]\n"
+	manual += "• The atmosphere of Trappist-1e is toxic. Your [b]O2 Suit Gauge[/b] drains continuously.\n"
+	manual += "• [b]Refill Sources:[/b] Pick up blue glowing Oxygen Cells, enter green atmospheric shields at Oxygen Stations, or retreat inside the Base Habitat.\n"
+	manual += "• If Oxygen depletes to 0%, rapid hypoxia inflicts lethal health damage!\n\n"
+	
+	manual += "[b][color=#38bdf8]3. ESSENTIAL CONTROLS & SHORTCUTS[/color][/b]\n"
+	manual += "• [b][W, A, S, D][/b] : Suit Thruster Movement\n"
+	manual += "• [b][Mouse Wheel][/b] : Dynamic Camera Zoom (0.9x tactical overview to 2.2x detail)\n"
+	manual += "• [b][Left Mouse Button][/b] : Pulse Mining Blaster (harvests resources & damages aliens)\n"
+	manual += "• [b][E][/b] : Contextual Interact (airlocks, research consoles, dropped crates)\n"
+	manual += "• [b][I] / [TAB][/b] : Inventory & Backpack Crafting (Oxygen Kits, Armor Plates, Ammo)\n"
+	manual += "• [b][B][/b] : Base Construction Menu (Solar Panels, Dome Habitats, Storage Vaults)\n"
+	manual += "• [b][H][/b] : Toggle this Survival Field Guide anytime\n"
+	manual += "• [b][ESC] / [P][/b] : Pause simulation & Save Mission Progress\n\n"
+	
+	manual += "[b][color=#38bdf8]4. ALIEN BESTIARY & COMBAT COUNTERS[/color][/b]\n"
+	manual += "• [color=#f87171]Scouts:[/color] Agile ambushers. Backpedal with thrusters while firing continuously.\n"
+	manual += "• [color=#fb923c]Spitters:[/color] Acid artillery. Strafe laterally to dodge corrosive slime pools.\n"
+	manual += "• [color=#e879f9]Brutes & Goliath Prime:[/color] Heavy armored horrors. Kite through canyon chokepoints and construct defensive perimeter bases."
+	
+	help_content_label.text = manual
+
+
+func _update_waypoint_tracker() -> void:
+	if not waypoint_label:
+		return
+	
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		player = get_node_or_null("/root/GameWorld/Player")
+	if not player:
+		waypoint_label.text = "🧭 TARGET TRACKER: Standby — EVA Suit Initializing..."
+		return
+	
+	var p_pos: Vector2 = player.global_position
+	var target_info = _find_active_objective_target(p_pos)
+	if target_info.is_empty():
+		waypoint_label.text = "🧭 TARGET TRACKER: Area clear • Explore surface for resources or press [H]"
+		return
+	
+	var t_pos: Vector2 = target_info.get("pos", Vector2.ZERO)
+	var t_name: String = target_info.get("name", "Objective Target")
+	var diff: Vector2 = t_pos - p_pos
+	var dist_m: float = diff.length() / 32.0 # 32 pixels per meter
+	
+	if dist_m < 2.0:
+		waypoint_label.text = "🧭 TARGET: ★ AT DESTINATION [%s] — Press [E] to Interact" % t_name
+		waypoint_label.modulate = Color(0.3, 1.0, 0.6)
+	else:
+		var arrow: String = _get_compass_arrow(diff.angle())
+		var bearing: String = _get_compass_bearing(diff.angle())
+		waypoint_label.text = "🧭 TARGET: %s %s [%.0fm %s] • Press [H] for Field Guide" % [arrow, t_name, dist_m, bearing]
+		waypoint_label.modulate = Color(0.2, 0.95, 0.9)
+
+
+func _find_active_objective_target(p_pos: Vector2) -> Dictionary:
+	var mm = get_node_or_null("/root/MissionManager")
+	var active = mm.call("get_active_mission") if mm and mm.has_method("get_active_mission") else null
+	var obj_type: int = int(active.get("objective_type")) if active else -1
+	
+	match obj_type:
+		0: # COLLECT_OXYGEN
+			var item = _find_nearest_collectable(p_pos, 0, "Oxygen Canister")
+			if not item.is_empty():
+				return item
+			return _find_nearest_oxygen_station(p_pos)
+		1: # RETRIEVE_SAMPLES
+			var sample = _find_nearest_collectable(p_pos, 3, "Alien Biomass Specimen")
+			if not sample.is_empty():
+				return sample
+			return _find_nearest_node_in_container(p_pos, "Plants", "Alien Flora Specimen")
+		2: # ACTIVATE_TERMINAL
+			var term = get_tree().get_first_node_in_group("research_terminal")
+			if not term:
+				term = get_node_or_null("/root/GameWorld/StationInteractiveObjects/ResearchTerminal")
+			if term:
+				return {"pos": term.global_position, "name": "Alpha-7 Research Terminal"}
+			return {"pos": Vector2(420, -450), "name": "Outpost Terminal Clearing"}
+		3: # SURVIVE_ENCOUNTER
+			var enemy = _find_nearest_enemy(p_pos)
+			if not enemy.is_empty():
+				return enemy
+			return {"pos": p_pos, "name": "Combat Zone (Survive Wave)"}
+		4: # DEFEAT_BOSS
+			var boss = get_tree().get_first_node_in_group("boss")
+			if not boss:
+				boss = get_node_or_null("/root/GameWorld/GoliathPrime_Boss")
+			if boss:
+				return {"pos": boss.global_position, "name": "Goliath Prime (Apex Threat)"}
+			return {"pos": Vector2(0, 750), "name": "Colossal Crater Basin"}
+		5: # RETURN_TO_BASE
+			var base = get_tree().get_first_node_in_group("research_base")
+			if not base:
+				base = get_node_or_null("/root/GameWorld/ResearchBase")
+			if base:
+				return {"pos": base.global_position, "name": "Base Habitat Airlock"}
+			return {"pos": Vector2.ZERO, "name": "Base Habitat Module"}
+		_:
+			var gs = get_node_or_null("/root/GameState")
+			if gs and float(gs.get("oxygen")) < 40.0:
+				var st = _find_nearest_oxygen_station(p_pos)
+				if not st.is_empty():
+					return st
+			return {"pos": Vector2.ZERO, "name": "Base Habitat Sanctuary"}
+
+
+func _find_nearest_collectable(p_pos: Vector2, target_type: int, default_name: String) -> Dictionary:
+	var collectables_node = get_node_or_null("/root/GameWorld/Collectables")
+	if not collectables_node:
+		var root = get_tree().current_scene
+		if root:
+			collectables_node = root.get_node_or_null("Collectables")
+	if not collectables_node:
+		return {}
+	
+	var best_pos := Vector2.ZERO
+	var best_dist := INF
+	for item in collectables_node.get_children():
+		if is_instance_valid(item) and item.visible:
+			var res_type = item.get("resource_type")
+			if res_type == null or int(res_type) == target_type:
+				var d: float = p_pos.distance_squared_to(item.global_position)
+				if d < best_dist:
+					best_dist = d
+					best_pos = item.global_position
+	
+	if best_dist < INF:
+		return {"pos": best_pos, "name": default_name}
+	return {}
+
+
+func _find_nearest_enemy(p_pos: Vector2) -> Dictionary:
+	var enemies = get_tree().get_nodes_in_group("enemies")
+	if enemies.is_empty():
+		var alien_node = get_node_or_null("/root/GameWorld/AlienEnemies")
+		if alien_node:
+			enemies = alien_node.get_children()
+	
+	var best_pos := Vector2.ZERO
+	var best_dist := INF
+	for e in enemies:
+		if is_instance_valid(e) and e.is_inside_tree() and e.visible:
+			var d: float = p_pos.distance_squared_to(e.global_position)
+			if d < best_dist:
+				best_dist = d
+				best_pos = e.global_position
+				
+	if best_dist < INF:
+		return {"pos": best_pos, "name": "Alien Hostile"}
+	return {}
+
+
+func _find_nearest_oxygen_station(p_pos: Vector2) -> Dictionary:
+	var stations_node = get_node_or_null("/root/GameWorld/OxygenStations")
+	if not stations_node:
+		return {}
+	var best_pos := Vector2.ZERO
+	var best_name := "O2 Refill Station"
+	var best_dist := INF
+	for st in stations_node.get_children():
+		if is_instance_valid(st) and st.is_inside_tree():
+			var d: float = p_pos.distance_squared_to(st.global_position)
+			if d < best_dist:
+				best_dist = d
+				best_pos = st.global_position
+				best_name = str(st.get("station_name")) if "station_name" in st else "O2 Refill Station"
+	if best_dist < INF:
+		return {"pos": best_pos, "name": best_name}
+	return {}
+
+
+func _find_nearest_node_in_container(p_pos: Vector2, container_name: String, item_name: String) -> Dictionary:
+	var container = get_node_or_null("/root/GameWorld/" + container_name)
+	if not container:
+		return {}
+	var best_pos := Vector2.ZERO
+	var best_dist := INF
+	for child in container.get_children():
+		if is_instance_valid(child) and child.is_inside_tree():
+			var d: float = p_pos.distance_squared_to(child.global_position)
+			if d < best_dist:
+				best_dist = d
+				best_pos = child.global_position
+	if best_dist < INF:
+		return {"pos": best_pos, "name": item_name}
+	return {}
+
+
+func _get_compass_arrow(angle: float) -> String:
+	var deg := rad_to_deg(angle)
+	if deg < 0.0:
+		deg += 360.0
+	if deg >= 337.5 or deg < 22.5:
+		return "▶"
+	elif deg >= 22.5 and deg < 67.5:
+		return "↘"
+	elif deg >= 67.5 and deg < 112.5:
+		return "▼"
+	elif deg >= 112.5 and deg < 157.5:
+		return "↙"
+	elif deg >= 157.5 and deg < 202.5:
+		return "◀"
+	elif deg >= 202.5 and deg < 247.5:
+		return "↖"
+	elif deg >= 247.5 and deg < 292.5:
+		return "▲"
+	else:
+		return "↗"
+
+
+func _get_compass_bearing(angle: float) -> String:
+	var deg := rad_to_deg(angle)
+	if deg < 0.0:
+		deg += 360.0
+	if deg >= 337.5 or deg < 22.5:
+		return "East"
+	elif deg >= 22.5 and deg < 67.5:
+		return "South-East"
+	elif deg >= 67.5 and deg < 112.5:
+		return "South"
+	elif deg >= 112.5 and deg < 157.5:
+		return "South-West"
+	elif deg >= 157.5 and deg < 202.5:
+		return "West"
+	elif deg >= 202.5 and deg < 247.5:
+		return "North-West"
+	elif deg >= 247.5 and deg < 292.5:
+		return "North"
+	else:
+		return "North-East"
+
 

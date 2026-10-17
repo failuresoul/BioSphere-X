@@ -250,6 +250,16 @@ The **AI vs AI Simulation Arena** (`scenes/ai_vs_ai/ai_arena.tscn`) is accessibl
    * **Assign Algorithms Independently**:
      * Assign any of the 7 algorithms to **Agent A** (e.g. `A* Search (Optimal)`).
      * Assign any of the 7 algorithms to **Agent B** (e.g. `Greedy Best-First Search`).
+   * **Tactical Roles (Dynamic Multi-Agent Behaviors)**:
+     * **Adaptive Tactician (Balanced & Dynamic)**: Evaluates own and opponent vitality in real time. Backpedals into evasive retreat and searches for repair pickups below `45% HP`. Surges forward aggressively to finish off opponents when they are weakened below `35% HP`.
+     * **Aggressive Assault (CQB Rapid Burst)**: High speed (`205 px/s`), closes into close-quarters standoff (`70–160px`), and discharges rapid plasma bursts (`0.32s` cooldown, `14.0` damage).
+     * **Long-Range Marksman (Sniper & Kiting)**: Maintains maximum standoff (`260–380px`), strictly backpedaling if enemies approach, and fires high-velocity rail slugs (`29.0` damage, `750 px/s` velocity).
+     * **Evasive Skirmisher (Agile Flanker)**: Agile lateral movement (`190 px/s`) with dynamic orbit switching every `1.2–2.6s` and immediate reflex dash evasion upon receiving damage.
+   * **Predictive Lead Aiming**:
+     * Agents calculate opponent velocity vectors and projectile flight latency to lead their shots ahead of moving targets.
+   * **Dynamic Battlefield Pickups**:
+     * **Nanite Repair Core (North Corridor, `(0, -145)`)**: Restores `+35 HP` on contact with green holographic beacon; respawns after `15.0s`. Low-health adaptive agents calculate utility to divert and secure it!
+     * **Plasma Overcharge Cell (South Corridor, `(0, 145)`)**: Grants `+35%` movement velocity and `+30%` fire-rate overdrive for `8.0s` with glowing yellow energy halos; respawns after `18.0s`.
    * **Spawn Swapping**: Toggle **Swap Spawns** to flip starting positions, ensuring complete experimental fairness.
    * **Deterministic Seed**: Adjust the numeric seed (e.g. `42`) for identical, reproducible trials across benchmarks.
 3. **Bottom Dock Interactive Controls**:

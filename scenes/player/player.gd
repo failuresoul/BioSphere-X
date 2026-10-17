@@ -17,7 +17,7 @@ signal player_attacked(projectile: Node2D, direction: Vector2)
 @export var attack_enabled: bool = true
 
 @export_group("Camera")
-@export var camera_zoom: Vector2 = Vector2(2.5, 2.5)
+@export var camera_zoom: Vector2 = Vector2(1.4, 1.4)
 @export var camera_smoothing_enabled: bool = true
 @export var camera_smoothing_speed: float = 6.0
 
@@ -98,6 +98,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_dead:
 		return
 	
+	# Camera dynamic zoom with mouse wheel
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			camera_zoom = (camera_zoom * 1.08).clamp(Vector2(0.9, 0.9), Vector2(2.2, 2.2))
+			if camera:
+				camera.zoom = camera_zoom
+			get_viewport().set_input_as_handled()
+			return
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			camera_zoom = (camera_zoom * 0.92).clamp(Vector2(0.9, 0.9), Vector2(2.2, 2.2))
+			if camera:
+				camera.zoom = camera_zoom
+			get_viewport().set_input_as_handled()
+			return
+
 	# Primary attack input: Mouse Left Click or Attack Key (J, F, Ctrl, or 'attack' action)
 	if attack_enabled:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:

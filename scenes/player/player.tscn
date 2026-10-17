@@ -21,7 +21,7 @@ shape = SubResource("CircleShape2D_player")
 script = ExtResource("2_visual")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(2.5, 2.5)
+zoom = Vector2(1.4, 1.4)
 position_smoothing_enabled = true
 position_smoothing_speed = 6.0
 limit_left = -1280

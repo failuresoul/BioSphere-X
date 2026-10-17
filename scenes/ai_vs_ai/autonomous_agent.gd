@@ -24,6 +24,21 @@ enum AgentState {
 @export var accent_color: Color = Color(0.12, 0.88, 1.0)
 @export var algorithm: String = "astar"
 @export var scenario: String = "combat" # "combat" or "race"
+@export var tactical_role: String = "adaptive" # "adaptive", "assault", "sniper", "flanker"
+
+const ROLES: Array[String] = [
+	"adaptive",
+	"assault",
+	"sniper",
+	"flanker"
+]
+
+const ROLE_LABELS: Dictionary = {
+	"adaptive": "Adaptive Tactician",
+	"assault": "Aggressive Assault",
+	"sniper": "Long-Range Marksman",
+	"flanker": "Evasive Skirmisher"
+}
 
 @export_group("Movement & Combat")
 @export var move_speed: float = 175.0
@@ -37,6 +52,18 @@ var current_state: AgentState = AgentState.IDLE
 var target_node: Node2D = null
 var spawn_position: Vector2 = Vector2.ZERO
 var facing_direction: Vector2 = Vector2.RIGHT
+var current_tactic_status: String = "ENGAGING"
+
+# Dynamic Tactical & Combat Behavior
+var _strafe_direction: float = 1.0
+var _strafe_timer: float = 0.0
+var _evasion_burst_timer: float = 0.0
+var _overcharge_timer: float = 0.0
+var _base_move_speed: float = 175.0
+var _base_attack_cooldown: float = 0.45
+var _min_standoff: float = 150.0
+var _max_standoff: float = 260.0
+var _lead_aim_factor: float = 0.90
 
 # Navigation State
 var _nav_path: PackedVector2Array = PackedVector2Array()
@@ -127,18 +154,67 @@ func _setup_components() -> void:
 		weapon_component = get_node_or_null("WeaponComponent")
 	if weapon_component:
 		weapon_component.set("use_global_energy", false)
-		weapon_component.set("damage", 18.0)
 		weapon_component.set("attack_range", attack_range)
-		weapon_component.set("projectile_speed", 520.0)
-		weapon_component.set("attack_cooldown", 0.45)
 		weapon_component.set("energy_cost", 0.0)
 		weapon_component.set("projectile_color", accent_color)
 		weapon_component.set("muzzle_flash_color", accent_color.lightened(0.3))
 		if weapon_component.has_signal("weapon_fired") and not weapon_component.weapon_fired.is_connected(_on_weapon_fired):
 			weapon_component.weapon_fired.connect(_on_weapon_fired)
 
+	_apply_role_tuning()
 
-func setup_agent(p_name: String, p_team: String, p_color: Color, p_algo: String, p_scenario: String = "combat") -> void:
+
+func _apply_role_tuning() -> void:
+	match tactical_role.to_lower():
+		"assault":
+			_base_move_speed = 205.0
+			attack_range = 330.0
+			_min_standoff = 70.0
+			_max_standoff = 160.0
+			_lead_aim_factor = 0.78
+			if weapon_component:
+				weapon_component.set("damage", 14.0)
+				weapon_component.set("attack_cooldown", 0.32)
+				weapon_component.set("projectile_speed", 580.0)
+				_base_attack_cooldown = 0.32
+		"sniper":
+			_base_move_speed = 150.0
+			attack_range = 440.0
+			_min_standoff = 260.0
+			_max_standoff = 380.0
+			_lead_aim_factor = 1.05
+			if weapon_component:
+				weapon_component.set("damage", 29.0)
+				weapon_component.set("attack_cooldown", 0.74)
+				weapon_component.set("projectile_speed", 750.0)
+				_base_attack_cooldown = 0.74
+		"flanker":
+			_base_move_speed = 190.0
+			attack_range = 360.0
+			_min_standoff = 150.0
+			_max_standoff = 240.0
+			_lead_aim_factor = 0.88
+			if weapon_component:
+				weapon_component.set("damage", 16.0)
+				weapon_component.set("attack_cooldown", 0.38)
+				weapon_component.set("projectile_speed", 620.0)
+				_base_attack_cooldown = 0.38
+		"adaptive", _:
+			tactical_role = "adaptive"
+			_base_move_speed = 175.0
+			attack_range = 340.0
+			_min_standoff = 150.0
+			_max_standoff = 260.0
+			_lead_aim_factor = 0.92
+			if weapon_component:
+				weapon_component.set("damage", 18.0)
+				weapon_component.set("attack_cooldown", 0.45)
+				weapon_component.set("projectile_speed", 540.0)
+				_base_attack_cooldown = 0.45
+	move_speed = _base_move_speed
+
+
+func setup_agent(p_name: String, p_team: String, p_color: Color, p_algo: String, p_scenario: String = "combat", p_role: String = "adaptive") -> void:
 	# Update team group
 	if is_in_group(team_group):
 		remove_from_group(team_group)
@@ -148,8 +224,11 @@ func setup_agent(p_name: String, p_team: String, p_color: Color, p_algo: String,
 	accent_color = p_color
 	algorithm = p_algo.to_lower().strip_edges()
 	scenario = p_scenario
+	tactical_role = p_role.to_lower().strip_edges()
 	
 	add_to_group(team_group)
+	
+	_apply_role_tuning()
 	
 	if weapon_component:
 		weapon_component.set("projectile_color", accent_color)
@@ -169,6 +248,15 @@ func set_map_data(m_data: RefCounted) -> void:
 	_map_data_ref = m_data
 
 
+func set_tactical_role(p_role: String) -> void:
+	tactical_role = p_role.to_lower().strip_edges()
+	_apply_role_tuning()
+
+
+func get_tactical_role() -> String:
+	return tactical_role
+
+
 func reset_agent(p_spawn_pos: Vector2 = Vector2.ZERO) -> void:
 	if p_spawn_pos != Vector2.ZERO:
 		spawn_position = p_spawn_pos
@@ -186,6 +274,11 @@ func reset_agent(p_spawn_pos: Vector2 = Vector2.ZERO) -> void:
 	_hit_flash_timer = 0.0
 	_recoil_offset = Vector2.ZERO
 	_death_fade = 1.0
+	_strafe_timer = 0.0
+	_evasion_burst_timer = 0.0
+	_overcharge_timer = 0.0
+	current_tactic_status = "ENGAGING"
+	_apply_role_tuning()
 
 	total_requests = 0
 	total_nodes_expanded = 0
@@ -219,11 +312,24 @@ func _physics_process(delta: float) -> void:
 			visual.call("update_motion", velocity, delta)
 		return
 
-	# Handle visual timers
+	# Handle visual and tactical timers
 	if _hit_flash_timer > 0.0:
 		_hit_flash_timer = maxf(0.0, _hit_flash_timer - delta * 5.0)
 	if _recoil_offset.length_squared() > 0.01:
 		_recoil_offset = _recoil_offset.move_toward(Vector2.ZERO, delta * 80.0)
+
+	if _evasion_burst_timer > 0.0:
+		_evasion_burst_timer = maxf(0.0, _evasion_burst_timer - delta)
+	if _overcharge_timer > 0.0:
+		_overcharge_timer = maxf(0.0, _overcharge_timer - delta)
+
+	# Dynamic move speed with tactical bursts & overcharge buffs
+	var effective_speed := _base_move_speed
+	if _overcharge_timer > 0.0:
+		effective_speed *= 1.35
+	if _evasion_burst_timer > 0.0:
+		effective_speed *= 1.25
+	move_speed = effective_speed
 
 	_update_autonomous_behavior(delta)
 	move_and_slide()
@@ -275,29 +381,95 @@ func _update_autonomous_behavior(delta: float) -> void:
 func _process_combat_scenario(target_pos: Vector2, dist: float, delta: float) -> void:
 	var can_see := has_line_of_sight_to(target_pos)
 	var in_range := dist <= attack_range
+	var my_hp_ratio := 1.0
+	var opp_hp_ratio := 1.0
+
+	if health_component and health_component.max_health > 0.0:
+		my_hp_ratio = health_component.current_health / health_component.max_health
+	if is_instance_valid(target_node):
+		var opp_hc = target_node.get_node_or_null("HealthComponent")
+		if opp_hc and opp_hc.max_health > 0.0:
+			opp_hp_ratio = opp_hc.current_health / opp_hc.max_health
+
+	# Dynamic lateral strafe flipping timer
+	_strafe_timer -= delta
+	if _strafe_timer <= 0.0:
+		_strafe_timer = randf_range(1.2, 2.6)
+		_strafe_direction = -_strafe_direction
+
+	# Dynamic tactical role state evaluation
+	var desired_min_standoff := _min_standoff
+	var desired_max_standoff := _max_standoff
+	var current_tactic := "ENGAGING"
+
+	match tactical_role.to_lower():
+		"assault":
+			current_tactic = "CQB RUSH"
+			desired_min_standoff = 70.0
+			desired_max_standoff = 160.0
+		"sniper":
+			current_tactic = "SNIPING"
+			desired_min_standoff = 260.0
+			desired_max_standoff = 380.0
+		"flanker":
+			current_tactic = "EVASIVE FLANK"
+			desired_min_standoff = 150.0
+			desired_max_standoff = 240.0
+		"adaptive", _:
+			if my_hp_ratio < 0.40:
+				current_tactic = "RETREAT & RECOVER"
+				desired_min_standoff = 260.0
+				desired_max_standoff = 360.0
+			elif opp_hp_ratio < 0.35 and my_hp_ratio > 0.45:
+				current_tactic = "PRESSING ADVANTAGE"
+				desired_min_standoff = 80.0
+				desired_max_standoff = 170.0
+			else:
+				current_tactic = "BALANCED TACTICS"
+
+	if _overcharge_timer > 0.0:
+		current_tactic += " [OVERCHARGED]"
+
+	current_tactic_status = current_tactic
 
 	if in_range and can_see:
 		current_state = AgentState.ATTACKING
-		# Tactical combat spacing: maintain optimal standoff between 150px and 260px
-		if dist < 160.0:
-			# Too close: backpedal away from opponent to keep spacing
-			var retreat_dir := (global_position - target_pos).normalized()
+		var to_target := (target_pos - global_position).normalized()
+		var perp := to_target.orthogonal() * _strafe_direction
+
+		if dist < desired_min_standoff:
+			# Too close: kite/backpedal away, blended with lateral strafing
+			var retreat_dir := (-to_target * 0.75 + perp * 0.45).normalized()
 			velocity = velocity.move_toward(retreat_dir * move_speed, acceleration * delta)
-		elif dist > 260.0:
-			# Advance closer to stay in effective firing range
-			var advance_dir := (target_pos - global_position).normalized()
+		elif dist > desired_max_standoff:
+			# Too far: close distance, blended with lateral strafing
+			var advance_dir := (to_target * 0.85 + perp * 0.25).normalized()
 			velocity = velocity.move_toward(advance_dir * move_speed, acceleration * delta)
 		else:
-			# In the combat sweet spot: lateral tactical strafing
-			var perp := (target_pos - global_position).normalized().orthogonal()
-			var strafe_dir := perp if team_group == "team_a" else -perp
-			velocity = velocity.move_toward(strafe_dir * (move_speed * 0.55), acceleration * delta)
+			# In the tactical sweet spot: active dynamic strafing
+			var strafe_speed := move_speed * 0.75
+			if tactical_role == "flanker" or _evasion_burst_timer > 0.0:
+				strafe_speed = move_speed * 0.95
+			velocity = velocity.move_toward(perp * strafe_speed, acceleration * delta)
 
-		var fire_dir := (target_pos - global_position).normalized()
+		var fire_dir := _calculate_lead_aim_direction(target_pos, dist)
 		_try_fire_weapon(fire_dir)
 	else:
 		current_state = AgentState.NAVIGATING
 		_follow_nav_path(delta)
+
+
+func _calculate_lead_aim_direction(target_pos: Vector2, dist: float) -> Vector2:
+	var proj_speed := 540.0
+	if weapon_component and weapon_component.get("projectile_speed"):
+		proj_speed = float(weapon_component.get("projectile_speed"))
+	var time_to_impact := dist / maxf(proj_speed, 100.0)
+	var target_vel := Vector2.ZERO
+	if is_instance_valid(target_node) and "velocity" in target_node:
+		target_vel = target_node.velocity
+	
+	var predicted_pos := target_pos + (target_vel * time_to_impact * _lead_aim_factor)
+	return (predicted_pos - global_position).normalized()
 
 
 func _process_race_scenario(_target_pos: Vector2, delta: float) -> void:
@@ -372,6 +544,12 @@ func _request_path_to(dest_pos: Vector2) -> void:
 func _try_fire_weapon(fire_dir: Vector2) -> void:
 	if not weapon_component:
 		return
+	# Adjust firing rate if overcharged
+	if _overcharge_timer > 0.0:
+		weapon_component.set("attack_cooldown", _base_attack_cooldown * 0.70)
+	else:
+		weapon_component.set("attack_cooldown", _base_attack_cooldown)
+
 	if weapon_component.can_attack():
 		_recoil_offset = -fire_dir * 4.0
 		if visual and visual.has_method("play_attack_recoil"):
@@ -457,6 +635,9 @@ func take_damage(amount: float, source: Node = null) -> bool:
 	if res:
 		damage_taken += amount
 		_hit_flash_timer = 1.0
+		# Dynamic reflex evasion: speed burst and strafe reversal
+		_evasion_burst_timer = 0.45
+		_strafe_direction = -_strafe_direction
 		if visual and visual.has_method("play_damage_flash"):
 			visual.call("play_damage_flash")
 		agent_damaged.emit(self, amount, health_component.current_health)
@@ -466,6 +647,31 @@ func take_damage(amount: float, source: Node = null) -> bool:
 			audio.call("play_sfx", "laser_hit", randf_range(0.95, 1.1))
 
 	return res
+
+
+func heal(amount: float) -> void:
+	if current_state == AgentState.DEAD:
+		return
+	if health_component and health_component.has_method("heal"):
+		health_component.call("heal", amount)
+	elif health_component:
+		health_component.current_health = minf(health_component.max_health, health_component.current_health + amount)
+	FloatingCombatTextScript.spawn(self, global_position, "+%d HP" % int(amount), Color(0.2, 1.0, 0.4))
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "pickup", 1.15)
+	queue_redraw()
+
+
+func apply_overcharge_boost(duration: float = 8.0) -> void:
+	if current_state == AgentState.DEAD:
+		return
+	_overcharge_timer = duration
+	FloatingCombatTextScript.spawn(self, global_position, "OVERCHARGED!", Color(1.0, 0.85, 0.2))
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx"):
+		audio.call("play_sfx", "powerup", 1.25)
+	queue_redraw()
 
 
 func _on_damage_data_received(data: RefCounted) -> void:
@@ -510,6 +716,9 @@ func get_metrics() -> Dictionary:
 		"agent_name": agent_name,
 		"team": team_group,
 		"algorithm": algorithm,
+		"tactical_role": tactical_role,
+		"current_tactic": current_tactic_status,
+		"overcharged": _overcharge_timer > 0.0,
 		"scenario": scenario,
 		"is_alive": current_state != AgentState.DEAD,
 		"current_health": cur_hp,
@@ -539,6 +748,11 @@ func _draw() -> void:
 	# If dead, don't draw overhead telemetry
 	if current_state == AgentState.DEAD:
 		return
+
+	# Overcharge dynamic aura
+	if _overcharge_timer > 0.0:
+		var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.012)
+		draw_arc(Vector2.ZERO, 20.0 * pulse, 0.0, TAU, 24, Color(1.0, 0.85, 0.2, 0.7), 2.0)
 
 	# Overhead Floating Team Marker & Mini Health Pip (Clean, No text overlap)
 	var hud_y := -24.0

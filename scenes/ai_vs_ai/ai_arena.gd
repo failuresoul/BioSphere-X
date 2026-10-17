@@ -69,6 +69,20 @@ const MAP_PRESET_LABELS: Array[String] = [
 	"The Labyrinth"
 ]
 
+const ROLES: Array[String] = [
+	"adaptive",
+	"assault",
+	"sniper",
+	"flanker"
+]
+
+const ROLE_LABELS: Array[String] = [
+	"Adaptive Tactician (Dynamic Decision)",
+	"Aggressive Assault (CQB Rapid Burst)",
+	"Long-Range Marksman (Sniper Standoff)",
+	"Evasive Skirmisher (Agile Flanker)"
+]
+
 const ALGO_THEORY: Dictionary = {
 	"astar": {
 		"name": "A* Search",
@@ -154,12 +168,23 @@ const ALGO_THEORY: Dictionary = {
 @export var current_map: String = "symmetric"
 @export var agent_a_algorithm: String = "astar"
 @export var agent_b_algorithm: String = "greedy"
+@export var agent_a_role: String = "adaptive"
+@export var agent_b_role: String = "flanker"
 @export var swap_spawns: bool = false
 @export var match_time_limit: float = 120.0
 @export var simulation_speed: float = 1.0
 @export var random_seed: int = 42
 @export var dynamic_camera_enabled: bool = true
 @export var show_ai_paths: bool = true
+
+# Dynamic Battlefield Pickups
+const PICKUP_REPAIR_POS := Vector2(0.0, -145.0)
+const PICKUP_OVERCHARGE_POS := Vector2(0.0, 145.0)
+const PICKUP_RADIUS := 28.0
+var pickup_repair_active: bool = true
+var pickup_repair_cooldown: float = 0.0
+var pickup_overcharge_active: bool = true
+var pickup_overcharge_cooldown: float = 0.0
 
 # Preloads
 const AutonomousAgentScript := preload("res://scenes/ai_vs_ai/autonomous_agent.gd")
@@ -187,6 +212,8 @@ var objective_beacon: Area2D = null
 @onready var map_dropdown: OptionButton = get_node_or_null("%MapDropdown")
 @onready var algo_a_dropdown: OptionButton = %AlgoADropdown
 @onready var algo_b_dropdown: OptionButton = %AlgoBDropdown
+@onready var role_a_dropdown: OptionButton = get_node_or_null("%RoleADropdown")
+@onready var role_b_dropdown: OptionButton = get_node_or_null("%RoleBDropdown")
 @onready var start_button: Button = %StartButton
 @onready var pause_button: Button = %PauseButton
 @onready var reset_button: Button = %ResetButton
@@ -230,10 +257,12 @@ var objective_beacon: Area2D = null
 # Live Telemetry Labels
 @onready var a_hp_bar: ProgressBar = %A_HpBar
 @onready var a_hp_label: Label = %A_HpLabel
+@onready var a_role_label: Label = get_node_or_null("%A_RoleLabel")
 @onready var a_nodes_label: Label = %A_NodesLabel
 @onready var a_time_label: Label = %A_TimeLabel
 @onready var b_hp_bar: ProgressBar = %B_HpBar
 @onready var b_hp_label: Label = %B_HpLabel
+@onready var b_role_label: Label = get_node_or_null("%B_RoleLabel")
 @onready var b_nodes_label: Label = %B_NodesLabel
 @onready var b_time_label: Label = %B_TimeLabel
 
@@ -415,7 +444,7 @@ func _spawn_agents() -> void:
 	agent_a = _agent_scene.instantiate()
 	agent_a.name = "AgentA"
 	add_child(agent_a)
-	agent_a.call("setup_agent", "Agent A", "team_a", Color(0.12, 0.88, 1.0), agent_a_algorithm, current_scenario)
+	agent_a.call("setup_agent", "Agent A", "team_a", Color(0.12, 0.88, 1.0), agent_a_algorithm, current_scenario, agent_a_role)
 	agent_a.global_position = pos_a
 	agent_a.call("set_map_data", map_data)
 	agent_a.connect("agent_died", _on_agent_died)
@@ -423,7 +452,7 @@ func _spawn_agents() -> void:
 	agent_b = _agent_scene.instantiate()
 	agent_b.name = "AgentB"
 	add_child(agent_b)
-	agent_b.call("setup_agent", "Agent B", "team_b", Color(1.0, 0.55, 0.15), agent_b_algorithm, current_scenario)
+	agent_b.call("setup_agent", "Agent B", "team_b", Color(1.0, 0.55, 0.15), agent_b_algorithm, current_scenario, agent_b_role)
 	agent_b.global_position = pos_b
 	agent_b.call("set_map_data", map_data)
 	agent_b.connect("agent_died", _on_agent_died)
@@ -499,6 +528,31 @@ func _setup_ui() -> void:
 				agent_b.algorithm = agent_b_algorithm
 				agent_b.queue_redraw()
 			_update_badges()
+		)
+
+	# Tactical Role Dropdowns
+	if role_a_dropdown:
+		role_a_dropdown.clear()
+		for i in range(ROLE_LABELS.size()):
+			role_a_dropdown.add_item(ROLE_LABELS[i], i)
+		role_a_dropdown.selected = max(0, ROLES.find(agent_a_role))
+		role_a_dropdown.item_selected.connect(func(idx: int):
+			agent_a_role = ROLES[idx]
+			if agent_a and agent_a.has_method("set_tactical_role"):
+				agent_a.call("set_tactical_role", agent_a_role)
+			_update_telemetry()
+		)
+
+	if role_b_dropdown:
+		role_b_dropdown.clear()
+		for i in range(ROLE_LABELS.size()):
+			role_b_dropdown.add_item(ROLE_LABELS[i], i)
+		role_b_dropdown.selected = max(0, ROLES.find(agent_b_role))
+		role_b_dropdown.item_selected.connect(func(idx: int):
+			agent_b_role = ROLES[idx]
+			if agent_b and agent_b.has_method("set_tactical_role"):
+				agent_b.call("set_tactical_role", agent_b_role)
+			_update_telemetry()
 		)
 
 	# Buttons
@@ -616,11 +670,49 @@ func _process(delta: float) -> void:
 		if match_elapsed_time >= match_time_limit:
 			_terminate_match("Time Limit Exceeded (Draw)")
 
+		_update_arena_pickups(delta)
+
 	_update_telemetry()
 	_update_camera(delta)
 
 	if match_state == MatchState.RUNNING or show_ai_paths:
 		queue_redraw()
+
+
+func _update_arena_pickups(delta: float) -> void:
+	# Nanite Repair Core cooldown
+	if not pickup_repair_active:
+		pickup_repair_cooldown = maxf(0.0, pickup_repair_cooldown - delta)
+		if pickup_repair_cooldown <= 0.0:
+			pickup_repair_active = true
+	else:
+		_check_pickup_collection(PICKUP_REPAIR_POS, "repair")
+
+	# Plasma Overcharge Cell cooldown
+	if not pickup_overcharge_active:
+		pickup_overcharge_cooldown = maxf(0.0, pickup_overcharge_cooldown - delta)
+		if pickup_overcharge_cooldown <= 0.0:
+			pickup_overcharge_active = true
+	else:
+		_check_pickup_collection(PICKUP_OVERCHARGE_POS, "overcharge")
+
+
+func _check_pickup_collection(pos: Vector2, type: String) -> void:
+	var agents := [agent_a, agent_b]
+	for ag in agents:
+		if is_instance_valid(ag) and ag.get("current_state") != AutonomousAgentScript.AgentState.DEAD:
+			if ag.global_position.distance_to(pos) <= PICKUP_RADIUS:
+				if type == "repair":
+					pickup_repair_active = false
+					pickup_repair_cooldown = 15.0
+					if ag.has_method("heal"):
+						ag.call("heal", 35.0)
+				elif type == "overcharge":
+					pickup_overcharge_active = false
+					pickup_overcharge_cooldown = 18.0
+					if ag.has_method("apply_overcharge_boost"):
+						ag.call("apply_overcharge_boost", 8.0)
+				break
 
 
 func _update_camera(delta: float) -> void:
@@ -659,6 +751,10 @@ func _update_telemetry() -> void:
 			a_hp_bar.value = cur_a
 		if a_hp_label:
 			a_hp_label.text = "%d HP" % int(cur_a)
+		if a_role_label:
+			var r_a: String = String(agent_a.get("tactical_role")).capitalize()
+			var t_a: String = String(agent_a.get("current_tactic_status"))
+			a_role_label.text = "[ %s | %s ]" % [r_a, t_a]
 		if a_nodes_label:
 			a_nodes_label.text = "Nodes: %d" % int(agent_a.get("total_nodes_expanded"))
 		if a_time_label:
@@ -672,6 +768,10 @@ func _update_telemetry() -> void:
 			b_hp_bar.value = cur_b
 		if b_hp_label:
 			b_hp_label.text = "%d HP" % int(cur_b)
+		if b_role_label:
+			var r_b: String = String(agent_b.get("tactical_role")).capitalize()
+			var t_b: String = String(agent_b.get("current_tactic_status"))
+			b_role_label.text = "[ %s | %s ]" % [r_b, t_b]
 		if b_nodes_label:
 			b_nodes_label.text = "Nodes: %d" % int(agent_b.get("total_nodes_expanded"))
 		if b_time_label:
@@ -762,12 +862,17 @@ func reset_match() -> void:
 	var pos_a := SPAWN_B_DEFAULT if swap_spawns else SPAWN_A_DEFAULT
 	var pos_b := SPAWN_A_DEFAULT if swap_spawns else SPAWN_B_DEFAULT
 
+	pickup_repair_active = true
+	pickup_repair_cooldown = 0.0
+	pickup_overcharge_active = true
+	pickup_overcharge_cooldown = 0.0
+
 	if agent_a:
 		agent_a.reset_agent(pos_a)
-		agent_a.setup_agent("Agent A", "team_a", Color(0.12, 0.88, 1.0), agent_a_algorithm, current_scenario)
+		agent_a.setup_agent("Agent A", "team_a", Color(0.12, 0.88, 1.0), agent_a_algorithm, current_scenario, agent_a_role)
 	if agent_b:
 		agent_b.reset_agent(pos_b)
-		agent_b.setup_agent("Agent B", "team_b", Color(1.0, 0.55, 0.15), agent_b_algorithm, current_scenario)
+		agent_b.setup_agent("Agent B", "team_b", Color(1.0, 0.55, 0.15), agent_b_algorithm, current_scenario, agent_b_role)
 
 	_configure_scenario_targets()
 	_set_agents_active(false)
@@ -1077,6 +1182,9 @@ func _draw() -> void:
 				if agent_a.has_method("has_line_of_sight_to") and agent_a.has_line_of_sight_to(agent_b.global_position):
 					draw_dashed_line(agent_a.global_position, agent_b.global_position, Color(1.0, 0.3, 0.3, 0.3), 1.5, 10.0)
 
+	# 7. Dynamic Battlefield Pickup Stations
+	_draw_arena_pickups()
+
 
 # ---------------------------------------------------------------------------
 # Visualizer & Academic Inspector Controls
@@ -1238,3 +1346,43 @@ func copy_defense_summary() -> void:
 	DisplayServer.clipboard_set(plain_text)
 	if copy_status_label:
 		copy_status_label.text = "✓ Copied to clipboard! Ready to paste into presentation or lab report."
+
+
+func _draw_arena_pickups() -> void:
+	var time_ms := Time.get_ticks_msec()
+	var pulse := 1.0 + 0.12 * sin(time_ms * 0.006)
+
+	# 1. Dynamic Pickup: Nanite Repair Core (+35 HP)
+	var rep_color := Color(0.15, 0.95, 0.45) if pickup_repair_active else Color(0.25, 0.35, 0.3, 0.4)
+	draw_arc(PICKUP_REPAIR_POS, 24.0, 0.0, TAU, 28, rep_color.lerp(Color.BLACK, 0.45), 3.0)
+	draw_circle(PICKUP_REPAIR_POS, 20.0, Color(0.04, 0.12, 0.08, 0.65 if pickup_repair_active else 0.2))
+
+	if pickup_repair_active:
+		draw_arc(PICKUP_REPAIR_POS, 24.0 * pulse, 0.0, TAU, 32, rep_color, 2.0)
+		var cw := 4.5
+		var cl := 14.0
+		draw_rect(Rect2(PICKUP_REPAIR_POS.x - cw * 0.5, PICKUP_REPAIR_POS.y - cl * 0.5, cw, cl), rep_color)
+		draw_rect(Rect2(PICKUP_REPAIR_POS.x - cl * 0.5, PICKUP_REPAIR_POS.y - cw * 0.5, cl, cw), rep_color)
+	else:
+		var pct := 1.0 - (pickup_repair_cooldown / 15.0)
+		draw_arc(PICKUP_REPAIR_POS, 24.0, -PI * 0.5, -PI * 0.5 + TAU * pct, 28, Color(0.2, 0.85, 0.4, 0.75), 2.5)
+
+	# 2. Dynamic Pickup: Plasma Overcharge Cell (+35% Speed & Fire-rate)
+	var ovr_color := Color(1.0, 0.75, 0.15) if pickup_overcharge_active else Color(0.35, 0.3, 0.2, 0.4)
+	draw_arc(PICKUP_OVERCHARGE_POS, 24.0, 0.0, TAU, 28, ovr_color.lerp(Color.BLACK, 0.45), 3.0)
+	draw_circle(PICKUP_OVERCHARGE_POS, 20.0, Color(0.18, 0.10, 0.03, 0.65 if pickup_overcharge_active else 0.2))
+
+	if pickup_overcharge_active:
+		draw_arc(PICKUP_OVERCHARGE_POS, 24.0 * pulse, 0.0, TAU, 32, ovr_color, 2.0)
+		var pts := PackedVector2Array([
+			PICKUP_OVERCHARGE_POS + Vector2(-2, -9),
+			PICKUP_OVERCHARGE_POS + Vector2(5, -2),
+			PICKUP_OVERCHARGE_POS + Vector2(1, -2),
+			PICKUP_OVERCHARGE_POS + Vector2(3, 9),
+			PICKUP_OVERCHARGE_POS + Vector2(-5, 1),
+			PICKUP_OVERCHARGE_POS + Vector2(-1, 1)
+		])
+		draw_colored_polygon(pts, ovr_color)
+	else:
+		var pct := 1.0 - (pickup_overcharge_cooldown / 18.0)
+		draw_arc(PICKUP_OVERCHARGE_POS, 24.0, -PI * 0.5, -PI * 0.5 + TAU * pct, 28, Color(1.0, 0.75, 0.2, 0.75), 2.5)

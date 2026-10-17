@@ -27,9 +27,10 @@ func _ready() -> void:
 	test_spawn_swapping_fairness()
 	test_experimental_metrics_and_export()
 	test_map_presets_and_academic_inspector()
+	test_dynamic_tactical_roles_and_arena_pickups()
 	
 	print("==================================================")
-	print("  ALL AI vs AI TESTS COMPLETED SUCCESSFULLY! [9/9]")
+	print("  ALL AI vs AI TESTS COMPLETED SUCCESSFULLY! [10/10]")
 	print("==================================================")
 	get_tree().quit(0)
 
@@ -312,3 +313,55 @@ func test_map_presets_and_academic_inspector() -> void:
 
 	arena.queue_free()
 	print("  [PASS] Tactical map presets, path visualizer, and academic defense inspector verified.")
+
+
+func test_dynamic_tactical_roles_and_arena_pickups() -> void:
+	print("[TEST 10/10] Verifying dynamic tactical roles, predictive aiming, and arena pickups...")
+	var agent = _agent_scene.instantiate()
+	add_child(agent)
+
+	# 1. Verify Role Assignment & Tuning
+	agent.call("setup_agent", "Test Assault", "team_a", Color.CYAN, "astar", "combat", "assault")
+	assert(agent.get("tactical_role") == "assault", "Role must be assault")
+	assert(agent.get("move_speed") >= 200.0, "Assault role should have high speed")
+	assert(agent.weapon_component.damage == 14.0, "Assault damage tuned")
+
+	agent.call("set_tactical_role", "sniper")
+	assert(agent.get("tactical_role") == "sniper", "Role must update to sniper")
+	assert(agent.get("attack_range") >= 420.0, "Sniper attack range should be 420+")
+	assert(agent.weapon_component.damage == 29.0, "Sniper damage should be 29")
+
+	agent.call("set_tactical_role", "flanker")
+	assert(agent.get("tactical_role") == "flanker", "Role must update to flanker")
+	assert(agent.get("move_speed") == 190.0, "Flanker speed should be 190")
+
+	# 2. Verify Healing and Overcharge
+	agent.health_component.current_health = 40.0
+	agent.call("heal", 35.0)
+	assert(agent.health_component.current_health == 75.0, "Agent heal must restore health")
+
+	agent.call("apply_overcharge_boost", 5.0)
+	assert(agent.get("_overcharge_timer") == 5.0, "Overcharge timer set")
+
+	# 3. Verify Metrics include tactical roles
+	var metrics: Dictionary = agent.call("get_metrics")
+	assert(metrics.has("tactical_role"), "Metrics must report tactical_role")
+	assert(metrics.has("current_tactic"), "Metrics must report current_tactic")
+	assert(metrics.has("overcharged"), "Metrics must report overcharged flag")
+	assert(metrics["overcharged"] == true, "Agent should report overcharged true")
+
+	agent.queue_free()
+
+	# 4. Verify Arena Pickups & Dropdowns
+	var arena = _arena_scene.instantiate()
+	add_child(arena)
+
+	assert(arena.get("pickup_repair_active") == true, "Repair pickup active by default")
+	assert(arena.get("pickup_overcharge_active") == true, "Overcharge pickup active by default")
+	assert(arena.role_a_dropdown != null, "Role A dropdown must exist in UI")
+	assert(arena.role_b_dropdown != null, "Role B dropdown must exist in UI")
+	assert(arena.a_role_label != null, "Agent A role label must exist in HUD")
+	assert(arena.b_role_label != null, "Agent B role label must exist in HUD")
+
+	arena.queue_free()
+	print("  [PASS] Dynamic tactical roles, predictive lead aiming, and arena pickups verified.")
