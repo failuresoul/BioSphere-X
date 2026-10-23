@@ -1,7 +1,13 @@
-<svg height="128" width="128" xmlns="http://www.w3.org/2000/svg">
-  <rect width="128" height="128" rx="16" fill="#1a1a2e"/>
-  <circle cx="64" cy="64" r="40" fill="none" stroke="#16213e" stroke-width="4"/>
-  <circle cx="64" cy="64" r="28" fill="none" stroke="#0f3460" stroke-width="3"/>
-  <circle cx="64" cy="64" r="12" fill="#e94560"/>
-  <text x="64" y="118" text-anchor="middle" fill="#e94560" font-size="14" font-family="monospace">BSX</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="22" fill="#07182b"/>
+  <circle cx="64" cy="62" r="48" fill="none" stroke="#3fe5db" stroke-width="3" opacity=".65"/>
+  <path d="M15 68c14-25 78-37 99-12" fill="none" stroke="#9b84ed" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="104" cy="51" r="6" fill="#ffd889"/>
+  <circle cx="45" cy="68" r="22" fill="#45e7cd" stroke="#edffff" stroke-width="5"/>
+  <circle cx="83" cy="68" r="22" fill="#e576b0" stroke="#fff0fa" stroke-width="5"/>
+  <circle cx="40" cy="65" r="3" fill="#0b2944"/>
+  <circle cx="50" cy="65" r="3" fill="#0b2944"/>
+  <circle cx="78" cy="65" r="3" fill="#391e45"/>
+  <circle cx="88" cy="65" r="3" fill="#391e45"/>
+  <path d="M35 76q10 9 20 0M73 76q10 9 20 0" fill="none" stroke="#17394b" stroke-width="3" stroke-linecap="round"/>
 </svg>
