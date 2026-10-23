@@ -324,6 +324,38 @@ class RuleInferenceEngine:
         Initializes domain rules for mission prerequisites, life-support warnings,
         extraction eligibility, and environmental survival conditions.
         """
+        self.register_rule(Rule(
+            id="rule_planet_duel_victory",
+            name="Planet Duel Victory",
+            description="Confirms a duel win after the rival falls and the pilot survives.",
+            category="duel",
+            priority=210,
+            conditions=[
+                Condition(field="duel_active", operator="==", value=True),
+                Condition(field="duel_rival_down", operator="==", value=True),
+                Condition(field="duel_player_alive", operator="==", value=True),
+            ],
+            conclusions={"duel_won": True},
+            actions=["unlock_next_planet"],
+            explanation_template="The rival was defeated while the pilot survived."
+        ))
+
+        self.register_rule(Rule(
+            id="rule_orbit_arena_wave_clear",
+            name="Orbit Arena Wave Clear",
+            description="Advances a planet arena when the pilot survives and all enemies are defeated.",
+            category="arena",
+            priority=200,
+            conditions=[
+                Condition(field="arena_wave_active", operator="==", value=True),
+                Condition(field="arena_enemies_remaining", operator="<=", value=0),
+                Condition(field="arena_player_alive", operator="==", value=True),
+            ],
+            conclusions={"arena_wave_cleared": True},
+            actions=["advance_arena_wave"],
+            explanation_template="All arena enemies defeated while the pilot is alive."
+        ))
+
         # ===================================================================
         # 1. LIFE SUPPORT & OXYGEN RULES
         # ===================================================================

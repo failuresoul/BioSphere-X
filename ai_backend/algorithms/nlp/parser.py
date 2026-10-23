@@ -27,6 +27,24 @@ class CommandParser:
 
     SUPPORTED_INTENTS: List[Dict[str, Any]] = [
         {
+            "id": "suit_attack",
+            "name": "Suit Attack Mode",
+            "description": "Sets the pilot suit to boost weapon damage.",
+            "examples": ["attack", "suit attack", "focus fire"]
+        },
+        {
+            "id": "suit_guard",
+            "name": "Suit Guard Mode",
+            "description": "Sets the pilot suit to reduce incoming damage.",
+            "examples": ["defend", "guard", "shield me"]
+        },
+        {
+            "id": "suit_heal",
+            "name": "Suit Repair Mode",
+            "description": "Sets the pilot suit to repair health using pulse energy.",
+            "examples": ["heal", "repair suit", "heal me"]
+        },
+        {
             "id": "collect_oxygen",
             "name": "Collect Oxygen",
             "description": "Refills suit life-support or gathers oxygen canisters.",
@@ -69,6 +87,9 @@ class CommandParser:
 
     def _compile_patterns(self) -> None:
         """Compiles regex matchers for intent recognition and parameter extraction."""
+        self._re_suit_attack = re.compile(r"\b(attack|focus\s+fire|shoot|fight)\b", re.IGNORECASE)
+        self._re_suit_guard = re.compile(r"\b(defend|guard|protect|shield)\b", re.IGNORECASE)
+        self._re_suit_heal = re.compile(r"\b(heal|healing|medic|repair\s+suit)\b", re.IGNORECASE)
         # 1. Collect Oxygen
         self._re_o2_intent = re.compile(
             r"\b(collect|gather|get|refill|replenish|harvest|take|recharge|breathe|fill|use)\b.*?\b(oxygen|o2|air|cells?|canisters?|tank)\b"
@@ -134,6 +155,22 @@ class CommandParser:
                 clarification_prompt="Please enter a command (e.g. 'collect oxygen', 'show inventory', 'return to base').",
                 suggested_actions=["help", "collect oxygen", "show inventory", "return to base"]
             )
+
+        for pattern, intent, mode in (
+            (self._re_suit_attack, "suit_attack", "attack"),
+            (self._re_suit_guard, "suit_guard", "guard"),
+            (self._re_suit_heal, "suit_heal", "heal"),
+        ):
+            if pattern.search(raw):
+                return ParsedCommand(
+                    raw_input=raw,
+                    intent=intent,
+                    confidence=0.95,
+                    parameters={"suit_mode": mode},
+                    is_valid=True,
+                    status="success",
+                    suggested_actions=["set_suit_mode"]
+                )
 
         # Check Ambiguous commands first
         if self._re_ambiguous_find.match(raw):
