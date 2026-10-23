@@ -10,31 +10,22 @@ config_version=5
 
 [application]
 
-config/name="BioSphere-X"
-config/description="A 2D top-down sci-fi survival game set on alien exoplanets."
-run/main_scene="res://scenes/main/main.tscn"
+config/name="BioSphere X"
+config/description="A space themed 2D platform fighting game with AI rivals."
+run/main_scene="res://scenes/star_brawl/star_brawl.tscn"
 config/features=PackedStringArray("4.0", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
 
 AIClient="*res://scripts/autoloads/ai_client.gd"
-GameState="*res://scripts/autoloads/game_state.gd"
-NavigationManager="*res://scripts/autoloads/navigation_manager.gd"
-DifficultyController="*res://scripts/autoloads/difficulty_controller.gd"
-MissionManager="*res://scripts/autoloads/mission_manager.gd"
-InventoryManager="*res://scripts/autoloads/inventory_manager.gd"
-ConstructionManager="*res://scripts/autoloads/construction_manager.gd"
-ExoplanetDatabase="*res://scripts/autoloads/exoplanet_database.gd"
-PlanetProgressionManager="*res://scripts/autoloads/planet_progression_manager.gd"
-GameRuleEngine="*res://scripts/autoloads/game_rule_engine.gd"
-SaveManager="*res://scripts/autoloads/save_manager.gd"
-AudioManager="*res://scripts/autoloads/audio_manager.gd"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+window/size/window_width_override=1280
+window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 

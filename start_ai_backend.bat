@@ -1,7 +1,7 @@
 @echo off
-title BioSphere-X Python AI Backend
+title BioSphere X Python AI Backend
 echo ========================================================
-echo   Starting BioSphere-X Python AI Backend Server
+echo   Starting BioSphere X Python AI Backend Server
 echo   API Docs: http://127.0.0.1:8000/docs
 echo   Health:   http://127.0.0.1:8000/health
 echo ========================================================
