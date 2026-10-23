@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/star_brawl/star_brawl.gd" id="1_game"]
+
+[node name="OrbitBreakers" type="Node2D"]
+script = ExtResource("1_game")
