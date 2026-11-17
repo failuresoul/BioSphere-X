@@ -17,7 +17,7 @@ extends RefCounted
 ##
 ## The arena that owns the brain must provide: grid, energy_of(fighter),
 ## perform_special(fighter, foe) -> bool, record_search(planner) and
-## recent_damage_taken() (only when use_fuzzy is on).
+## recent_damage_taken(fighter) (only when use_fuzzy is on).
 
 const Pathfinder = preload("res://scripts/utils/modular_pathfinder.gd")
 const PlannerScript = preload("res://scripts/utils/path_planner.gd")
@@ -143,7 +143,13 @@ func _on_decision(response: Dictionary, state: Dictionary) -> void:
 		source = "fallback"                      # server slow or offline
 		last_decision = {}
 		next_action = fallback_action(state)
-	_set_action(next_action, me, foe, arena)
+	_set_action(_apply_preferences(next_action), me, foe, arena)
+
+
+## Hook: lets a subclass change the chosen move (AI vs AI uses it for the
+## forward-chaining modes). The boss keeps the move unchanged.
+func _apply_preferences(next_action: String) -> String:
+	return next_action
 
 
 ## Used when the server does not answer in time: attack if near, else move closer.
@@ -166,7 +172,7 @@ func _adjust(delta: float, me: SpaceFighter, foe: SpaceFighter, arena) -> void:
 	if _fuzzy_timer <= 0.0:
 		_fuzzy_timer = FUZZY_INTERVAL
 		var health := foe.health / foe.max_health * 100.0
-		AIClient.request_fuzzy(health, arena.recent_damage_taken(), absf(foe.position.x - me.position.x), _on_fuzzy)
+		AIClient.request_fuzzy(health, arena.recent_damage_taken(foe), absf(foe.position.x - me.position.x), _on_fuzzy)
 	aggression = move_toward(aggression, aggression_target, AGGRESSION_CHANGE * delta)
 	me.move_speed = base_speed * (0.8 + 0.4 * aggression)
 	me.attack_interval = base_attack_interval * (1.3 - 0.6 * aggression)

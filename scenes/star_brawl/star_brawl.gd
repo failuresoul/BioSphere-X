@@ -12,7 +12,7 @@ const PortalGateScript = preload("res://scenes/star_brawl/portal_gate.gd")
 const PilotAvatarScript = preload("res://scenes/star_brawl/pilot_avatar.gd")
 const BrainScript = preload("res://scenes/star_brawl/fighter_brain.gd")
 const GridScript = preload("res://scenes/star_brawl/arena_grid.gd")
-const AiScreenScript = preload("res://scenes/star_brawl/ai_vs_ai_screen.gd")
+const AiMatchScript = preload("res://scenes/ai_vs_ai_mode/ai_vs_ai_match.gd")
 const ASSET := "res://assets/star_brawl/"
 ## Oxygen survival (exploration only). Simple, fair numbers:
 ## a full tank lasts about 65 s; a tank gives +40; the safe dome refills 8 per second.
@@ -23,10 +23,7 @@ const DOME_RADIUS := 90.0
 const SUFFOCATION := 4.0           # health lost per second when oxygen is 0
 const RECENT_DAMAGE_TIME := 5.0    # "recent damage" for fuzzy logic = last 5 seconds
 
-## AI vs AI settings.
-const AI_HEALTH := 150.0
-const MATCH_SECONDS := 60.0     # time limit; then the AI with more health % wins
-const BATCH_SPEED := 3.0        # "Run 10 matches" plays at 3x speed
+## Path colours (P key).
 const BLUE := Color("5fb4ff")
 const RED := Color("ff6f7d")
 const BOSS_SPECIALS := [
@@ -101,15 +98,9 @@ var pickups: Array[Dictionary] = []   # placed by the CSP solver: {"node", "kind
 var grid: ArenaGrid                   # boss arena as a tile grid (for the search algorithms)
 var wall_rect := Rect2()
 var boss_brain: FighterBrain          # Player vs AI: controls the boss
-var blue_brain: FighterBrain          # AI vs AI: AI 1, drives the `player` fighter
-var red_brain: FighterBrain           # AI vs AI: AI 2, drives the `rival` fighter
 var show_paths := false               # P key: draw the grid and the current paths
 var show_states := true               # F key: show each alien's FSM state label
 var hud_planner                       # path planner whose search is shown top-right
-var match_time := 0.0
-var ai_config: Dictionary = {}
-var batch_total := 0                  # > 0 while "Run 10 matches" is running
-var batch_results: Array[Dictionary] = []
 
 var world_layer: Node2D
 var camera: Camera2D
@@ -124,7 +115,7 @@ var hud_root: Control
 var home_screen: Control
 var map_screen: Control
 var campaign_screen: Control
-var ai_screen: Control
+var ai_match: Node                    # AI vs AI mode (scenes/ai_vs_ai_mode/ai_vs_ai_match.gd)
 var left_fill: ColorRect
 var right_fill: ColorRect
 var left_name: Label
@@ -343,7 +334,7 @@ func _draw_wall(facts: Dictionary) -> void:
 
 ## The safe dome: a glowing bubble. Standing inside it refills oxygen.
 func _draw_dome() -> void:
-	if dome_center == Vector2.INF or segment != "explore":
+	if dome_center == Vector2.INF or (segment != "explore" and mode != "ava"):
 		return
 	draw_circle(dome_center, DOME_RADIUS, Color(0.45, 0.85, 1.0, 0.16))
 	draw_arc(dome_center, DOME_RADIUS, 0.0, TAU, 48, Color(0.6, 0.95, 1.0, 0.8), 3.0)
@@ -357,9 +348,10 @@ func _draw_paths() -> void:
 	for cell in grid.free_cells():
 		draw_rect(Rect2(Vector2(cell) * GridScript.CELL, Vector2.ONE * GridScript.CELL), Color(1, 1, 1, 0.07), false, 1.0)
 	var lines: Array = []                 # [path, colour]
-	for entry in [[boss_brain, RED], [blue_brain, BLUE], [red_brain, RED]]:
-		if entry[0] != null and entry[0].active:
-			lines.append([entry[0].planner.path, entry[1]])
+	if boss_brain != null and boss_brain.active:
+		lines.append([boss_brain.planner.path, RED])
+	if mode == "ava":
+		lines.append_array(ai_match.path_lines())
 	for alien in aliens:
 		if is_instance_valid(alien) and alien.get("state") in [AlienScript.State.CHASE, AlienScript.State.ATTACK]:
 			lines.append([alien.get("planner").path, Color("ffd36b")])
@@ -414,6 +406,7 @@ func _load_planet() -> void:
 	var planet: Dictionary = PLANETS[planet_index]
 	var facts: Dictionary = PlanetFacts.at(planet_index)
 	_clear_level()
+	dome_center = Vector2.INF
 	segment = "explore"
 	portal_pending = false
 	camera.limit_right = int(ARENA_WIDTH)
@@ -587,12 +580,11 @@ func _clear_level(keep_player: bool = false) -> void:
 	boss_special.clear()
 	boss_impact.clear()
 	boss_impact_timer = 0.0
-	for brain in [boss_brain, blue_brain, red_brain]:
-		if brain != null:
-			brain.active = false
+	if boss_brain != null:
+		boss_brain.active = false
 	boss_brain = null
-	blue_brain = null
-	red_brain = null
+	if ai_match != null:
+		ai_match.deactivate()
 	grid = null
 	wall_rect = Rect2()
 
@@ -793,32 +785,25 @@ func _refresh_ui() -> void:
 		return
 	var planet: Dictionary = PLANETS[planet_index]
 	var duel := segment == "boss" and is_instance_valid(rival)
-	if mode == "ava" and blue_brain != null:
-		left_name.text = "AI 1 (BLUE)  •  %s" % blue_brain.title()
-		right_name.text = "%s  •  AI 2 (RED)" % red_brain.title()
-		left_info.text = blue_brain.stats_text()
-		right_info.text = red_brain.stats_text()
-		stage_label.text = "%02d:%02d" % [int(match_time) / 60, int(match_time) % 60]
-		stage_subtitle.text = "MATCH %d / %d" % [batch_results.size() + 1, batch_total] if batch_total > 0 else "AI vs AI"
+	if mode == "ava":
+		return                                      # AI vs AI uses its own HUD
+	left_name.text = str(PilotAvatarScript.PILOTS[selected_pilot]["name"])
+	right_name.text = "%s  •  %s" % [planet["rival"], boss_brain.title()] if boss_brain != null else "REACH THE PORTAL"
+	left_info.text = ""
+	if boss_brain != null:
+		# e.g. "Boss: Minimax+αβ → attack | nodes 120, pruned 64"
+		#      "Search: A* | Nodes: 34 | 0.4 ms | Aggression: HIGH"
+		right_info.text = "Boss: %s | Aggression %.2f" % [boss_brain.stats_text(), boss_brain.aggression]
+	elif hud_planner != null:
+		right_info.text = hud_planner.hud_text()          # e.g. "Search: A* | Nodes: 34 | 0.4 ms"
+	else:
+		right_info.text = ""
+	stage_label.text = "%02d / %02d" % [planet_index + 1, PLANETS.size()]
+	stage_subtitle.text = "BOSS DUEL" if segment == "boss" else "EXPLORATION"
+	if duel:
 		target_label.text = ""
 	else:
-		left_name.text = str(PilotAvatarScript.PILOTS[selected_pilot]["name"])
-		right_name.text = "%s  •  %s" % [planet["rival"], boss_brain.title()] if boss_brain != null else "REACH THE PORTAL"
-		left_info.text = ""
-		if boss_brain != null:
-			# e.g. "Boss: Minimax+αβ → attack | nodes 120, pruned 64"
-			#      "Search: A* | Nodes: 34 | 0.4 ms | Aggression: HIGH"
-			right_info.text = "Boss: %s | Aggression %.2f" % [boss_brain.stats_text(), boss_brain.aggression]
-		elif hud_planner != null:
-			right_info.text = hud_planner.hud_text()          # e.g. "Search: A* | Nodes: 34 | 0.4 ms"
-		else:
-			right_info.text = ""
-		stage_label.text = "%02d / %02d" % [planet_index + 1, PLANETS.size()]
-		stage_subtitle.text = "BOSS DUEL" if segment == "boss" else "EXPLORATION"
-		if duel:
-			target_label.text = ""
-		else:
-			target_label.text = "PORTAL %d m →" % maxi(0, roundi(PORTAL_X - player.position.x))
+		target_label.text = "PORTAL %d m →" % maxi(0, roundi(PORTAL_X - player.position.x))
 	left_fill.size.x = 324.0 * clampf(player.health / player.max_health, 0.0, 1.0)
 	right_bar_back.visible = duel
 	right_fill.visible = duel
@@ -830,8 +815,6 @@ func _refresh_ui() -> void:
 	oxygen_fill.visible = exploring
 	oxygen_fill.size.x = 221.0 * clampf(oxygen / 100.0, 0.0, 1.0)
 	oxygen_fill.color = Color("ff6f6f") if oxygen < 20.0 else Color("5fd0ff")
-	if mode != "pva":
-		warning_label.text = ""
 	meter_fill.size.x = 140.0 * clampf(pulse_charge / 100.0, 0.0, 1.0)
 	meter_fill.color = Color("fbe789") if pulse_charge >= 70.0 else Color("44edcf")
 
@@ -877,36 +860,29 @@ func _build_frontend() -> void:
 	ui_layer.add_child(campaign_screen)
 	campaign_screen.connect("action_requested", Callable(self, "_on_campaign_action"))
 	campaign_screen.visible = false
-	ai_screen = AiScreenScript.new() as Control
-	ui_layer.add_child(ai_screen)
-	ai_screen.call("configure", PLANETS)
-	ai_screen.connect("start_requested", Callable(self, "start_ai_match"))
-	ai_screen.connect("batch_requested", Callable(self, "start_ai_batch"))
-	ai_screen.connect("home_requested", Callable(self, "_show_home"))
-	ai_screen.visible = false
-
+	ai_match = AiMatchScript.new()
+	add_child(ai_match)
+	ai_match.init(self)
 
 func _set_screen(next_phase: String) -> void:
 	phase = next_phase
 	home_screen.visible = next_phase == "home"
 	map_screen.visible = next_phase == "map"
 	campaign_screen.visible = next_phase in ["briefing", "clear", "upgrade", "defeat"]
-	ai_screen.visible = next_phase in ["ai_setup", "ai_result"]
-	world_layer.visible = next_phase in ["fight", "paused"]
-	hud_root.visible = next_phase in ["fight", "paused"]
+	world_layer.visible = next_phase in ["fight", "paused", "ai_paused", "ai_judging"]
+	hud_root.visible = mode == "pva" and next_phase in ["fight", "paused"]
+	ai_match.on_phase(next_phase)
 	for widget in pulse_widgets:
 		widget.visible = mode == "pva"
-	if mode == "ava":
-		controls_label.text = "AI vs AI     P SHOW PATHS     ESC STOP MATCH"
-	else:
-		controls_label.text = "A/D MOVE   SPACE JUMP   J HIT   K BLAST   SHIFT DASH   E PULSE   P PATHS   F STATES   ESC PAUSE"
+	controls_label.text = "A/D MOVE   SPACE JUMP   J HIT   K BLAST   SHIFT DASH   E PULSE   P PATHS   F STATES   ESC PAUSE"
 	if next_phase != "paused":
 		modal_shade.visible = false
 
 
 func _show_home() -> void:
+	if mode == "ava":
+		ai_match.deactivate()
 	mode = "pva"
-	batch_total = 0
 	Engine.time_scale = 1.0
 	_set_screen("home")
 	home_screen.call("close_controls")
@@ -1014,7 +990,7 @@ func _physics_process(delta: float) -> void:
 		return
 	hazard_clock += delta
 	if mode == "ava":
-		_update_ai_match(delta)
+		ai_match.update(delta)
 	else:
 		_update_player_vs_ai(delta)
 	if phase != "fight":
@@ -1053,7 +1029,7 @@ func _update_player_vs_ai(delta: float) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
-	if event.keycode == KEY_P and phase == "fight":
+	if event.keycode == KEY_P and phase in ["fight", "ai_paused"]:
 		show_paths = not show_paths
 		queue_redraw()
 		return
@@ -1063,12 +1039,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			if is_instance_valid(alien):
 				alien.get("state_label").visible = show_states
 		return
+	if mode == "ava":
+		ai_match.handle_key(event.keycode)          # Esc pause, Q quit, 1/2/4 speed
+		get_viewport().set_input_as_handled()
+		return
 	if event.keycode == KEY_ESCAPE:
-		if mode == "ava" and phase in ["fight", "ai_result"]:
-			stop_ai_match()
-		elif phase == "ai_setup":
-			_show_home()
-		elif phase == "fight":
+		if phase == "fight":
 			_show_pause()
 		elif phase == "paused":
 			_resume_fight()
@@ -1082,7 +1058,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			home_screen.call("close_controls")
 		get_viewport().set_input_as_handled()
 		return
-	if phase != "fight" or mode == "ava":
+	if phase != "fight":
 		return
 	match event.keycode:
 		KEY_SPACE, KEY_W, KEY_UP:
@@ -1295,22 +1271,37 @@ func _on_strike(fighter: SpaceFighter, kind: String) -> void:
 	if kind == "punch":
 		play_sound("throw")
 		_burst(fighter.position + Vector2(fighter.facing * 38, -8), fighter == player)
-		var targets: Array[SpaceFighter] = []
-		if fighter == player:
-			targets = _living_enemies()
-		else:
-			targets.append(player)
-		for target in targets:
+		for target in _targets_of(fighter):
 			var dx: float = target.position.x - fighter.position.x
 			if absf(dx) < 82.0 + maxf(0.0, target.hit_radius - 34.0) and absf(target.position.y - fighter.position.y) < 64.0 + maxf(0.0, target.hit_radius - 34.0) and dx * fighter.facing > -10.0:
 				var toward := 1 if dx > 0.0 else -1
-				_deal_damage(target, fighter.punch_damage, toward)
+				_deal_damage(target, fighter.punch_damage, toward, fighter)
 	else:
-		_spawn_projectile(fighter.position + Vector2(fighter.facing * 32, -8), fighter.facing, fighter == player, fighter.punch_damage * 0.78)
+		_spawn_projectile(fighter.position + Vector2(fighter.facing * 32, -8), fighter.facing, fighter == player, fighter.punch_damage * 0.78, fighter)
 		play_sound("magic")
 
 
-func _spawn_projectile(at: Vector2, direction: int, friendly: bool, damage: float) -> void:
+## Who `attacker` can hurt. Player vs AI: the player hits enemies, enemies hit the player.
+## AI vs AI: each fighter hits the other fighter and the aliens; aliens hit both fighters.
+func _targets_of(attacker: SpaceFighter) -> Array[SpaceFighter]:
+	var targets: Array[SpaceFighter] = []
+	if mode != "ava":
+		if attacker == player:
+			targets = _living_enemies()
+		else:
+			targets.append(player)
+		return targets
+	for fighter in [player, rival]:
+		if is_instance_valid(fighter) and fighter != attacker and not fighter.knocked_out_state:
+			targets.append(fighter)
+	if not aliens.has(attacker):
+		for alien in aliens:
+			if is_instance_valid(alien) and not alien.knocked_out_state:
+				targets.append(alien)
+	return targets
+
+
+func _spawn_projectile(at: Vector2, direction: int, friendly: bool, damage: float, owner: SpaceFighter = null) -> void:
 	var projectile := Sprite2D.new()
 	projectile.texture = load(ASSET + "effects/star.png") as Texture2D
 	projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1322,7 +1313,7 @@ func _spawn_projectile(at: Vector2, direction: int, friendly: bool, damage: floa
 	var projectile_speed := 640.0 if friendly else (525.0 + planet_index * 18.0 if segment == "boss" else 525.0)
 	if mode == "ava":
 		projectile_speed = 600.0    # same speed for both AIs
-	projectiles.append({"node": projectile, "speed": direction * projectile_speed, "friendly": friendly, "damage": damage, "life": 2.2})
+	projectiles.append({"node": projectile, "speed": direction * projectile_speed, "friendly": friendly, "damage": damage, "life": 2.2, "owner": owner})
 
 
 func _update_projectiles(delta: float) -> void:
@@ -1332,14 +1323,17 @@ func _update_projectiles(delta: float) -> void:
 		item["life"] = float(item["life"]) - delta
 		projectile.position.x += float(item["speed"]) * delta
 		var impact := false
+		var owner = item["owner"] if is_instance_valid(item["owner"]) else null
 		var targets: Array[SpaceFighter] = []
-		if bool(item["friendly"]):
+		if mode == "ava" and owner != null:
+			targets = _targets_of(owner)
+		elif bool(item["friendly"]):
 			targets = _living_enemies()
 		else:
 			targets.append(player)
 		for target in targets:
 			if projectile.position.distance_to(target.position) < target.hit_radius:
-				_deal_damage(target, float(item["damage"]), 1 if float(item["speed"]) > 0.0 else -1)
+				_deal_damage(target, float(item["damage"]), 1 if float(item["speed"]) > 0.0 else -1, owner)
 				_burst(projectile.position, bool(item["friendly"]))
 				impact = true
 				break
@@ -1368,17 +1362,14 @@ func _burst(at: Vector2, friendly: bool) -> void:
 	tween.finished.connect(burst.queue_free)
 
 
-func _deal_damage(target: SpaceFighter, amount: float, direction: int) -> void:
+func _deal_damage(target: SpaceFighter, amount: float, direction: int, attacker: SpaceFighter = null) -> void:
 	var before := target.health
 	target.take_damage(amount, direction)
 	var dealt := before - target.health
 	if dealt > 0.0:
 		# Hitting someone gives energy to the attacker.
 		if mode == "ava":
-			var attacker := rival if target == player else player
-			attacker.energy = minf(100.0, attacker.energy + 12.0)
-			var brain: FighterBrain = blue_brain if attacker == player else red_brain
-			brain.damage_dealt += dealt
+			ai_match.on_damage(attacker, target, dealt)
 		elif target != player:
 			pulse_charge = minf(100.0, pulse_charge + 15.0)
 		else:
@@ -1446,41 +1437,33 @@ func _update_pickups() -> void:
 # ---------------------------------------------------------------------------
 ## Energy of a fighter (the human player uses the Orbit Pulse meter).
 func energy_of(fighter: SpaceFighter) -> float:
-	return pulse_charge if mode == "pva" and fighter == player else fighter.energy
+	return pulse_charge if fighter == player else fighter.energy
 
 
 ## Called when Minimax / MCTS chooses "special". Returns false if not possible.
 func perform_special(fighter: SpaceFighter, foe: SpaceFighter) -> bool:
 	if fighter.special_cooldown > 0.0 or energy_of(fighter) < 50.0:
 		return false
-	if mode == "pva":
-		# The boss uses its planet's telegraphed special move.
-		if not boss_special.is_empty() or absf(foe.position.x - fighter.position.x) > 760.0:
-			return false
-		fighter.energy -= 50.0
-		fighter.special_cooldown = 6.0
-		_begin_boss_special()
-		return true
-	# AI vs AI special: a 3-shot volley.
+	# The boss uses its planet's telegraphed special move.
+	if not boss_special.is_empty() or absf(foe.position.x - fighter.position.x) > 760.0:
+		return false
 	fighter.energy -= 50.0
-	fighter.special_cooldown = 4.0
-	var toward := 1 if foe.position.x >= fighter.position.x else -1
-	fighter.facing = toward
-	for lane in [-30.0, -8.0, 14.0]:
-		_spawn_projectile(fighter.position + Vector2(toward * 40.0, lane), toward, fighter == player, fighter.punch_damage)
-	play_sound("magic")
+	fighter.special_cooldown = 6.0
+	_begin_boss_special()
 	return true
 
 
 ## Called after every path search (fighters and aliens): updates the HUD and the P-key drawing.
 func record_search(planner) -> void:
+	if mode == "ava":
+		ai_match.alien_searches += 1               # alien patrols in AI vs AI
 	hud_planner = planner
 	if show_paths:
 		queue_redraw()
 
 
 ## Damage the player took in the last few seconds (fuzzy logic input).
-func recent_damage_taken() -> float:
+func recent_damage_taken(_fighter = null) -> float:
 	var now := Time.get_ticks_msec() / 1000.0
 	while not recent_hits.is_empty() and now - float(recent_hits[0][0]) > RECENT_DAMAGE_TIME:
 		recent_hits.pop_front()
@@ -1602,195 +1585,25 @@ func _place_level_items(spots: Dictionary) -> void:
 
 
 # ---------------------------------------------------------------------------
-# AI vs AI mode
+# AI vs AI mode: everything is in scenes/ai_vs_ai_mode/ai_vs_ai_match.gd
 # ---------------------------------------------------------------------------
 func open_ai_setup() -> void:
-	mode = "ava"
-	batch_total = 0
-	Engine.time_scale = 1.0
-	_set_screen("ai_setup")
-	ai_screen.call("show_setup")
-	ai_screen.call("set_backend", AIClient.is_backend_available)
-	AIClient.check_health(func(result: Dictionary) -> void:
-		ai_screen.call("set_backend", bool(result.get("success", false)))
-	)
+	ai_match.open_setup()
 	play_sound("select")
-
-
-func start_ai_match(config: Dictionary) -> void:
-	ai_config = config
-	batch_total = 0
-	batch_results.clear()
-	Engine.time_scale = 1.0
-	_begin_ai_match()
-
-
-## "Run 10 matches": plays `count` matches back to back at BATCH_SPEED.
-func start_ai_batch(config: Dictionary, count: int) -> void:
-	ai_config = config
-	batch_total = count
-	batch_results.clear()
-	Engine.time_scale = BATCH_SPEED
-	_begin_ai_match()
-
-
-func _begin_ai_match() -> void:
-	mode = "ava"
-	planet_index = int(ai_config.get("planet", 0))
-	_clear_level()
-	segment = "boss"
-	_set_screen("fight")
-	_build_boss_arena()
-	var gravity := float(PLANETS[planet_index]["gravity"])
-	player = _make_ai_fighter("purple", Color(0.62, 0.8, 1.0), "AI 1", BLUE, Vector2(210, 585), 1, gravity)
-	rival = _make_ai_fighter("pink", Color(1.0, 0.62, 0.62), "AI 2", RED, Vector2(BOSS_WIDTH - 210, 585), -1, gravity)
-	blue_brain = BrainScript.new(str(ai_config["blue_search"]), str(ai_config["blue_decision"]))
-	red_brain = BrainScript.new(str(ai_config["red_search"]), str(ai_config["red_decision"]))
-	match_time = 0.0
-	ui_timer = 0.0
-	_announce("AI 1  vs  AI 2  •  FIGHT!", 1.5)
-	queue_redraw()
-	_refresh_ui()
-
-
-func _make_ai_fighter(color_name: String, tint: Color, tag: String, tag_color: Color, at: Vector2, facing: int, gravity: float) -> SpaceFighter:
-	var fighter := FighterScript.new() as SpaceFighter
-	fighter.configure(self, false, color_name, AI_HEALTH)
-	fighter.punch_damage = 10.0
-	fighter.move_speed = 250.0
-	fighter.gravity_scale = gravity
-	fighter.position = at
-	fighter.facing = facing
-	fighter.strike_requested.connect(_on_strike)
-	fighter.knocked_out.connect(_on_knockout)
-	world_layer.add_child(fighter)
-	fighter.sprite.modulate = tint
-	var label := _label(fighter, tag, Vector2(-24, -84), Vector2(48, 22), 16, tag_color)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	return fighter
-
-
-func _update_ai_match(delta: float) -> void:
-	match_time += delta
-	var middle := (player.position.x + rival.position.x) * 0.5
-	camera.position = camera.position.lerp(Vector2(clampf(middle, 640.0, BOSS_WIDTH - 640.0), 360.0), minf(1.0, delta * 3.0))
-	blue_brain.update(delta, player, rival, self)
-	red_brain.update(delta, rival, player, self)
-	if match_time >= MATCH_SECONDS:
-		_end_ai_match()
-
-
-## Ends the match (knockout or time limit) and shows the result.
-func _end_ai_match() -> void:
-	if phase != "fight" or mode != "ava" or blue_brain == null:
-		return
-	blue_brain.active = false
-	red_brain.active = false
-	var blue_left := player.health / player.max_health
-	var red_left := rival.health / rival.max_health
-	var winner := "draw"
-	if blue_left > red_left:
-		winner = "blue"
-	elif red_left > blue_left:
-		winner = "red"
-	var result := {
-		"winner": winner,
-		"time": match_time,
-		"knockout": player.knocked_out_state or rival.knocked_out_state,
-		"blue": _ai_stats(blue_brain, blue_left),
-		"red": _ai_stats(red_brain, red_left),
-	}
-	if batch_total > 0:
-		batch_results.append(result)
-		if batch_results.size() < batch_total:
-			call_deferred("_begin_ai_match")      # next match of the batch
-			return
-		Engine.time_scale = 1.0
-		_set_screen("ai_result")
-		_show_batch_result()
-		return
-	_set_screen("ai_result")
-	_show_match_result(result)
-
-
-func _ai_stats(brain: FighterBrain, health_left: float) -> Dictionary:
-	return {
-		"title": brain.title(),
-		"health": health_left * 100.0,
-		"damage": brain.damage_dealt,
-		"searches": brain.planner.searches,
-		"avg_nodes": brain.average_nodes(),
-		"avg_ms": brain.average_time_ms(),
-	}
-
-
-func _show_match_result(result: Dictionary) -> void:
-	var blue: Dictionary = result["blue"]
-	var red: Dictionary = result["red"]
-	var title: String = {"blue": "AI 1 (BLUE) WINS", "red": "AI 2 (RED) WINS", "draw": "DRAW"}[result["winner"]]
-	var how := "knockout" if result["knockout"] else "time limit (more health wins)"
-	ai_screen.call("show_result", title, "Time taken %.1f s  •  %s" % [result["time"], how], [
-		["", "AI 1 (BLUE)", "AI 2 (RED)"],
-		["Algorithms", blue["title"], red["title"]],
-		["Health left", "%d %%" % roundi(blue["health"]), "%d %%" % roundi(red["health"])],
-		["Total damage dealt", "%.0f" % blue["damage"], "%.0f" % red["damage"]],
-		["Searches run", str(blue["searches"]), str(red["searches"])],
-		["Avg nodes expanded", "%.1f" % blue["avg_nodes"], "%.1f" % red["avg_nodes"]],
-		["Avg search time", "%.3f ms" % blue["avg_ms"], "%.3f ms" % red["avg_ms"]],
-	])
-
-
-func _show_batch_result() -> void:
-	var wins := {"blue": 0, "red": 0, "draw": 0}
-	var totals := {"blue": {"damage": 0.0, "nodes": 0.0, "ms": 0.0}, "red": {"damage": 0.0, "nodes": 0.0, "ms": 0.0}}
-	var total_time := 0.0
-	for result in batch_results:
-		wins[result["winner"]] += 1
-		total_time += float(result["time"])
-		for side in ["blue", "red"]:
-			totals[side]["damage"] += float(result[side]["damage"])
-			totals[side]["nodes"] += float(result[side]["avg_nodes"])
-			totals[side]["ms"] += float(result[side]["avg_ms"])
-	var n := float(batch_results.size())
-	var first: Dictionary = batch_results[0]
-	ai_screen.call("show_result", "%d MATCHES:  AI 1  %d  -  %d  AI 2" % [batch_results.size(), wins["blue"], wins["red"]],
-		"Draws %d  •  average match %.1f s" % [wins["draw"], total_time / n], [
-		["", "AI 1 (BLUE)", "AI 2 (RED)"],
-		["Algorithms", first["blue"]["title"], first["red"]["title"]],
-		["Wins", str(wins["blue"]), str(wins["red"])],
-		["Avg damage per match", "%.0f" % (totals["blue"]["damage"] / n), "%.0f" % (totals["red"]["damage"] / n)],
-		["Avg nodes expanded", "%.1f" % (totals["blue"]["nodes"] / n), "%.1f" % (totals["red"]["nodes"] / n)],
-		["Avg search time", "%.3f ms" % (totals["blue"]["ms"] / n), "%.3f ms" % (totals["red"]["ms"] / n)],
-	])
-
-
-## Esc during AI vs AI: stop the match (or the batch) and go back to the setup screen.
-func stop_ai_match() -> void:
-	_clear_level()
-	open_ai_setup()
 
 
 func _on_knockout(fighter: SpaceFighter) -> void:
 	if phase != "fight":
 		return
+	if aliens.has(fighter):
+		_alien_down(fighter)
+		return
 	if mode == "ava":
-		call_deferred("_end_ai_match")
+		ai_match.on_knockout(fighter)
 		return
 	if fighter == player:
 		campaign_screen.call("present", "defeat", PLANETS[planet_index], {"stage_index": planet_index, "stage_count": PLANETS.size()})
 		_set_screen("defeat")
-		return
-	if fighter != rival:
-		aliens.erase(fighter)
-		alien_kills += 1
-		_burst(fighter.position + Vector2(0, -16), true)
-		pulse_charge = minf(100.0, pulse_charge + 18.0)
-		_announce("ALIEN DOWN  •  ENERGY +18", 1.2)
-		var vanish := create_tween()
-		vanish.set_parallel(true)
-		vanish.tween_property(fighter, "scale", Vector2(0.25, 0.25), 0.22)
-		vanish.tween_property(fighter, "modulate:a", 0.0, 0.22)
-		vanish.finished.connect(fighter.queue_free)
 		return
 	if segment != "boss":
 		return
@@ -1808,6 +1621,20 @@ func _on_knockout(fighter: SpaceFighter) -> void:
 			_announce("VICTORY  •  RULES: duel_won → unlock_next_planet", 2.0)
 		_finish_planet()                            # (also the fallback when the server is off)
 	)
+
+
+func _alien_down(fighter: SpaceFighter) -> void:
+	aliens.erase(fighter)
+	_burst(fighter.position + Vector2(0, -16), true)
+	if mode == "pva":
+		alien_kills += 1
+		pulse_charge = minf(100.0, pulse_charge + 18.0)
+		_announce("ALIEN DOWN  •  ENERGY +18", 1.2)
+	var vanish := create_tween()
+	vanish.set_parallel(true)
+	vanish.tween_property(fighter, "scale", Vector2(0.25, 0.25), 0.22)
+	vanish.tween_property(fighter, "modulate:a", 0.0, 0.22)
+	vanish.finished.connect(fighter.queue_free)
 
 
 func _finish_planet() -> void:

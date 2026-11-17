@@ -4,6 +4,7 @@ conditions are true, add its conclusion as a new fact, and repeat until no
 rule adds anything new.
 
 Facts example: {"boss_hp": 0, "player_hp": 40, "oxygen": 15}
+or in AI vs AI: {"my_hp": 25, "enemy_hp": 60} and {"blue_hp": 0, "red_hp": 45, "time_up": False}
 """
 import operator
 
@@ -16,6 +17,13 @@ RULES = [
     ("defeat", [("player_hp", "<=", 0)], "duel_lost"),
     ("low_health", [("player_hp", ">", 0), ("player_hp", "<", 30)], "low_health_warning"),
     ("low_oxygen", [("oxygen", "<", 20)], "oxygen_warning"),
+    # AI vs AI: each fighter asks every second with its own my_hp / enemy_hp (percent)
+    ("defensive", [("my_hp", "<", 30)], "defensive_mode"),        # prefer block / dodge / move_away
+    ("finisher", [("enemy_hp", "<", 20)], "finisher_mode"),       # prefer attack / special
+    # AI vs AI: the match referee
+    ("blue_down", [("blue_hp", "<=", 0)], "red_wins"),
+    ("red_down", [("red_hp", "<=", 0)], "blue_wins"),
+    ("time_up", [("time_up", "==", True)], "compare_hp"),         # then the higher HP % wins
 ]
 
 

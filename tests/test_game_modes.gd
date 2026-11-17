@@ -69,39 +69,29 @@ func _ready() -> void:
 		await get_tree().process_frame
 	_check(game.phase == "clear", "Defeating the boss clears the planet")
 
-	# ---- AI vs AI -----------------------------------------------------------
+	# ---- AI vs AI (full check: tests/test_ai_vs_ai.gd) --------------------
 	game._show_home()
 	game.open_ai_setup()
-	_check(game.phase == "ai_setup" and game.ai_screen.visible, "AI vs AI opens the setup screen")
-	var config := {"blue_search": "astar", "blue_decision": "minimax_ab", "red_search": "bidirectional", "red_decision": "mcts", "planet": 3}
-	game.start_ai_match(config)
-	_check(game.phase == "fight" and game.mode == "ava" and game.blue_brain != null and game.red_brain != null, "AI vs AI match starts")
-	_check("A* + Minimax+αβ" in game.left_name.text and "Bidirectional + MCTS" in game.right_name.text, "HUD shows both AIs' algorithms")
-	# Let a full match play at high speed; it must end by knockout or time limit.
-	Engine.time_scale = 6.0
-	var start_ms := Time.get_ticks_msec()
-	while game.phase == "fight" and Time.get_ticks_msec() - start_ms < 30000:
-		await get_tree().process_frame
-	Engine.time_scale = 1.0
-	_check(game.phase == "ai_result" and game.ai_screen.result_panel.visible, "Match finishes and shows the result panel")
-	_check(game.ai_screen.result_title.text != "", "Result: %s" % game.ai_screen.result_title.text)
-	print("  blue: searches %d, avg nodes %.1f, damage %.0f  |  red: searches %d, avg nodes %.1f, damage %.0f" % [
-		game.blue_brain.planner.searches, game.blue_brain.average_nodes(), game.blue_brain.damage_dealt,
-		game.red_brain.planner.searches, game.red_brain.average_nodes(), game.red_brain.damage_dealt])
-	print("  decisions came from: %s" % game.blue_brain.source)
-	_check(game.blue_brain.planner.searches > 10 and game.red_brain.planner.searches > 10, "Both AIs kept searching during the match")
-
-	# "Run N matches": force quick knockouts to step through a 2-match batch.
-	game.start_ai_batch(config, 2)
-	for match_number in 2:
-		await get_tree().process_frame
-		game.rival.take_damage(5000.0, 1)
-		await get_tree().process_frame
-		await get_tree().process_frame
-	_check(game.phase == "ai_result" and game.batch_results.size() == 2 and "AI 1  2  -  0  AI 2" in game.ai_screen.result_title.text, "Batch run shows the win table")
-	_check(Engine.time_scale == 1.0, "Speed is reset after the batch")
+	var ai = game.ai_match
+	_check(game.phase == "ai_setup" and ai.setup.visible, "AI vs AI opens the setup screen")
+	var config := {"blue_search": "astar", "blue_decision": "minimax_ab", "red_search": "rotate", "red_decision": "mcts", "planet": 3}
+	ai.start_match(config)
+	_check(game.phase == "fight" and game.mode == "ava" and ai.hud.visible and not game.hud_root.visible, "AI vs AI match starts with its own HUD")
+	await _run_seconds(2.5)
+	_check(ai.blue.planner.searches > 0 and ai.red.planner.searches > 0, "Both AIs are searching (blue A*, red rotating)")
+	_check("Search:" in ai.panels["blue"]["text"].text and "Decision:" in ai.panels["red"]["text"].text, "Panels show search and decision")
+	game._unhandled_key_input(_key(KEY_2))
+	_check(Engine.time_scale == 2.0, "Key 2 = speed 2x")
 	game._unhandled_key_input(_key(KEY_ESCAPE))
-	_check(game.phase == "ai_setup", "Esc returns to the AI vs AI setup")
+	_check(game.phase == "ai_paused" and ai.pause_label.visible, "Esc pauses the match")
+	var paused_time: float = ai.time
+	await _run_seconds(0.3)
+	_check(is_equal_approx(ai.time, paused_time), "Time stops while paused")
+	game._unhandled_key_input(_key(KEY_ESCAPE))
+	_check(game.phase == "fight", "Esc resumes")
+	game._unhandled_key_input(_key(KEY_ESCAPE))
+	game._unhandled_key_input(_key(KEY_Q))
+	_check(game.phase == "ai_setup" and Engine.time_scale == 1.0, "Q (while paused) quits to the setup screen")
 
 	print("Game modes: %s" % ("PASS" if failures == 0 else "%d FAILURES" % failures))
 	game.queue_free()

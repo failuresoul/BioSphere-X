@@ -26,6 +26,19 @@ def test_warnings():
     assert forward_chain({"player_hp": 90, "oxygen": 50})["new_facts"] == {}
 
 
+def test_ai_vs_ai_fighter_modes():
+    assert forward_chain({"my_hp": 25, "enemy_hp": 60})["new_facts"] == {"defensive_mode": True}
+    assert forward_chain({"my_hp": 80, "enemy_hp": 15})["new_facts"] == {"finisher_mode": True}
+    assert forward_chain({"my_hp": 80, "enemy_hp": 60})["new_facts"] == {}
+
+
+def test_ai_vs_ai_referee():
+    assert forward_chain({"blue_hp": 0, "red_hp": 45})["new_facts"] == {"red_wins": True}
+    assert forward_chain({"blue_hp": 30, "red_hp": 0})["new_facts"] == {"blue_wins": True}
+    result = forward_chain({"blue_hp": 40, "red_hp": 55, "time_up": True})
+    assert result["new_facts"] == {"compare_hp": True} and result["fired_rules"] == ["time_up"]
+
+
 def test_logic_endpoint():
     response = TestClient(app).post("/logic/infer", json={"facts": {"boss_hp": 0, "player_hp": 1}})
     assert response.status_code == 200
