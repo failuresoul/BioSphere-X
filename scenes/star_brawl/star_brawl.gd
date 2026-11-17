@@ -23,6 +23,10 @@ const DOME_RADIUS := 90.0
 const SUFFOCATION := 4.0           # health lost per second when oxygen is 0
 const RECENT_DAMAGE_TIME := 5.0    # "recent damage" for fuzzy logic = last 5 seconds
 
+## Suit modes (Q key): ATTACK hits 20% harder, GUARD takes 35% less damage,
+## HEAL turns 15 Orbit Pulse energy into 7 health every 3 seconds.
+const SUIT_MODES := ["ATTACK", "GUARD", "HEAL"]
+
 ## Path colours (P key).
 const BLUE := Color("5fb4ff")
 const RED := Color("ff6f7d")
@@ -80,6 +84,8 @@ var boss_special: Dictionary = {}
 var boss_impact: Dictionary = {}
 var boss_impact_timer := 0.0
 var boss_base_speed := 220.0
+var suit_mode := "ATTACK"             # Q key cycles ATTACK / GUARD / HEAL
+var suit_timer := 3.0
 var oxygen := 100.0                   # 0-100
 var dome_center := Vector2.INF        # safe dome position (placed by the CSP solver)
 var level_item_spots: Dictionary = {} # where the CSP put each item this level
@@ -787,7 +793,7 @@ func _refresh_ui() -> void:
 	var duel := segment == "boss" and is_instance_valid(rival)
 	if mode == "ava":
 		return                                      # AI vs AI uses its own HUD
-	left_name.text = str(PilotAvatarScript.PILOTS[selected_pilot]["name"])
+	left_name.text = "%s  •  %s SUIT" % [PilotAvatarScript.PILOTS[selected_pilot]["name"], suit_mode]
 	right_name.text = "%s  •  %s" % [planet["rival"], boss_brain.title()] if boss_brain != null else "REACH THE PORTAL"
 	left_info.text = ""
 	if boss_brain != null:
@@ -874,7 +880,7 @@ func _set_screen(next_phase: String) -> void:
 	ai_match.on_phase(next_phase)
 	for widget in pulse_widgets:
 		widget.visible = mode == "pva"
-	controls_label.text = "A/D MOVE   SPACE JUMP   J HIT   K BLAST   SHIFT DASH   E PULSE   P PATHS   F STATES   ESC PAUSE"
+	controls_label.text = "A/D MOVE  SPACE JUMP  J HIT  K BLAST  SHIFT DASH  E PULSE  Q SUIT  P PATHS  F STATES  ESC PAUSE"
 	if next_phase != "paused":
 		modal_shade.visible = false
 
@@ -1011,6 +1017,7 @@ func _update_player_vs_ai(delta: float) -> void:
 	var move_right := Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)
 	var move_left := Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)
 	player.desired_direction = float(move_right) - float(move_left)
+	_update_suit(delta)
 	_update_warnings(delta)
 	if segment != "boss":
 		_update_aliens(delta)
@@ -1071,6 +1078,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			player.dash()
 		KEY_E:
 			_orbit_pulse()
+		KEY_Q:
+			_cycle_suit_mode()
 
 
 func _update_boss_special(delta: float) -> void:
@@ -1363,6 +1372,11 @@ func _burst(at: Vector2, friendly: bool) -> void:
 
 
 func _deal_damage(target: SpaceFighter, amount: float, direction: int, attacker: SpaceFighter = null) -> void:
+	if mode == "pva":
+		if attacker == player and suit_mode == "ATTACK":
+			amount *= 1.2
+		elif target == player and suit_mode == "GUARD":
+			amount *= 0.65
 	var before := target.health
 	target.take_damage(amount, direction)
 	var dealt := before - target.health
@@ -1621,6 +1635,28 @@ func _on_knockout(fighter: SpaceFighter) -> void:
 			_announce("VICTORY  •  RULES: duel_won → unlock_next_planet", 2.0)
 		_finish_planet()                            # (also the fallback when the server is off)
 	)
+
+
+## Q key: ATTACK -> GUARD -> HEAL -> ATTACK ...
+func _cycle_suit_mode() -> void:
+	suit_mode = SUIT_MODES[(SUIT_MODES.find(suit_mode) + 1) % SUIT_MODES.size()]
+	suit_timer = 3.0
+	_announce("SUIT MODE: %s" % suit_mode, 1.4)
+	_refresh_ui()
+
+
+## HEAL suit: every 3 s, 15 Orbit Pulse energy -> +7 health.
+func _update_suit(delta: float) -> void:
+	if suit_mode != "HEAL":
+		return
+	suit_timer -= delta
+	if suit_timer > 0.0:
+		return
+	suit_timer = 3.0
+	if pulse_charge >= 15.0 and player.health < player.max_health:
+		pulse_charge -= 15.0
+		player.health = minf(player.max_health, player.health + 7.0)
+		_announce("SUIT REPAIR  •  HEALTH +7", 1.2)
 
 
 func _alien_down(fighter: SpaceFighter) -> void:

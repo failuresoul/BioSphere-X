@@ -121,7 +121,7 @@ func _build_controls() -> void:
 	menu_scrim.add_child(controls_panel)
 	var heading := _panel_text("PILOT CONTROLS", Vector2(36, 32), Vector2(540, 52), 36, Color("e9fbff"))
 	controls_panel.add_child(heading)
-	var body := _panel_text("A / D or arrows       Move through the arena\nSpace or W              Double jump and stomp\nJ                                 Close strike\nK                                Star blaster\nShift                          Dash past traps\nE                                Orbit Pulse at 70 energy\nP                                Show / hide AI search paths\nEsc (AI vs AI)          Stop the match\nEsc                            Pause the fight", Vector2(53, 103), Vector2(520, 313), 20, Color("cce0f4"))
+	var body := _panel_text("A / D or arrows       Move through the arena\nSpace or W              Double jump and stomp\nJ                                 Close strike\nK                                Star blaster\nShift                          Dash past traps\nE                                Orbit Pulse at 70 energy\nQ                               Suit mode: attack / guard / heal\nF                                Show / hide alien FSM states\nP                                Show / hide AI search paths\nEsc (AI vs AI)          Stop the match\nEsc                            Pause the fight", Vector2(53, 96), Vector2(520, 320), 18, Color("cce0f4"))
 	controls_panel.add_child(body)
 	var close_button := _button("BACK TO HOME", Vector2(178, 420), Vector2(254, 55), Color("12637d"), Color("71e9f1"))
 	close_button.reparent(controls_panel)
