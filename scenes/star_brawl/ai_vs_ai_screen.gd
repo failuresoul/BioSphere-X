@@ -7,7 +7,7 @@ signal batch_requested(config: Dictionary, count: int)
 signal home_requested
 
 const Pathfinder = preload("res://scripts/utils/modular_pathfinder.gd")
-const DECISIONS := ["minimax", "mcts"]
+const DECISIONS := ["minimax_ab", "minimax", "mcts"]
 const BLUE := Color("5fb4ff")
 const RED := Color("ff6f7d")
 
@@ -56,7 +56,7 @@ func _build_setup() -> void:
 	_side(Vector2(150, 175), "AI 1  (BLUE)", BLUE, "blue")
 	_side(Vector2(690, 175), "AI 2  (RED)", RED, "red")
 	(dropdowns["red_search"] as OptionButton).select(Pathfinder.ORDER.find("dfs"))
-	(dropdowns["red_decision"] as OptionButton).select(1)
+	(dropdowns["red_decision"] as OptionButton).select(2)       # MCTS
 	_label(setup_panel, "ARENA / PLANET", Vector2(390, 445), Vector2(500, 28), 18, Color("e0f9ff"), true)
 	dropdowns["planet"] = _dropdown(setup_panel, Vector2(440, 478), [])
 	backend_label = _label(setup_panel, "", Vector2(0, 535), Vector2(1280, 26), 16, Color("f6da88"), true)
@@ -79,7 +79,7 @@ func _side(at: Vector2, title: String, color: Color, key: String) -> void:
 	dropdowns[key + "_search"] = _dropdown(panel, Vector2(40, 94), names)
 	(dropdowns[key + "_search"] as OptionButton).select(Pathfinder.ORDER.find("astar"))
 	_label(panel, "Decision algorithm (combat)", Vector2(40, 146), Vector2(360, 24), 16, Color("cce0f4"))
-	dropdowns[key + "_decision"] = _dropdown(panel, Vector2(40, 174), ["Minimax", "MCTS"])
+	dropdowns[key + "_decision"] = _dropdown(panel, Vector2(40, 174), ["Minimax + alpha-beta", "Minimax", "MCTS"])
 
 
 ## The choices on the setup screen as a dictionary.

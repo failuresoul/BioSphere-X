@@ -1,91 +1,105 @@
 """
-Simple combat state shared by Minimax and MCTS.
+Combat state shared by Minimax and MCTS.
 
-The fight is modelled as a turn-based two-player game:
-  "me"    = the AI that is choosing an action (MAX player)
-  "enemy" = its opponent                       (MIN player)
+The fight is a turn-based two-player game:
+  BOSS   = the AI that is choosing a move (MAX player)
+  PLAYER = its opponent                   (MIN player)
+(In AI vs AI mode the fighter that is thinking plays the "boss" role.)
 
-State variables: health, energy and special-move cooldown for both sides,
-the distance between them, and a short-lived guard flag ("block"/"dodge").
+State: both health bars, the distance between them, both energy bars and
+both special-move cooldowns. Actions (the same for both sides):
+  attack, block, dodge, move_closer, move_away, special
 """
 from dataclasses import dataclass, replace
 
 ACTIONS = ["attack", "block", "dodge", "move_closer", "move_away", "special"]
 
-MELEE_RANGE = 120.0     # punch range (pixels)
-BLAST_RANGE = 450.0     # blaster range (pixels)
-SPECIAL_RANGE = 300.0   # special move range (pixels)
-SPECIAL_COST = 50.0     # energy needed for a special move
+# Simple damage rules
+MELEE_RANGE = 120.0      # attack up close: 10 damage (a punch)
+BLAST_RANGE = 450.0      # attack from further away: 6 damage (a shot); beyond this it misses
+SPECIAL_RANGE = 300.0    # special: 22 damage, costs 50 energy, then 3 turns cooldown
+SPECIAL_COST = 50.0
+BLOCK_FACTOR = 0.4       # a blocked hit only does 40% damage
+GOOD_DISTANCE = 120.0    # the boss likes to stay within punching distance
 
 
 @dataclass(frozen=True)
 class CombatState:
-    my_hp: float = 100.0
-    enemy_hp: float = 100.0
+    boss_hp: float = 100.0
+    player_hp: float = 100.0
     distance: float = 300.0
-    my_energy: float = 50.0
-    enemy_energy: float = 50.0
-    my_cooldown: int = 0         # turns until "special" is ready again
-    enemy_cooldown: int = 0
-    my_guard: str = ""           # "", "block" or "dodge"
-    enemy_guard: str = ""
-    my_turn: bool = True         # True = "me" moves next
+    boss_energy: float = 50.0
+    player_energy: float = 50.0
+    boss_cooldown: int = 0        # turns until the boss can use "special" again
+    player_cooldown: int = 0
+    boss_guard: str = ""          # "", "block" or "dodge" (lasts until the boss's next turn)
+    player_guard: str = ""
+    boss_turn: bool = True        # True = the boss moves next
 
     def is_terminal(self) -> bool:
-        return self.my_hp <= 0 or self.enemy_hp <= 0
+        return self.boss_hp <= 0 or self.player_hp <= 0
 
     def legal_actions(self) -> list:
-        """Actions for whoever moves next. Special needs energy and no cooldown."""
-        energy, cooldown = (self.my_energy, self.my_cooldown) if self.my_turn else (self.enemy_energy, self.enemy_cooldown)
+        """Moves for whoever is next. "special" needs 50 energy and no cooldown."""
+        if self.boss_turn:
+            energy, cooldown = self.boss_energy, self.boss_cooldown
+        else:
+            energy, cooldown = self.player_energy, self.player_cooldown
         return [a for a in ACTIONS if a != "special" or (energy >= SPECIAL_COST and cooldown == 0)]
 
-    def flipped(self) -> "CombatState":
-        """Same state seen from the other fighter's point of view."""
-        return CombatState(self.enemy_hp, self.my_hp, self.distance, self.enemy_energy, self.my_energy,
-                           self.enemy_cooldown, self.my_cooldown, self.enemy_guard, self.my_guard, not self.my_turn)
+    def swapped(self) -> "CombatState":
+        """The same state with the two fighters' roles swapped."""
+        return CombatState(self.player_hp, self.boss_hp, self.distance, self.player_energy, self.boss_energy,
+                           self.player_cooldown, self.boss_cooldown, self.player_guard, self.boss_guard,
+                           not self.boss_turn)
 
-    def apply(self, action: str) -> "CombatState":
-        """Returns the next state after the player to move performs `action`."""
-        if not self.my_turn:
-            # Let the enemy act by flipping the view, acting as "me", and flipping back.
-            return self.flipped().apply(action).flipped()
+    def apply_action(self, action: str) -> "CombatState":
+        """Returns the next state after the fighter whose turn it is does `action`."""
+        if not self.boss_turn:
+            # The player uses exactly the same rules: swap roles, act, swap back.
+            return self.swapped().apply_action(action).swapped()
 
-        s = replace(self, my_guard="", my_cooldown=max(0, self.my_cooldown - 1))
+        # From here on the BOSS acts.
+        s = replace(self, boss_guard="", boss_cooldown=max(0, self.boss_cooldown - 1))
         damage = 0.0
         if action == "attack":
-            damage = 10.0 if s.distance <= MELEE_RANGE else (6.0 if s.distance <= BLAST_RANGE else 0.0)
-            s = replace(s, my_energy=min(100.0, s.my_energy + 10.0))
+            if s.distance <= MELEE_RANGE:
+                damage = 10.0
+            elif s.distance <= BLAST_RANGE:
+                damage = 6.0
+            s = replace(s, boss_energy=min(100.0, s.boss_energy + 10.0))
         elif action == "special":
             damage = 22.0 if s.distance <= SPECIAL_RANGE else 0.0
-            s = replace(s, my_energy=s.my_energy - SPECIAL_COST, my_cooldown=3)
+            s = replace(s, boss_energy=s.boss_energy - SPECIAL_COST, boss_cooldown=3)
         elif action == "block":
-            s = replace(s, my_guard="block", my_energy=min(100.0, s.my_energy + 5.0))
+            s = replace(s, boss_guard="block", boss_energy=min(100.0, s.boss_energy + 5.0))
         elif action == "dodge":
-            s = replace(s, my_guard="dodge", distance=min(800.0, s.distance + 80.0),
-                        my_energy=max(0.0, s.my_energy - 10.0))
+            s = replace(s, boss_guard="dodge", distance=min(800.0, s.distance + 80.0),
+                        boss_energy=max(0.0, s.boss_energy - 10.0))
         elif action == "move_closer":
-            s = replace(s, distance=max(40.0, s.distance - 100.0), my_energy=min(100.0, s.my_energy + 5.0))
+            s = replace(s, distance=max(40.0, s.distance - 100.0), boss_energy=min(100.0, s.boss_energy + 5.0))
         elif action == "move_away":
-            s = replace(s, distance=min(800.0, s.distance + 100.0), my_energy=min(100.0, s.my_energy + 5.0))
+            s = replace(s, distance=min(800.0, s.distance + 100.0), boss_energy=min(100.0, s.boss_energy + 5.0))
 
-        # The enemy's guard from its last turn reduces (block) or avoids (dodge) the hit.
-        if s.enemy_guard == "block":
-            damage *= 0.4
-        elif s.enemy_guard == "dodge":
+        # The player's guard from its last turn reduces (block) or avoids (dodge) the hit.
+        if s.player_guard == "block":
+            damage *= BLOCK_FACTOR
+        elif s.player_guard == "dodge":
             damage = 0.0
-        return replace(s, enemy_hp=max(0.0, s.enemy_hp - damage), my_turn=False)
+        return replace(s, player_hp=max(0.0, s.player_hp - damage), boss_turn=False)
 
 
 def evaluate(state: CombatState) -> float:
-    """Score from "me"'s point of view: (my_hp - enemy_hp) + small bonuses."""
-    if state.enemy_hp <= 0:
-        return 1000.0
-    if state.my_hp <= 0:
-        return -1000.0
-    score = state.my_hp - state.enemy_hp
-    score += 0.1 * (state.my_energy - state.enemy_energy)       # more energy is good
-    if state.my_cooldown == 0 and state.my_energy >= SPECIAL_COST:
-        score += 3.0                                             # special move is ready
-    if state.distance <= MELEE_RANGE:
-        score += 2.0                                             # pressure the enemy
+    """How good the state is for the BOSS (higher = better):
+    the boss keeps its health, the player loses health, the boss stays at a good distance."""
+    if state.player_hp <= 0:
+        return 1000.0                                   # boss won
+    if state.boss_hp <= 0:
+        return -1000.0                                  # boss lost
+    score = state.boss_hp - state.player_hp             # health difference
+    if state.distance <= GOOD_DISTANCE:
+        score += 5.0                                    # good distance: can punch
+    elif state.distance > BLAST_RANGE:
+        score -= 5.0                                    # too far to hurt the player
+    score += 0.1 * (state.boss_energy - state.player_energy)   # small bonus for more energy
     return score

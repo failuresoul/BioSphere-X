@@ -3,7 +3,7 @@ BioSphere-X AI backend (FastAPI).
 
 Godot sends the current game situation here and gets back an AI answer:
   POST /pathfinding/find -> BFS, DFS, DLS, IDDFS, Bidirectional, Greedy or A* path
-  POST /api/ai/decision  -> Minimax or MCTS picks a combat action
+  POST /adversarial/decide -> Minimax (+ alpha-beta) or MCTS picks the boss's move
   POST /api/ai/fuzzy     -> fuzzy logic picks the boss aggression
   POST /api/ai/csp       -> CSP places health / energy pickups
   POST /api/ai/rules     -> forward chaining derives facts (e.g. duel_won)
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # so "algorithms" can be imported
 
@@ -36,21 +36,19 @@ class PathIn(BaseModel):
 
 
 class StateIn(BaseModel):
-    my_hp: float = 100.0
-    enemy_hp: float = 100.0
-    distance: float = 300.0
-    my_energy: float = 50.0
-    enemy_energy: float = 50.0
-    my_cooldown: int = 0
-    enemy_cooldown: int = 0
+    boss_hp: float = 100.0                # percent
+    player_hp: float = 100.0              # percent
+    distance: float = 300.0               # pixels
+    boss_energy: float = 50.0
+    player_energy: float = 50.0
+    boss_cooldown: int = 0                # turns until "special" is ready
+    player_cooldown: int = 0
 
 
-class DecisionIn(BaseModel):
-    state: StateIn
+class DecideIn(BaseModel):
     algorithm: str = "minimax"            # "minimax" or "mcts"
-    depth: int = Field(default=3, ge=1, le=5)
-    simulations: int = Field(default=200, ge=10, le=2000)
-    alpha_beta: bool = False
+    use_alpha_beta: bool = True           # only used by minimax
+    state: StateIn
 
 
 class FuzzyIn(BaseModel):
@@ -84,14 +82,16 @@ def pathfinding(req: PathIn):
     return find_path(req.algorithm, req.grid, req.start, req.goal)
 
 
-@app.post("/api/ai/decision")
-def decision(req: DecisionIn):
+@app.post("/adversarial/decide")
+def decide(req: DecideIn):
     state = CombatState(**req.state.model_dump())
-    if req.algorithm.lower() == "mcts":
-        result = mcts_decision(state, simulations=req.simulations)
+    if req.algorithm == "mcts":
+        result = mcts_decision(state)
+    elif req.algorithm == "minimax":
+        result = minimax_decision(state, use_alpha_beta=req.use_alpha_beta)
     else:
-        result = minimax_decision(state, depth=req.depth, use_alpha_beta=req.alpha_beta)
-    return {"algorithm": req.algorithm.lower(), **result}
+        raise HTTPException(status_code=400, detail="algorithm must be 'minimax' or 'mcts'")
+    return {"algorithm": req.algorithm, "use_alpha_beta": req.use_alpha_beta and req.algorithm == "minimax", **result}
 
 
 @app.post("/api/ai/fuzzy")

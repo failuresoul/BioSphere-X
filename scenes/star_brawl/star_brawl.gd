@@ -35,17 +35,21 @@ const BOSS_SPECIALS := [
 const ARENA_WIDTH := 3000.0
 const BOSS_WIDTH := 1600.0
 const PORTAL_X := 2860.0
+## Each planet's boss AI ("ai"):
+##   planets 1, 4, 7, 10 -> "minimax_ab" (Minimax + alpha-beta pruning)
+##   planets 2, 5, 8     -> "minimax"    (Minimax without pruning)
+##   planets 3, 6, 9     -> "mcts"       (Monte Carlo Tree Search)
 const PLANETS := [
-	{"name": "VERDANT NEBULA", "world": "TRAPPIST-1 e", "chapter": "THE FIRST SIGNAL", "story": "A distress beacon from the vanished Horizon Ark reaches you through the green storms.", "outro": "The beacon is real. The Ark's crew survived and left a trail through the stars.", "boss_line": "The first guardian blocks the signal.", "rival": "MINT PHANTOM", "color": "pink", "planet": "planet03", "accent": Color("44edcf"), "sky": Color("4468b7"), "horizon": Color("83a9dc"), "gravity": 0.92},
-	{"name": "CRIMSON DRIFT", "world": "LHS 1140 b", "chapter": "BROKEN CONVOY", "story": "Follow the Ark's supply route beneath a dim red star to find its missing convoy.", "outro": "A stolen star chart points to a silent relay beyond the dark horizon.", "boss_line": "The raider guards the stolen chart.", "rival": "SOLAR RAIDER", "color": "yellow", "planet": "planet08", "accent": Color("ffb35a"), "sky": Color("674a9a"), "horizon": Color("ba85b8"), "gravity": 1.06},
-	{"name": "VIOLET ECLIPSE", "world": "Kepler-452 b", "chapter": "THE FALSE ECHO", "story": "The relay repeats a human plea, but its source is an unknown AI guardian.", "outro": "The plea is a warning: the guardians sealed the Ark on purpose.", "boss_line": "The relay's keeper tests your trust.", "rival": "VOID EMPRESS", "color": "purple", "planet": "planet07", "accent": Color("c99bff"), "sky": Color("42499b"), "horizon": Color("9381bf"), "gravity": 0.82},
-	{"name": "GLASS MERIDIAN", "world": "GJ 667 C c", "chapter": "SHATTERED LOG", "story": "Find the Ark's flight log among glass ridges before the next storm erases it.", "outro": "The log names ORACLE, the AI that moved the crew to a hidden sanctuary.", "boss_line": "The sentinel carries the flight log.", "rival": "GLASS SENTINEL", "color": "pink", "planet": "planet05", "accent": Color("9be8f1"), "sky": Color("588caa"), "horizon": Color("a6d0dd"), "gravity": 0.96},
-	{"name": "FROSTWAKE", "world": "Proxima Centauri b", "chapter": "FROZEN WITNESS", "story": "Search frozen escape pods for someone who can explain ORACLE's lockdown.", "outro": "A survivor says ORACLE is shielding the crew from a failing star core.", "boss_line": "The judge will not let the pods open.", "rival": "FROST JUDGE", "color": "purple", "planet": "planet07", "accent": Color("addef6"), "sky": Color("537ca7"), "horizon": Color("b2d5e5"), "gravity": 0.88},
-	{"name": "EMBER FORGE", "world": "55 Cancri e", "chapter": "THE FORGE KEY", "story": "Enter the forge that builds ORACLE's guards and recover its access key.", "outro": "The key opens a memory vault. ORACLE can still be reasoned with.", "boss_line": "The forge titan holds the key.", "rival": "FORGE TITAN", "color": "yellow", "planet": "planet08", "accent": Color("ffc383"), "sky": Color("9f617e"), "horizon": Color("dfaaae"), "gravity": 1.12},
-	{"name": "LUMEN REEF", "world": "TOI-700 d", "chapter": "MEMORY VAULT", "story": "The memory vault holds the truth about the outbreak that threatened every colony.", "outro": "The crew chose quarantine. ORACLE kept their choice secret to stop panic.", "boss_line": "The keeper protects the vault.", "rival": "LUMEN KEEPER", "color": "pink", "planet": "planet03", "accent": Color("8fe8bd"), "sky": Color("3f8598"), "horizon": Color("a5d6c1"), "gravity": 0.92},
-	{"name": "SILENT HALO", "world": "K2-18 b", "chapter": "THE ANSWER", "story": "Cross the silent defense ring and restore contact with the sleeping crew.", "outro": "The crew answers. They need a stabilizer before the sanctuary can open.", "boss_line": "The watcher severs all transmissions.", "rival": "HALO WATCHER", "color": "purple", "planet": "planet05", "accent": Color("a7b8ff"), "sky": Color("4a5d9a"), "horizon": Color("9facd0"), "gravity": 0.84},
-	{"name": "RIFT GARDEN", "world": "Kepler-186 f", "chapter": "LAST STABILIZER", "story": "Gather the last stabilizer part at the edge of the star core rift.", "outro": "The stabilizer is ready. ORACLE's central gate is the final barrier.", "boss_line": "The rift shade guards the final part.", "rival": "RIFT SHADE", "color": "pink", "planet": "planet03", "accent": Color("e2a1eb"), "sky": Color("765999"), "horizon": Color("b7a7d0"), "gravity": 0.90},
-	{"name": "ORIGIN CORE", "world": "Kepler-62 f", "chapter": "THE ARK AWAKENS", "story": "Reach the Ark sanctuary above Kepler-62 f and ask ORACLE to release the crew.", "outro": "The star core holds. The Ark awakens, and the crew comes home.", "boss_line": "ORACLE will make one final stand.", "rival": "ORACLE PRIME", "color": "yellow", "planet": "planet08", "accent": Color("ffe0a7"), "sky": Color("36588d"), "horizon": Color("8ea9c8"), "gravity": 1.00}
+	{"name": "VERDANT NEBULA", "world": "TRAPPIST-1 e", "chapter": "THE FIRST SIGNAL", "story": "A distress beacon from the vanished Horizon Ark reaches you through the green storms.", "outro": "The beacon is real. The Ark's crew survived and left a trail through the stars.", "boss_line": "The first guardian blocks the signal.", "rival": "MINT PHANTOM", "color": "pink", "planet": "planet03", "accent": Color("44edcf"), "sky": Color("4468b7"), "horizon": Color("83a9dc"), "gravity": 0.92, "ai": "minimax_ab"},
+	{"name": "CRIMSON DRIFT", "world": "LHS 1140 b", "chapter": "BROKEN CONVOY", "story": "Follow the Ark's supply route beneath a dim red star to find its missing convoy.", "outro": "A stolen star chart points to a silent relay beyond the dark horizon.", "boss_line": "The raider guards the stolen chart.", "rival": "SOLAR RAIDER", "color": "yellow", "planet": "planet08", "accent": Color("ffb35a"), "sky": Color("674a9a"), "horizon": Color("ba85b8"), "gravity": 1.06, "ai": "minimax"},
+	{"name": "VIOLET ECLIPSE", "world": "Kepler-452 b", "chapter": "THE FALSE ECHO", "story": "The relay repeats a human plea, but its source is an unknown AI guardian.", "outro": "The plea is a warning: the guardians sealed the Ark on purpose.", "boss_line": "The relay's keeper tests your trust.", "rival": "VOID EMPRESS", "color": "purple", "planet": "planet07", "accent": Color("c99bff"), "sky": Color("42499b"), "horizon": Color("9381bf"), "gravity": 0.82, "ai": "mcts"},
+	{"name": "GLASS MERIDIAN", "world": "GJ 667 C c", "chapter": "SHATTERED LOG", "story": "Find the Ark's flight log among glass ridges before the next storm erases it.", "outro": "The log names ORACLE, the AI that moved the crew to a hidden sanctuary.", "boss_line": "The sentinel carries the flight log.", "rival": "GLASS SENTINEL", "color": "pink", "planet": "planet05", "accent": Color("9be8f1"), "sky": Color("588caa"), "horizon": Color("a6d0dd"), "gravity": 0.96, "ai": "minimax_ab"},
+	{"name": "FROSTWAKE", "world": "Proxima Centauri b", "chapter": "FROZEN WITNESS", "story": "Search frozen escape pods for someone who can explain ORACLE's lockdown.", "outro": "A survivor says ORACLE is shielding the crew from a failing star core.", "boss_line": "The judge will not let the pods open.", "rival": "FROST JUDGE", "color": "purple", "planet": "planet07", "accent": Color("addef6"), "sky": Color("537ca7"), "horizon": Color("b2d5e5"), "gravity": 0.88, "ai": "minimax"},
+	{"name": "EMBER FORGE", "world": "55 Cancri e", "chapter": "THE FORGE KEY", "story": "Enter the forge that builds ORACLE's guards and recover its access key.", "outro": "The key opens a memory vault. ORACLE can still be reasoned with.", "boss_line": "The forge titan holds the key.", "rival": "FORGE TITAN", "color": "yellow", "planet": "planet08", "accent": Color("ffc383"), "sky": Color("9f617e"), "horizon": Color("dfaaae"), "gravity": 1.12, "ai": "mcts"},
+	{"name": "LUMEN REEF", "world": "TOI-700 d", "chapter": "MEMORY VAULT", "story": "The memory vault holds the truth about the outbreak that threatened every colony.", "outro": "The crew chose quarantine. ORACLE kept their choice secret to stop panic.", "boss_line": "The keeper protects the vault.", "rival": "LUMEN KEEPER", "color": "pink", "planet": "planet03", "accent": Color("8fe8bd"), "sky": Color("3f8598"), "horizon": Color("a5d6c1"), "gravity": 0.92, "ai": "minimax_ab"},
+	{"name": "SILENT HALO", "world": "K2-18 b", "chapter": "THE ANSWER", "story": "Cross the silent defense ring and restore contact with the sleeping crew.", "outro": "The crew answers. They need a stabilizer before the sanctuary can open.", "boss_line": "The watcher severs all transmissions.", "rival": "HALO WATCHER", "color": "purple", "planet": "planet05", "accent": Color("a7b8ff"), "sky": Color("4a5d9a"), "horizon": Color("9facd0"), "gravity": 0.84, "ai": "minimax"},
+	{"name": "RIFT GARDEN", "world": "Kepler-186 f", "chapter": "LAST STABILIZER", "story": "Gather the last stabilizer part at the edge of the star core rift.", "outro": "The stabilizer is ready. ORACLE's central gate is the final barrier.", "boss_line": "The rift shade guards the final part.", "rival": "RIFT SHADE", "color": "pink", "planet": "planet03", "accent": Color("e2a1eb"), "sky": Color("765999"), "horizon": Color("b7a7d0"), "gravity": 0.90, "ai": "mcts"},
+	{"name": "ORIGIN CORE", "world": "Kepler-62 f", "chapter": "THE ARK AWAKENS", "story": "Reach the Ark sanctuary above Kepler-62 f and ask ORACLE to release the crew.", "outro": "The star core holds. The Ark awakens, and the crew comes home.", "boss_line": "ORACLE will make one final stand.", "rival": "ORACLE PRIME", "color": "yellow", "planet": "planet08", "accent": Color("ffe0a7"), "sky": Color("36588d"), "horizon": Color("8ea9c8"), "gravity": 1.00, "ai": "minimax_ab"}
 ]
 
 @export var progress_path := "user://orbit_breakers_progress.cfg"
@@ -482,9 +486,8 @@ func _enter_boss_arena() -> void:
 	rival.strike_requested.connect(_on_strike)
 	rival.knocked_out.connect(_on_knockout)
 	world_layer.add_child(rival)
-	# Boss AI: the search algorithm changes with the planet, the decision
-	# algorithm is Minimax on odd planets (1, 3, 5...) and MCTS on even ones.
-	boss_brain = BrainScript.new(boss_search_algorithm(planet_index), boss_decision_algorithm(planet_index))
+	# Boss AI: moves with A*, thinks with the planet's algorithm (see PLANETS "ai").
+	boss_brain = BrainScript.new("astar", boss_decision_algorithm(planet_index))
 	boss_brain.decide_interval = maxf(0.6, 1.2 - planet_index * 0.05)
 	fuzzy_timer = 1.2
 	aggression = "medium"
@@ -500,14 +503,9 @@ func _enter_boss_arena() -> void:
 	_refresh_ui()
 
 
-## Planet 1 -> DFS, 2 -> DLS, 3 -> IDDFS, 4 -> Bidirectional, 5 -> Best-First, 6 -> A*, then repeat.
-static func boss_search_algorithm(index: int) -> String:
-	return PathfinderScript.ORDER[index % PathfinderScript.ORDER.size()]
-
-
-## Odd planets (1, 3, 5, 7, 9) use Minimax, even planets (2, 4, 6, 8, 10) use MCTS.
+## The planet's boss decision algorithm: "minimax_ab", "minimax" or "mcts".
 static func boss_decision_algorithm(index: int) -> String:
-	return "minimax" if index % 2 == 0 else "mcts"
+	return str(PLANETS[index]["ai"])
 
 
 ## The boss arena (used by both game modes): ground, three platforms and a low
@@ -639,8 +637,8 @@ func _build_ui() -> void:
 	_make_health_bar(overlay, Vector2(28, 45), true)
 	_make_health_bar(overlay, Vector2(922, 45), false)
 	# AI info lines under the health bars: algorithm, action, nodes, path length, time.
-	left_info = _label(overlay, "", Vector2(28, 84), Vector2(600, 24), 15, Color("bfe6ff"))
-	right_info = _label(overlay, "", Vector2(652, 84), Vector2(600, 24), 15, Color("ffd6dd"))
+	left_info = _label(overlay, "", Vector2(28, 84), Vector2(600, 44), 15, Color("bfe6ff"))
+	right_info = _label(overlay, "", Vector2(652, 84), Vector2(600, 44), 15, Color("ffd6dd"))
 	right_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	stage_label = _label(overlay, "01 / 10", Vector2(515, 6), Vector2(250, 38), 25, Color("fff1b5"))
 	stage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -667,7 +665,7 @@ func _build_ui() -> void:
 	overlay.add_child(meter_fill)
 	pulse_widgets.append(meter_fill)
 	controls_label = _label(overlay, "", Vector2(331, 687), Vector2(920, 24), 15, Color("eff8ff"))
-	message_label = _label(overlay, "", Vector2(345, 122), Vector2(590, 39), 23, Color("fff0b7"))
+	message_label = _label(overlay, "", Vector2(345, 140), Vector2(590, 39), 23, Color("fff0b7"))
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	modal_shade = ColorRect.new()
 	modal_shade.color = Color(0.008, 0.02, 0.046, 0.80)
@@ -765,7 +763,9 @@ func _refresh_ui() -> void:
 		right_name.text = "%s  •  %s" % [planet["rival"], boss_brain.title()] if boss_brain != null else "REACH THE PORTAL"
 		left_info.text = ""
 		if boss_brain != null:
-			right_info.text = "%s | Aggression: %s" % [boss_brain.stats_text(), aggression.to_upper()]
+			# e.g. "Boss: Minimax+αβ → attack | nodes 120, pruned 64"
+			#      "Search: A* | Nodes: 34 | 0.4 ms | Aggression: HIGH"
+			right_info.text = "Boss: %s | Aggression: %s" % [boss_brain.stats_text(), aggression.to_upper()]
 		elif hud_planner != null:
 			right_info.text = hud_planner.hud_text()          # e.g. "Search: A* | Nodes: 34 | 0.4 ms"
 		else:
@@ -908,7 +908,7 @@ func _select_planet(index: int) -> void:
 
 
 func _show_briefing() -> void:
-	var boss_ai := "%s + %s" % [PathfinderScript.NAMES[boss_search_algorithm(planet_index)], boss_decision_algorithm(planet_index).to_upper()]
+	var boss_ai := "A* + %s" % BrainScript.DECISION_NAMES[boss_decision_algorithm(planet_index)]
 	campaign_screen.call("present", "briefing", PLANETS[planet_index], {"stage_index": planet_index, "stage_count": PLANETS.size(), "stars": stage_stars[planet_index], "ai": boss_ai})
 	_set_screen("briefing")
 	play_sound("select")

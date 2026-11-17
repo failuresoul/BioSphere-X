@@ -76,7 +76,8 @@ func hud_text() -> String:
 
 
 ## Moves `fighter` one step along the path: walk toward the next tile and
-## jump if that tile is higher. Returns false if there is no usable path.
+## jump if that tile is higher, or if a wall is in the way (big fighters
+## such as bosses are taller than one tile). Returns false if there is no usable path.
 static func follow(fighter, tiles: Array, grid) -> bool:
 	if tiles.size() < 2:
 		return false
@@ -85,6 +86,8 @@ static func follow(fighter, tiles: Array, grid) -> bool:
 	var next: Vector2i = tiles[mini(index + 1, tiles.size() - 1)] if index >= 0 else tiles[1]
 	var dx: float = grid.to_world(next).x - fighter.position.x
 	fighter.desired_direction = signf(dx) if absf(dx) > 10.0 else 0.0
-	if next.y < here.y and (fighter.is_on_floor() or fighter.velocity.y > 0.0):
-		fighter.jump()                     # next tile is higher: jump (or double jump)
+	var next_is_higher := next.y < here.y
+	var blocked_by_wall: bool = fighter.is_on_wall() and fighter.desired_direction != 0.0
+	if (next_is_higher or blocked_by_wall) and (fighter.is_on_floor() or fighter.velocity.y > 0.0):
+		fighter.jump()                     # jump (or double jump)
 	return true

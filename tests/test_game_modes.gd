@@ -28,11 +28,27 @@ func _ready() -> void:
 	game._check_portal()
 	await get_tree().process_frame
 	_check(game.segment == "boss" and is_instance_valid(game.rival) and game.grid != null, "Portal opens the boss arena and its grid")
-	_check(game.boss_brain.search_algorithm == "bfs" and game.boss_brain.decision_algorithm == "minimax", "Planet 1 boss uses BFS + Minimax")
-	_check(game.boss_decision_algorithm(1) == "mcts" and game.boss_decision_algorithm(2) == "minimax", "Even planets use MCTS, odd planets Minimax")
+	_check(game.boss_brain.search_algorithm == "astar" and game.boss_brain.decision_algorithm == "minimax_ab", "Planet 1 boss: A* + Minimax with alpha-beta")
+	var mapping: Array = []
+	for index in 10:
+		mapping.append(game.boss_decision_algorithm(index))
+	_check(mapping == ["minimax_ab", "minimax", "mcts", "minimax_ab", "minimax", "mcts", "minimax_ab", "minimax", "mcts", "minimax_ab"], "Planets 1,4,7,10 alpha-beta; 2,5,8 minimax; 3,6,9 MCTS")
+	_check(game.boss_brain.fallback_action({"distance": 100.0}) == "attack" and game.boss_brain.fallback_action({"distance": 900.0}) == "move_closer", "Fallback: attack if near, else move closer")
 	await _run_seconds(2.0)
 	_check(game.boss_brain.planner.searches > 0 and game.boss_brain.planner.nodes > 0, "Boss got paths asynchronously (%d searches, from %s)" % [game.boss_brain.planner.searches, game.boss_brain.planner.source])
-	_check("BFS + MINIMAX" in game.right_name.text and "Search: " in game.right_info.text and "Nodes: " in game.right_info.text, "HUD shows: %s" % game.right_info.text)
+	_check("Boss: Minimax+αβ → " in game.right_info.text and "Search: A*" in game.right_info.text, "HUD shows: %s" % game.right_info.text.replace("
+", "  //  "))
+	_check(game.boss_brain.source == "server" and "pruned" in game.right_info.text, "Boss decision came from the server (nodes and pruned shown)")
+	# ATTACK AND REST: after a special the boss rests 1.5 s.
+	game.rival.energy = 100.0
+	game.rival.special_cooldown = 0.0
+	game.boss_special.clear()
+	game.rival.position.x = game.player.position.x + 200.0
+	game.boss_brain._set_action("special", game.rival, game.player, game)
+	_check(is_equal_approx(game.boss_brain.rest_timer, 1.5) and "rest" in game.boss_brain.decision_text(), "Boss rests 1.5 s after a big attack")
+	await _run_seconds(2.8)          # special wind-up (about 0.8 s) + 1.5 s rest
+	_check(game.boss_brain.rest_timer <= 0.0, "Boss stops resting after the rest time")
+	game.player.health = game.player.max_health
 	game._unhandled_key_input(_key(KEY_P))
 	_check(game.show_paths, "P shows the AI path")
 	game._unhandled_key_input(_key(KEY_P))
@@ -47,10 +63,10 @@ func _ready() -> void:
 	game._show_home()
 	game.open_ai_setup()
 	_check(game.phase == "ai_setup" and game.ai_screen.visible, "AI vs AI opens the setup screen")
-	var config := {"blue_search": "astar", "blue_decision": "minimax", "red_search": "bidirectional", "red_decision": "mcts", "planet": 3}
+	var config := {"blue_search": "astar", "blue_decision": "minimax_ab", "red_search": "bidirectional", "red_decision": "mcts", "planet": 3}
 	game.start_ai_match(config)
 	_check(game.phase == "fight" and game.mode == "ava" and game.blue_brain != null and game.red_brain != null, "AI vs AI match starts")
-	_check("A* + MINIMAX" in game.left_name.text and "Bidirectional + MCTS" in game.right_name.text, "HUD shows both AIs' algorithms")
+	_check("A* + Minimax+αβ" in game.left_name.text and "Bidirectional + MCTS" in game.right_name.text, "HUD shows both AIs' algorithms")
 	# Let a full match play at high speed; it must end by knockout or time limit.
 	Engine.time_scale = 6.0
 	var start_ms := Time.get_ticks_msec()

@@ -94,9 +94,12 @@ func request_path(algorithm: String, grid: Array, start: Vector2i, goal: Vector2
 	send_request("/pathfinding/find", HTTPClient.METHOD_POST, body, callback, timeout)
 
 
-## Minimax / MCTS picks a combat action. state = my_hp, enemy_hp, distance, energies, cooldowns.
-func request_decision(state: Dictionary, algorithm: String, callback: Callable = Callable()) -> void:
-	send_request("/api/ai/decision", HTTPClient.METHOD_POST, {"state": state, "algorithm": algorithm, "depth": 3, "simulations": 200}, callback)
+## Adversarial search: Minimax (with or without alpha-beta) or MCTS picks the boss's move.
+## state = boss_hp, player_hp, distance, boss_energy, player_energy, boss_cooldown, player_cooldown.
+## Uses a short timeout: if the server is slow the boss uses its fallback rule.
+func request_decision(state: Dictionary, algorithm: String, use_alpha_beta: bool, timeout: float, callback: Callable = Callable()) -> void:
+	var body := {"algorithm": algorithm, "use_alpha_beta": use_alpha_beta, "state": state}
+	send_request("/adversarial/decide", HTTPClient.METHOD_POST, body, callback, timeout)
 
 
 ## Fuzzy logic: player health (percent) + distance (pixels) -> boss aggression.
