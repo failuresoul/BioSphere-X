@@ -30,6 +30,9 @@ var dash_timer := 0.0
 var invulnerable := 0.0
 var slow_timer := 0.0
 var knocked_out_state := false
+var energy := 30.0          # 0-100, spent on special moves (AI fighters)
+var special_cooldown := 0.0  # seconds until the next special move
+var block_timer := 0.0       # while > 0 the fighter blocks: takes 40% damage
 var sprite: Sprite2D
 var pilot_art: Node2D
 var pose := ""
@@ -82,6 +85,9 @@ func _physics_process(delta: float) -> void:
 	land_anim = maxf(0.0, land_anim - delta)
 	invulnerable = maxf(0.0, invulnerable - delta)
 	slow_timer = maxf(0.0, slow_timer - delta)
+	special_cooldown = maxf(0.0, special_cooldown - delta)
+	block_timer = maxf(0.0, block_timer - delta)
+	energy = minf(100.0, energy + 4.0 * delta)
 	animation_clock += delta
 	if is_on_floor():
 		jumps_left = 2
@@ -93,7 +99,9 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, desired_direction * move_speed * speed_factor, 2200.0 * delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, 2200.0 * delta)
-	if absf(desired_direction) > 0.15:
+	if block_timer > 0.0:
+		velocity.x = 0.0
+	if absf(desired_direction) > 0.15 and block_timer <= 0.0:
 		facing = 1 if desired_direction > 0.0 else -1
 	var airborne := not is_on_floor()
 	move_and_slide()
@@ -169,7 +177,7 @@ func _update_pose() -> void:
 		pilot_art.call("set_visual", pilot_variant, motion, facing, animation_clock)
 		pilot_art.position = offset
 		pilot_art.modulate.a = sprite.modulate.a
-	var effect_active := attack_anim > 0.0 or blast_anim > 0.0 or dash_timer > 0.0
+	var effect_active := attack_anim > 0.0 or blast_anim > 0.0 or dash_timer > 0.0 or block_timer > 0.0
 	if effect_active or effect_visible != effect_active:
 		queue_redraw()
 	effect_visible = effect_active
@@ -182,6 +190,9 @@ func _draw() -> void:
 			draw_line(Vector2(x, -17 + streak * 10), Vector2(x - facing * 22, -17 + streak * 10), Color("d4fbff", 0.65 - streak * 0.14), 3.0)
 	if attack_anim > 0.0:
 		draw_arc(Vector2(facing * 28, -5), 24, -1.1 if facing > 0 else 2.0, 1.1 if facing > 0 else 4.2, 16, Color("efffff", attack_anim * 3.0), 4.0)
+	if block_timer > 0.0:
+		var shield_angle := 0.0 if facing > 0 else PI    # shield arc in front of the fighter
+		draw_arc(Vector2(facing * 26, -6), 40, shield_angle - 1.2, shield_angle + 1.2, 18, Color("8fd8ff", 0.85), 5.0)
 	if blast_anim > 0.0:
 		draw_circle(Vector2(facing * 44, -7), 7.0 + (0.22 - blast_anim) * 25.0, Color("83fff1", blast_anim * 2.8))
 
@@ -228,9 +239,16 @@ func dash() -> void:
 	arena.play_sound("magic")
 
 
+func block() -> void:
+	if arena.is_fighting() and not knocked_out_state:
+		block_timer = maxf(block_timer, 0.25)
+
+
 func take_damage(amount: float, push_direction: int) -> void:
 	if invulnerable > 0.0 or knocked_out_state:
 		return
+	if block_timer > 0.0:
+		amount *= 0.4
 	health = maxf(0.0, health - amount)
 	invulnerable = 0.4
 	velocity = Vector2(push_direction * 300.0, -220.0)

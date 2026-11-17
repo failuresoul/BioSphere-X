@@ -24,4 +24,8 @@ if not defined GODOT_EXE (
     pause
     exit /b 1
 )
+if not exist "%~dp0.godot" (
+    echo First run: importing game assets, please wait...
+    "%GODOT_EXE%" --headless --path "%~dp0." --import
+)
 start "" "%GODOT_EXE%" --path "%~dp0."

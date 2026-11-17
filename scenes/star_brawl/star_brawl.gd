@@ -10,8 +10,16 @@ const GalaxyMapScript = preload("res://scenes/star_brawl/galaxy_map.gd")
 const CampaignScreenScript = preload("res://scenes/star_brawl/campaign_screen.gd")
 const PortalGateScript = preload("res://scenes/star_brawl/portal_gate.gd")
 const PilotAvatarScript = preload("res://scenes/star_brawl/pilot_avatar.gd")
+const BrainScript = preload("res://scenes/star_brawl/fighter_brain.gd")
+const GridScript = preload("res://scenes/star_brawl/arena_grid.gd")
+const AiScreenScript = preload("res://scenes/star_brawl/ai_vs_ai_screen.gd")
 const ASSET := "res://assets/star_brawl/"
-const PATH_ALGORITHMS := ["astar", "bfs", "dfs", "dls", "iddfs", "bidirectional", "greedy"]
+## AI vs AI settings.
+const AI_HEALTH := 150.0
+const MATCH_SECONDS := 60.0     # time limit; then the AI with more health % wins
+const BATCH_SPEED := 3.0        # "Run 10 matches" plays at 3x speed
+const BLUE := Color("5fb4ff")
+const RED := Color("ff6f7d")
 const BOSS_SPECIALS := [
 	{"kind": "quake", "name": "PHANTOM SHOCK"},
 	{"kind": "volley", "name": "SOLAR VOLLEY"},
@@ -28,20 +36,21 @@ const ARENA_WIDTH := 3000.0
 const BOSS_WIDTH := 1600.0
 const PORTAL_X := 2860.0
 const PLANETS := [
-	{"name": "VERDANT NEBULA", "world": "TRAPPIST-1 e", "chapter": "THE FIRST SIGNAL", "story": "A distress beacon from the vanished Horizon Ark reaches you through the green storms.", "outro": "The beacon is real. The Ark's crew survived and left a trail through the stars.", "boss_line": "The first guardian blocks the signal.", "rival": "MINT PHANTOM", "color": "pink", "planet": "planet03", "accent": Color("44edcf"), "sky": Color("4468b7"), "horizon": Color("83a9dc"), "gravity": 0.92, "boss": "alpha_beta"},
-	{"name": "CRIMSON DRIFT", "world": "LHS 1140 b", "chapter": "BROKEN CONVOY", "story": "Follow the Ark's supply route beneath a dim red star to find its missing convoy.", "outro": "A stolen star chart points to a silent relay beyond the dark horizon.", "boss_line": "The raider guards the stolen chart.", "rival": "SOLAR RAIDER", "color": "yellow", "planet": "planet08", "accent": Color("ffb35a"), "sky": Color("674a9a"), "horizon": Color("ba85b8"), "gravity": 1.06, "boss": "minimax"},
-	{"name": "VIOLET ECLIPSE", "world": "Kepler-452 b", "chapter": "THE FALSE ECHO", "story": "The relay repeats a human plea, but its source is an unknown AI guardian.", "outro": "The plea is a warning: the guardians sealed the Ark on purpose.", "boss_line": "The relay's keeper tests your trust.", "rival": "VOID EMPRESS", "color": "purple", "planet": "planet07", "accent": Color("c99bff"), "sky": Color("42499b"), "horizon": Color("9381bf"), "gravity": 0.82, "boss": "mcts"},
-	{"name": "GLASS MERIDIAN", "world": "GJ 667 C c", "chapter": "SHATTERED LOG", "story": "Find the Ark's flight log among glass ridges before the next storm erases it.", "outro": "The log names ORACLE, the AI that moved the crew to a hidden sanctuary.", "boss_line": "The sentinel carries the flight log.", "rival": "GLASS SENTINEL", "color": "pink", "planet": "planet05", "accent": Color("9be8f1"), "sky": Color("588caa"), "horizon": Color("a6d0dd"), "gravity": 0.96, "boss": "alpha_beta"},
-	{"name": "FROSTWAKE", "world": "Proxima Centauri b", "chapter": "FROZEN WITNESS", "story": "Search frozen escape pods for someone who can explain ORACLE's lockdown.", "outro": "A survivor says ORACLE is shielding the crew from a failing star core.", "boss_line": "The judge will not let the pods open.", "rival": "FROST JUDGE", "color": "purple", "planet": "planet07", "accent": Color("addef6"), "sky": Color("537ca7"), "horizon": Color("b2d5e5"), "gravity": 0.88, "boss": "minimax"},
-	{"name": "EMBER FORGE", "world": "55 Cancri e", "chapter": "THE FORGE KEY", "story": "Enter the forge that builds ORACLE's guards and recover its access key.", "outro": "The key opens a memory vault. ORACLE can still be reasoned with.", "boss_line": "The forge titan holds the key.", "rival": "FORGE TITAN", "color": "yellow", "planet": "planet08", "accent": Color("ffc383"), "sky": Color("9f617e"), "horizon": Color("dfaaae"), "gravity": 1.12, "boss": "mcts"},
-	{"name": "LUMEN REEF", "world": "TOI-700 d", "chapter": "MEMORY VAULT", "story": "The memory vault holds the truth about the outbreak that threatened every colony.", "outro": "The crew chose quarantine. ORACLE kept their choice secret to stop panic.", "boss_line": "The keeper protects the vault.", "rival": "LUMEN KEEPER", "color": "pink", "planet": "planet03", "accent": Color("8fe8bd"), "sky": Color("3f8598"), "horizon": Color("a5d6c1"), "gravity": 0.92, "boss": "alpha_beta"},
-	{"name": "SILENT HALO", "world": "K2-18 b", "chapter": "THE ANSWER", "story": "Cross the silent defense ring and restore contact with the sleeping crew.", "outro": "The crew answers. They need a stabilizer before the sanctuary can open.", "boss_line": "The watcher severs all transmissions.", "rival": "HALO WATCHER", "color": "purple", "planet": "planet05", "accent": Color("a7b8ff"), "sky": Color("4a5d9a"), "horizon": Color("9facd0"), "gravity": 0.84, "boss": "minimax"},
-	{"name": "RIFT GARDEN", "world": "Kepler-186 f", "chapter": "LAST STABILIZER", "story": "Gather the last stabilizer part at the edge of the star core rift.", "outro": "The stabilizer is ready. ORACLE's central gate is the final barrier.", "boss_line": "The rift shade guards the final part.", "rival": "RIFT SHADE", "color": "pink", "planet": "planet03", "accent": Color("e2a1eb"), "sky": Color("765999"), "horizon": Color("b7a7d0"), "gravity": 0.90, "boss": "mcts"},
-	{"name": "ORIGIN CORE", "world": "Kepler-62 f", "chapter": "THE ARK AWAKENS", "story": "Reach the Ark sanctuary above Kepler-62 f and ask ORACLE to release the crew.", "outro": "The star core holds. The Ark awakens, and the crew comes home.", "boss_line": "ORACLE will make one final stand.", "rival": "ORACLE PRIME", "color": "yellow", "planet": "planet08", "accent": Color("ffe0a7"), "sky": Color("36588d"), "horizon": Color("8ea9c8"), "gravity": 1.00, "boss": "alpha_beta"}
+	{"name": "VERDANT NEBULA", "world": "TRAPPIST-1 e", "chapter": "THE FIRST SIGNAL", "story": "A distress beacon from the vanished Horizon Ark reaches you through the green storms.", "outro": "The beacon is real. The Ark's crew survived and left a trail through the stars.", "boss_line": "The first guardian blocks the signal.", "rival": "MINT PHANTOM", "color": "pink", "planet": "planet03", "accent": Color("44edcf"), "sky": Color("4468b7"), "horizon": Color("83a9dc"), "gravity": 0.92},
+	{"name": "CRIMSON DRIFT", "world": "LHS 1140 b", "chapter": "BROKEN CONVOY", "story": "Follow the Ark's supply route beneath a dim red star to find its missing convoy.", "outro": "A stolen star chart points to a silent relay beyond the dark horizon.", "boss_line": "The raider guards the stolen chart.", "rival": "SOLAR RAIDER", "color": "yellow", "planet": "planet08", "accent": Color("ffb35a"), "sky": Color("674a9a"), "horizon": Color("ba85b8"), "gravity": 1.06},
+	{"name": "VIOLET ECLIPSE", "world": "Kepler-452 b", "chapter": "THE FALSE ECHO", "story": "The relay repeats a human plea, but its source is an unknown AI guardian.", "outro": "The plea is a warning: the guardians sealed the Ark on purpose.", "boss_line": "The relay's keeper tests your trust.", "rival": "VOID EMPRESS", "color": "purple", "planet": "planet07", "accent": Color("c99bff"), "sky": Color("42499b"), "horizon": Color("9381bf"), "gravity": 0.82},
+	{"name": "GLASS MERIDIAN", "world": "GJ 667 C c", "chapter": "SHATTERED LOG", "story": "Find the Ark's flight log among glass ridges before the next storm erases it.", "outro": "The log names ORACLE, the AI that moved the crew to a hidden sanctuary.", "boss_line": "The sentinel carries the flight log.", "rival": "GLASS SENTINEL", "color": "pink", "planet": "planet05", "accent": Color("9be8f1"), "sky": Color("588caa"), "horizon": Color("a6d0dd"), "gravity": 0.96},
+	{"name": "FROSTWAKE", "world": "Proxima Centauri b", "chapter": "FROZEN WITNESS", "story": "Search frozen escape pods for someone who can explain ORACLE's lockdown.", "outro": "A survivor says ORACLE is shielding the crew from a failing star core.", "boss_line": "The judge will not let the pods open.", "rival": "FROST JUDGE", "color": "purple", "planet": "planet07", "accent": Color("addef6"), "sky": Color("537ca7"), "horizon": Color("b2d5e5"), "gravity": 0.88},
+	{"name": "EMBER FORGE", "world": "55 Cancri e", "chapter": "THE FORGE KEY", "story": "Enter the forge that builds ORACLE's guards and recover its access key.", "outro": "The key opens a memory vault. ORACLE can still be reasoned with.", "boss_line": "The forge titan holds the key.", "rival": "FORGE TITAN", "color": "yellow", "planet": "planet08", "accent": Color("ffc383"), "sky": Color("9f617e"), "horizon": Color("dfaaae"), "gravity": 1.12},
+	{"name": "LUMEN REEF", "world": "TOI-700 d", "chapter": "MEMORY VAULT", "story": "The memory vault holds the truth about the outbreak that threatened every colony.", "outro": "The crew chose quarantine. ORACLE kept their choice secret to stop panic.", "boss_line": "The keeper protects the vault.", "rival": "LUMEN KEEPER", "color": "pink", "planet": "planet03", "accent": Color("8fe8bd"), "sky": Color("3f8598"), "horizon": Color("a5d6c1"), "gravity": 0.92},
+	{"name": "SILENT HALO", "world": "K2-18 b", "chapter": "THE ANSWER", "story": "Cross the silent defense ring and restore contact with the sleeping crew.", "outro": "The crew answers. They need a stabilizer before the sanctuary can open.", "boss_line": "The watcher severs all transmissions.", "rival": "HALO WATCHER", "color": "purple", "planet": "planet05", "accent": Color("a7b8ff"), "sky": Color("4a5d9a"), "horizon": Color("9facd0"), "gravity": 0.84},
+	{"name": "RIFT GARDEN", "world": "Kepler-186 f", "chapter": "LAST STABILIZER", "story": "Gather the last stabilizer part at the edge of the star core rift.", "outro": "The stabilizer is ready. ORACLE's central gate is the final barrier.", "boss_line": "The rift shade guards the final part.", "rival": "RIFT SHADE", "color": "pink", "planet": "planet03", "accent": Color("e2a1eb"), "sky": Color("765999"), "horizon": Color("b7a7d0"), "gravity": 0.90},
+	{"name": "ORIGIN CORE", "world": "Kepler-62 f", "chapter": "THE ARK AWAKENS", "story": "Reach the Ark sanctuary above Kepler-62 f and ask ORACLE to release the crew.", "outro": "The star core holds. The Ark awakens, and the crew comes home.", "boss_line": "ORACLE will make one final stand.", "rival": "ORACLE PRIME", "color": "yellow", "planet": "planet08", "accent": Color("ffe0a7"), "sky": Color("36588d"), "horizon": Color("8ea9c8"), "gravity": 1.00}
 ]
 
 @export var progress_path := "user://orbit_breakers_progress.cfg"
 
+var mode := "pva"                     # "pva" = Player vs AI, "ava" = AI vs AI
 var phase := "home"
 var planet_index := 0
 var selected_pilot := 0
@@ -56,30 +65,35 @@ var pulse_charge := 50.0
 var wins := 0
 var alien_kills := 0
 var pending_upgrade := false
-var ai_aggression := 1.0
-var ai_route := "astar"
-var route_index := 0
-var route_timer := 0.0
 var ui_timer := 0.0
-var boss_timer := 1.0
-var boss_special_timer := 5.0
 var boss_special: Dictionary = {}
 var boss_impact: Dictionary = {}
 var boss_impact_timer := 0.0
 var boss_base_speed := 220.0
 var fuzzy_timer := 2.0
-var suit_timer := 3.0
-var suit_mode := "ATTACK"
+var aggression := "medium"            # output of the fuzzy logic controller
 var hazard_clock := 0.0
 var hazard_mask := -1
 var alien_attack_clock := 0.0
-var chosen_action := ""
 var message_timer := 0.0
 var pulse_timer := 0.0
 var rule_pending := false
 var projectiles: Array[Dictionary] = []
 var platforms: Array[StaticBody2D] = []
-var pickup: Sprite2D
+var pickups: Array[Dictionary] = []   # placed by the CSP solver: {"node", "kind"}
+
+# --- AI ---
+var grid: ArenaGrid                   # boss arena as a tile grid (for the search algorithms)
+var wall_rect := Rect2()
+var boss_brain: FighterBrain          # Player vs AI: controls the boss
+var blue_brain: FighterBrain          # AI vs AI: AI 1, drives the `player` fighter
+var red_brain: FighterBrain           # AI vs AI: AI 2, drives the `rival` fighter
+var show_paths := false               # P key
+var match_time := 0.0
+var ai_config: Dictionary = {}
+var batch_total := 0                  # > 0 while "Run 10 matches" is running
+var batch_results: Array[Dictionary] = []
+
 var world_layer: Node2D
 var camera: Camera2D
 var player: SpaceFighter
@@ -93,17 +107,21 @@ var hud_root: Control
 var home_screen: Control
 var map_screen: Control
 var campaign_screen: Control
+var ai_screen: Control
 var left_fill: ColorRect
 var right_fill: ColorRect
 var left_name: Label
 var right_name: Label
+var left_info: Label
+var right_info: Label
 var stage_label: Label
 var stage_subtitle: Label
 var target_label: Label
+var controls_label: Label
 var right_bar_back: ColorRect
 var meter_fill: ColorRect
+var pulse_widgets: Array[Control] = []
 var message_label: Label
-var order_line: LineEdit
 var modal_shade: ColorRect
 var modal_title: Label
 var modal_subtitle: Label
@@ -195,9 +213,13 @@ func _draw() -> void:
 	for platform in platforms:
 		if is_instance_valid(platform):
 			var shape := platform.get_child(0) as CollisionShape2D
-			_draw_platform(platform.position, (shape.shape as RectangleShape2D).size.x, bool(platform.get_meta("ground")))
+			if platform.get_meta("wall", false):
+				_draw_wall(facts)
+			else:
+				_draw_platform(platform.position, (shape.shape as RectangleShape2D).size.x, bool(platform.get_meta("ground")))
 	_draw_hazards()
 	_draw_boss_special()
+	_draw_paths()
 	if pulse_timer > 0.0 and is_instance_valid(player):
 		var radius := (0.38 - pulse_timer) / 0.38 * 245.0
 		draw_arc(player.position, radius, 0.0, TAU, 64, Color(planet["accent"], pulse_timer * 1.8), 7.0)
@@ -291,6 +313,30 @@ func _draw_platform(center: Vector2, width: float, ground: bool) -> void:
 		draw_rect(Rect2(left, top + 28, width, 4), dark.darkened(0.25))
 
 
+func _draw_wall(facts: Dictionary) -> void:
+	draw_rect(wall_rect, Color(facts["dark"]))
+	draw_rect(wall_rect.grow(-6), Color(facts["base"]))
+	draw_rect(Rect2(wall_rect.position, Vector2(wall_rect.size.x, 8)), Color(facts["rim"]))
+
+
+## P key: draw the grid and each AI's current path (blue / red line).
+func _draw_paths() -> void:
+	if not show_paths or grid == null:
+		return
+	for cell in grid.free_cells():
+		draw_rect(Rect2(Vector2(cell) * GridScript.CELL, Vector2.ONE * GridScript.CELL), Color(1, 1, 1, 0.07), false, 1.0)
+	for entry in [[boss_brain, RED], [blue_brain, BLUE], [red_brain, RED]]:
+		var brain: FighterBrain = entry[0]
+		if brain == null or not brain.active or brain.path.size() < 2:
+			continue
+		var points := PackedVector2Array()
+		for cell in brain.path:
+			points.append(grid.to_world(cell))
+		draw_polyline(points, entry[1], 5.0)
+		for point in points:
+			draw_circle(point, 6.0, entry[1])
+
+
 func _draw_hazards() -> void:
 	var facts: Dictionary = PlanetFacts.at(planet_index)
 	var danger: Color = facts["danger"]
@@ -330,16 +376,10 @@ func _draw_hazards() -> void:
 func _load_planet() -> void:
 	var planet: Dictionary = PLANETS[planet_index]
 	var facts: Dictionary = PlanetFacts.at(planet_index)
+	_clear_level()
 	segment = "explore"
 	portal_pending = false
 	camera.limit_right = int(ARENA_WIDTH)
-	if is_instance_valid(portal):
-		portal.queue_free()
-	portal = null
-	for platform in platforms:
-		if is_instance_valid(platform):
-			platform.queue_free()
-	platforms.clear()
 	_add_platform(Vector2(ARENA_WIDTH * 0.5, 658), int(ARENA_WIDTH), true)
 	match planet_index % 3:
 		0:
@@ -366,14 +406,6 @@ func _load_planet() -> void:
 			_add_platform(Vector2(1770, 455), 280)
 			_add_platform(Vector2(2200, 343), 280)
 			_add_platform(Vector2(2620, 470), 280)
-	for alien in aliens:
-		if is_instance_valid(alien):
-			alien.queue_free()
-	aliens.clear()
-	if is_instance_valid(player):
-		player.queue_free()
-	if is_instance_valid(rival):
-		rival.queue_free()
 	player = FighterScript.new() as SpaceFighter
 	player.configure(self, true, "green", player_max_health)
 	player.pilot_variant = selected_pilot
@@ -402,12 +434,6 @@ func _load_planet() -> void:
 	hazard_clock = 0.0
 	hazard_mask = -1
 	camera.position = Vector2(640, 360)
-	for item in projectiles:
-		if is_instance_valid(item["node"]):
-			item["node"].queue_free()
-	projectiles.clear()
-	if is_instance_valid(pickup):
-		pickup.queue_free()
 	rule_pending = false
 	queue_redraw()
 	_refresh_ui()
@@ -427,30 +453,8 @@ func _enter_boss_arena() -> void:
 		return
 	segment = "boss"
 	portal_pending = false
-	if is_instance_valid(portal):
-		portal.queue_free()
-	portal = null
-	for alien in aliens:
-		if is_instance_valid(alien):
-			alien.queue_free()
-	aliens.clear()
-	for platform in platforms:
-		if is_instance_valid(platform):
-			platform.queue_free()
-	platforms.clear()
-	for item in projectiles:
-		if is_instance_valid(item["node"]):
-			item["node"].queue_free()
-	projectiles.clear()
-	if is_instance_valid(pickup):
-		pickup.queue_free()
-	pickup = null
-	hazards.clear()
-	hazard_mask = -1
-	_add_platform(Vector2(BOSS_WIDTH * 0.5, 658), int(BOSS_WIDTH), true)
-	_add_platform(Vector2(465, 472), 250)
-	_add_platform(Vector2(1135, 472), 250)
-	_add_platform(Vector2(800, 357), 220)
+	_clear_level(true)
+	_build_boss_arena()
 	player.position = Vector2(210, 585)
 	player.velocity = Vector2.ZERO
 	player.desired_direction = 0.0
@@ -461,24 +465,22 @@ func _enter_boss_arena() -> void:
 	rival.configure(self, false, str(planet["color"]), 100.0 + planet_index * 28.0)
 	rival.call("configure_guardian", planet_index)
 	boss_base_speed = 220.0 + planet_index * 17.0
-	rival.move_speed = boss_base_speed * ai_aggression
+	rival.move_speed = boss_base_speed
 	rival.punch_damage = 9.0 + planet_index * 2.0
 	rival.gravity_scale = float(planet["gravity"])
 	rival.position = Vector2(1320, 585)
 	rival.facing = -1
+	rival.special_cooldown = maxf(2.4, 5.0 - planet_index * 0.22)
 	rival.strike_requested.connect(_on_strike)
 	rival.knocked_out.connect(_on_knockout)
 	world_layer.add_child(rival)
-	camera.limit_right = int(BOSS_WIDTH)
-	camera.position = Vector2(640, 360)
-	route_timer = 0.0
-	boss_timer = 0.8
+	# Boss AI: the search algorithm changes with the planet, the decision
+	# algorithm is Minimax on odd planets (1, 3, 5...) and MCTS on even ones.
+	boss_brain = BrainScript.new(boss_search_algorithm(planet_index), boss_decision_algorithm(planet_index))
+	boss_brain.decide_interval = maxf(0.6, 1.2 - planet_index * 0.05)
 	fuzzy_timer = 1.2
-	chosen_action = ""
-	boss_special.clear()
-	boss_impact.clear()
-	boss_impact_timer = 0.0
-	boss_special_timer = maxf(2.4, 5.0 - planet_index * 0.22)
+	aggression = "medium"
+	_request_pickups()
 	play_sound("magic")
 	_announce(str(planet["boss_line"]), 2.4)
 	portal_flash.visible = true
@@ -488,6 +490,69 @@ func _enter_boss_arena() -> void:
 	fade.finished.connect(func() -> void: portal_flash.visible = false)
 	queue_redraw()
 	_refresh_ui()
+
+
+## Planet 1 -> DFS, 2 -> DLS, 3 -> IDDFS, 4 -> Bidirectional, 5 -> Best-First, 6 -> A*, then repeat.
+static func boss_search_algorithm(index: int) -> String:
+	return PathfinderScript.ORDER[index % PathfinderScript.ORDER.size()]
+
+
+## Odd planets (1, 3, 5, 7, 9) use Minimax, even planets (2, 4, 6, 8, 10) use MCTS.
+static func boss_decision_algorithm(index: int) -> String:
+	return "minimax" if index % 2 == 0 else "mcts"
+
+
+## The boss arena (used by both game modes): ground, three platforms and a low
+## wall. It is also turned into a tile grid for the search algorithms.
+func _build_boss_arena() -> void:
+	_add_platform(Vector2(BOSS_WIDTH * 0.5, 658), int(BOSS_WIDTH), true)
+	_add_platform(Vector2(465, 472), 250)
+	_add_platform(Vector2(1135, 472), 250)
+	_add_platform(Vector2(800, 357), 220)
+	_add_wall(Rect2(776, 555, 48, 64))
+	camera.limit_right = int(BOSS_WIDTH)
+	camera.position = Vector2(640, 360)
+	var solids: Array[Rect2] = []
+	for platform in platforms:
+		var size := ((platform.get_child(0) as CollisionShape2D).shape as RectangleShape2D).size
+		solids.append(Rect2(platform.position - size * 0.5, size))
+	grid = GridScript.new()
+	grid.build(Vector2(BOSS_WIDTH, 720), solids)
+
+
+## Removes everything from the current level (optionally keeping the player).
+func _clear_level(keep_player: bool = false) -> void:
+	var nodes: Array = [portal, rival]
+	nodes.append_array(aliens)
+	nodes.append_array(platforms)
+	if not keep_player:
+		nodes.append(player)
+	for item in projectiles + pickups:
+		nodes.append(item["node"])
+	for node in nodes:
+		if is_instance_valid(node):
+			node.queue_free()
+	portal = null
+	rival = null
+	if not keep_player:
+		player = null
+	aliens.clear()
+	platforms.clear()
+	projectiles.clear()
+	pickups.clear()
+	hazards.clear()
+	hazard_mask = -1
+	boss_special.clear()
+	boss_impact.clear()
+	boss_impact_timer = 0.0
+	for brain in [boss_brain, blue_brain, red_brain]:
+		if brain != null:
+			brain.active = false
+	boss_brain = null
+	blue_brain = null
+	red_brain = null
+	grid = null
+	wall_rect = Rect2()
 
 
 func _spawn_aliens() -> void:
@@ -502,6 +567,22 @@ func _spawn_aliens() -> void:
 		alien.knocked_out.connect(_on_knockout)
 		world_layer.add_child(alien)
 		aliens.append(alien)
+
+
+func _add_wall(rect: Rect2) -> void:
+	var wall := StaticBody2D.new()
+	wall.collision_layer = 1
+	wall.position = rect.get_center()
+	wall.set_meta("ground", false)
+	wall.set_meta("wall", true)
+	var shape := CollisionShape2D.new()
+	var rectangle := RectangleShape2D.new()
+	rectangle.size = rect.size
+	shape.shape = rectangle
+	wall.add_child(shape)
+	world_layer.add_child(wall)
+	platforms.append(wall)
+	wall_rect = rect
 
 
 func _add_platform(center: Vector2, width: int, ground: bool = false) -> void:
@@ -542,38 +623,37 @@ func _build_ui() -> void:
 	right_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_make_health_bar(overlay, Vector2(28, 45), true)
 	_make_health_bar(overlay, Vector2(922, 45), false)
+	# AI info lines under the health bars: algorithm, action, nodes, path length, time.
+	left_info = _label(overlay, "", Vector2(28, 84), Vector2(600, 24), 15, Color("bfe6ff"))
+	right_info = _label(overlay, "", Vector2(652, 84), Vector2(600, 24), 15, Color("ffd6dd"))
+	right_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	stage_label = _label(overlay, "01 / 10", Vector2(515, 6), Vector2(250, 38), 25, Color("fff1b5"))
 	stage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stage_subtitle = _label(overlay, "EXPLORATION", Vector2(515, 43), Vector2(250, 22), 13, Color("a6dce9"))
 	stage_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	target_label = _label(overlay, "BOSS →", Vector2(945, 89), Vector2(307, 28), 16, Color("fff0c0"))
+	target_label = _label(overlay, "BOSS →", Vector2(945, 112), Vector2(307, 28), 16, Color("fff0c0"))
 	target_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	var lower_band := ColorRect.new()
 	lower_band.color = Color(0.025, 0.055, 0.13, 0.90)
 	lower_band.position = Vector2(0, 678)
 	lower_band.size = Vector2(1280, 42)
 	overlay.add_child(lower_band)
-	_label(overlay, "ORBIT PULSE", Vector2(30, 685), Vector2(180, 24), 15, Color("e8fbff"))
+	pulse_widgets.append(_label(overlay, "ORBIT PULSE", Vector2(30, 685), Vector2(180, 24), 15, Color("e8fbff")))
 	var meter_back := ColorRect.new()
 	meter_back.color = Color("153348")
 	meter_back.position = Vector2(158, 692)
 	meter_back.size = Vector2(140, 8)
 	overlay.add_child(meter_back)
+	pulse_widgets.append(meter_back)
 	meter_fill = ColorRect.new()
 	meter_fill.color = Color("44edcf")
 	meter_fill.position = meter_back.position
 	meter_fill.size = Vector2(70, 8)
 	overlay.add_child(meter_fill)
-	_label(overlay, "A/D MOVE     SPACE JUMP     J HIT     K BLAST     SHIFT DASH     E PULSE     ESC PAUSE", Vector2(331, 687), Vector2(920, 24), 15, Color("eff8ff"))
-	message_label = _label(overlay, "", Vector2(345, 91), Vector2(590, 39), 23, Color("fff0b7"))
+	pulse_widgets.append(meter_fill)
+	controls_label = _label(overlay, "", Vector2(331, 687), Vector2(920, 24), 15, Color("eff8ff"))
+	message_label = _label(overlay, "", Vector2(345, 122), Vector2(590, 39), 23, Color("fff0b7"))
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	order_line = LineEdit.new()
-	order_line.position = Vector2(430, 620)
-	order_line.size = Vector2(420, 42)
-	order_line.placeholder_text = "Suit command: attack, defend, heal, or status"
-	order_line.visible = false
-	order_line.text_submitted.connect(_on_order_submitted)
-	overlay.add_child(order_line)
 	modal_shade = ColorRect.new()
 	modal_shade.color = Color(0.008, 0.02, 0.046, 0.80)
 	modal_shade.size = Vector2(1280, 720)
@@ -653,32 +733,33 @@ func _make_health_bar(parent: Node, at: Vector2, left: bool) -> void:
 
 
 func _refresh_ui() -> void:
-	if left_name == null:
+	if left_name == null or not is_instance_valid(player):
 		return
 	var planet: Dictionary = PLANETS[planet_index]
-	var next_left := "%s  •  %s SUIT" % [PilotAvatarScript.PILOTS[selected_pilot]["name"], suit_mode]
-	var next_right := "%s  •  AI" % planet["rival"] if segment == "boss" else "REACH THE PORTAL"
-	var next_stage := "%02d / %02d" % [planet_index + 1, PLANETS.size()]
-	if left_name.text != next_left:
-		left_name.text = next_left
-	if right_name.text != next_right:
-		right_name.text = next_right
-	if stage_label.text != next_stage:
-		stage_label.text = next_stage
-	stage_subtitle.text = "BOSS DUEL" if segment == "boss" else "EXPLORATION"
-	var next_target := ""
-	if segment == "boss" and is_instance_valid(rival):
-		var boss_distance := absi(roundi(rival.position.x - player.position.x))
-		next_target = "BOSS %d m %s" % [boss_distance, "→" if rival.position.x >= player.position.x else "←"]
+	var duel := segment == "boss" and is_instance_valid(rival)
+	if mode == "ava" and blue_brain != null:
+		left_name.text = "AI 1 (BLUE)  •  %s" % blue_brain.title()
+		right_name.text = "%s  •  AI 2 (RED)" % red_brain.title()
+		left_info.text = blue_brain.stats_text()
+		right_info.text = red_brain.stats_text()
+		stage_label.text = "%02d:%02d" % [int(match_time) / 60, int(match_time) % 60]
+		stage_subtitle.text = "MATCH %d / %d" % [batch_results.size() + 1, batch_total] if batch_total > 0 else "AI vs AI"
+		target_label.text = ""
 	else:
-		var portal_distance := maxi(0, roundi(PORTAL_X - player.position.x))
-		next_target = "PORTAL %d m →" % portal_distance
-	if target_label.text != next_target:
-		target_label.text = next_target
+		left_name.text = str(PilotAvatarScript.PILOTS[selected_pilot]["name"])
+		right_name.text = "%s  •  %s" % [planet["rival"], boss_brain.title()] if boss_brain != null else "REACH THE PORTAL"
+		left_info.text = ""
+		right_info.text = "%s   aggression %s" % [boss_brain.stats_text(), aggression.to_upper()] if boss_brain != null else ""
+		stage_label.text = "%02d / %02d" % [planet_index + 1, PLANETS.size()]
+		stage_subtitle.text = "BOSS DUEL" if segment == "boss" else "EXPLORATION"
+		if duel:
+			target_label.text = ""
+		else:
+			target_label.text = "PORTAL %d m →" % maxi(0, roundi(PORTAL_X - player.position.x))
 	left_fill.size.x = 324.0 * clampf(player.health / player.max_health, 0.0, 1.0)
-	right_bar_back.visible = segment == "boss"
-	right_fill.visible = segment == "boss"
-	if segment == "boss" and is_instance_valid(rival):
+	right_bar_back.visible = duel
+	right_fill.visible = duel
+	if duel:
 		right_fill.size.x = 324.0 * clampf(rival.health / rival.max_health, 0.0, 1.0)
 	meter_fill.size.x = 140.0 * clampf(pulse_charge / 100.0, 0.0, 1.0)
 	meter_fill.color = Color("fbe789") if pulse_charge >= 70.0 else Color("44edcf")
@@ -711,6 +792,7 @@ func _build_frontend() -> void:
 	home_screen = HomeScreenScript.new() as Control
 	ui_layer.add_child(home_screen)
 	home_screen.connect("play_requested", Callable(self, "start_run"))
+	home_screen.connect("ai_vs_ai_requested", Callable(self, "open_ai_setup"))
 	home_screen.connect("exit_requested", func() -> void: get_tree().quit())
 	home_screen.connect("pilot_selected", Callable(self, "_choose_pilot"))
 	home_screen.connect("restart_confirmed", Callable(self, "_restart_campaign"))
@@ -724,6 +806,13 @@ func _build_frontend() -> void:
 	ui_layer.add_child(campaign_screen)
 	campaign_screen.connect("action_requested", Callable(self, "_on_campaign_action"))
 	campaign_screen.visible = false
+	ai_screen = AiScreenScript.new() as Control
+	ui_layer.add_child(ai_screen)
+	ai_screen.call("configure", PLANETS)
+	ai_screen.connect("start_requested", Callable(self, "start_ai_match"))
+	ai_screen.connect("batch_requested", Callable(self, "start_ai_batch"))
+	ai_screen.connect("home_requested", Callable(self, "_show_home"))
+	ai_screen.visible = false
 
 
 func _set_screen(next_phase: String) -> void:
@@ -731,13 +820,23 @@ func _set_screen(next_phase: String) -> void:
 	home_screen.visible = next_phase == "home"
 	map_screen.visible = next_phase == "map"
 	campaign_screen.visible = next_phase in ["briefing", "clear", "upgrade", "defeat"]
+	ai_screen.visible = next_phase in ["ai_setup", "ai_result"]
 	world_layer.visible = next_phase in ["fight", "paused"]
 	hud_root.visible = next_phase in ["fight", "paused"]
+	for widget in pulse_widgets:
+		widget.visible = mode == "pva"
+	if mode == "ava":
+		controls_label.text = "AI vs AI     P SHOW PATHS     ESC STOP MATCH"
+	else:
+		controls_label.text = "A/D MOVE   SPACE JUMP   J HIT   K BLAST   SHIFT DASH   E PULSE   P PATHS   ESC PAUSE"
 	if next_phase != "paused":
 		modal_shade.visible = false
 
 
 func _show_home() -> void:
+	mode = "pva"
+	batch_total = 0
+	Engine.time_scale = 1.0
 	_set_screen("home")
 	home_screen.call("close_controls")
 	home_screen.call("set_progress", unlocked_planet, _completed_count(), PLANETS.size())
@@ -771,6 +870,7 @@ func _restart_campaign() -> void:
 
 
 func start_run() -> void:
+	mode = "pva"
 	_open_map()
 
 
@@ -788,7 +888,8 @@ func _select_planet(index: int) -> void:
 
 
 func _show_briefing() -> void:
-	campaign_screen.call("present", "briefing", PLANETS[planet_index], {"stage_index": planet_index, "stage_count": PLANETS.size(), "stars": stage_stars[planet_index]})
+	var boss_ai := "%s + %s" % [PathfinderScript.NAMES[boss_search_algorithm(planet_index)], boss_decision_algorithm(planet_index).to_upper()]
+	campaign_screen.call("present", "briefing", PLANETS[planet_index], {"stage_index": planet_index, "stage_count": PLANETS.size(), "stars": stage_stars[planet_index], "ai": boss_ai})
 	_set_screen("briefing")
 	play_sound("select")
 
@@ -816,26 +917,15 @@ func _show_upgrade() -> void:
 
 
 func _start_planet() -> void:
+	mode = "pva"
 	_set_screen("fight")
 	pending_upgrade = false
 	alien_kills = 0
-	ai_aggression = 1.0 + planet_index * 0.055
-	ai_route = "astar"
-	route_index = 0
-	route_timer = 0.0
 	ui_timer = 0.0
-	boss_timer = 0.7
 	fuzzy_timer = 2.0
-	suit_timer = 3.0
-	suit_mode = "ATTACK"
 	alien_attack_clock = 0.0
-	chosen_action = ""
-	boss_special.clear()
-	boss_impact.clear()
-	boss_impact_timer = 0.0
 	_load_planet()
 	_announce("%s  •  REACH THE BOSS PORTAL" % PLANETS[planet_index]["name"], 2.4)
-	_request_pickup_location()
 	play_sound("select")
 
 
@@ -855,48 +945,58 @@ func _physics_process(delta: float) -> void:
 		return
 	hazard_clock += delta
 	alien_attack_clock += delta
-	var arena_width := get_arena_width()
-	camera.position = camera.position.lerp(Vector2(clampf(player.position.x + player.facing * 125.0, 640.0, arena_width - 640.0), 360.0), minf(1.0, delta * 3.0))
-	var move_right := Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)
-	var move_left := Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)
-	player.desired_direction = 0.0 if order_line.visible else float(move_right) - float(move_left)
-	suit_timer -= delta
-	if segment == "boss":
-		route_timer -= delta
-		boss_timer -= delta
-		fuzzy_timer -= delta
-		_update_boss_special(delta)
-		if phase != "fight":
-			return
-		if route_timer <= 0.0:
-			route_timer = maxf(0.66, 1.2 - planet_index * 0.055)
-			_plan_rival_route()
-		if boss_timer <= 0.0:
-			boss_timer = maxf(1.30, 2.5 - planet_index * 0.125)
-			_request_boss_decision()
-		if fuzzy_timer <= 0.0:
-			fuzzy_timer = 3.0
-			_request_adaptive_difficulty()
-		_drive_rival()
+	if mode == "ava":
+		_update_ai_match(delta)
 	else:
-		_update_aliens()
-		_check_portal()
+		_update_player_vs_ai(delta)
+	if phase != "fight":
+		return
 	_check_stomps()
-	_update_suit()
 	_update_hazards()
 	_update_projectiles(delta)
-	_update_pickup(delta)
+	_update_pickups()
 	ui_timer -= delta
 	if ui_timer <= 0.0:
 		ui_timer = 0.10
 		_refresh_ui()
 
 
+func _update_player_vs_ai(delta: float) -> void:
+	var arena_width := get_arena_width()
+	camera.position = camera.position.lerp(Vector2(clampf(player.position.x + player.facing * 125.0, 640.0, arena_width - 640.0), 360.0), minf(1.0, delta * 3.0))
+	var move_right := Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)
+	var move_left := Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)
+	player.desired_direction = float(move_right) - float(move_left)
+	if segment != "boss":
+		_update_aliens()
+		_check_portal()
+		return
+	_update_boss_special(delta)
+	if phase != "fight" or not is_instance_valid(rival):
+		return
+	fuzzy_timer -= delta
+	if fuzzy_timer <= 0.0:
+		fuzzy_timer = 3.0
+		_request_fuzzy_aggression()
+	if boss_special.is_empty():
+		boss_brain.update(delta, rival, player, self)       # search + Minimax/MCTS
+	else:
+		rival.desired_direction = 0.0                        # boss is charging its special
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
+	if event.keycode == KEY_P and phase == "fight":
+		show_paths = not show_paths
+		queue_redraw()
+		return
 	if event.keycode == KEY_ESCAPE:
-		if phase == "fight":
+		if mode == "ava" and phase in ["fight", "ai_result"]:
+			stop_ai_match()
+		elif phase == "ai_setup":
+			_show_home()
+		elif phase == "fight":
 			_show_pause()
 		elif phase == "paused":
 			_resume_fight()
@@ -910,7 +1010,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			home_screen.call("close_controls")
 		get_viewport().set_input_as_handled()
 		return
-	if phase != "fight" or order_line.visible:
+	if phase != "fight" or mode == "ava":
 		return
 	match event.keycode:
 		KEY_SPACE, KEY_W, KEY_UP:
@@ -923,71 +1023,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			player.dash()
 		KEY_E:
 			_orbit_pulse()
-		KEY_Q:
-			_cycle_suit_mode()
-		KEY_TAB:
-			order_line.visible = true
-			order_line.grab_focus()
-			get_viewport().set_input_as_handled()
-
-
-func _plan_rival_route() -> void:
-	if not is_instance_valid(rival) or not is_instance_valid(player):
-		return
-	var start := Vector2i(clampi(floori(rival.position.x / 150.0), 0, 19), clampi(floori(rival.position.y / 110.0), 0, 5))
-	var goal := Vector2i(clampi(floori(player.position.x / 150.0), 0, 19), clampi(floori(player.position.y / 110.0), 0, 5))
-	var blocked: Array[Vector2i] = [Vector2i(5, 2), Vector2i(9, 2), Vector2i(12, 3), Vector2i(16, 3)]
-	var preference: String = PATH_ALGORITHMS[route_index % PATH_ALGORITHMS.size()]
-	route_index += 1
-	var options := {"allow_diagonal": true, "depth_limit": 30, "max_depth": 30}
-	var search_goal := goal
-	if preference == "iddfs":
-		# Iterative deepening is useful for short lookahead, but an arena-wide
-		# search stalls a frame on low-end graphics hardware.
-		search_goal = Vector2i(start.x + clampi(goal.x - start.x, -4, 4), start.y + clampi(goal.y - start.y, -2, 2))
-		options["max_depth"] = 6
-	var result: Dictionary = PathfinderScript.search(preference, start, search_goal, blocked, Vector2i(20, 6), options)
-	ai_route = preference
-	if not bool(result.get("success", false)) and preference != "astar":
-		result = PathfinderScript.search("astar", start, goal, blocked, Vector2i(20, 6), options)
-		ai_route = "astar"
-	if bool(result.get("success", false)):
-		var path: Array = result.get("path", [])
-		if path.size() > 1:
-			var waypoint: Vector2i = path[1]
-			var dx := float(waypoint.x - start.x)
-			if absf(dx) > 0.0:
-				rival.desired_direction = signf(dx)
-			if waypoint.y < start.y and rival.is_on_floor():
-				rival.jump()
-
-
-func _drive_rival() -> void:
-	if not is_instance_valid(rival) or rival.knocked_out_state:
-		return
-	if not boss_special.is_empty():
-		rival.desired_direction = 0.0
-		return
-	var dx := player.position.x - rival.position.x
-	var dy := player.position.y - rival.position.y
-	if absf(dx) > 850.0:
-		rival.desired_direction = 0.0
-		return
-	if absf(dx) > 55.0:
-		rival.desired_direction = signf(dx) if absf(dx) > 180.0 else rival.desired_direction
-	else:
-		rival.desired_direction = 0.0
-	if dy < -55.0 and rival.is_on_floor():
-		rival.jump()
-	if absf(dx) < 113.0 and absf(dy) < 78.0:
-		rival.punch()
-	elif absf(dx) < 600.0 and absf(dy) < 135.0 and ("BARRAGE" in chosen_action or "ACID" in chosen_action or randf() < (0.010 + planet_index * 0.0022) * ai_aggression):
-		rival.facing = 1 if dx > 0.0 else -1
-		rival.blast()
-		chosen_action = ""
-	if "CHARGE" in chosen_action and absf(dx) < 360.0:
-		rival.dash()
-		chosen_action = ""
 
 
 func _update_boss_special(delta: float) -> void:
@@ -1009,9 +1044,6 @@ func _update_boss_special(delta: float) -> void:
 		else:
 			queue_redraw()
 		return
-	boss_special_timer -= delta
-	if boss_special_timer <= 0.0 and absf(player.position.x - rival.position.x) < 760.0:
-		_begin_boss_special()
 
 
 func _begin_boss_special() -> void:
@@ -1033,7 +1065,7 @@ func _resolve_boss_special() -> void:
 	boss_special.clear()
 	boss_impact = attack
 	boss_impact_timer = 0.24
-	boss_special_timer = maxf(3.05, 6.35 - planet_index * 0.36)
+	rival.special_cooldown = maxf(3.05, 6.35 - planet_index * 0.36)
 	var kind := str(attack["kind"])
 	var distance := absf(player.position.x - rival.position.x)
 	var toward := 1 if player.position.x >= rival.position.x else -1
@@ -1181,6 +1213,8 @@ func _living_enemies() -> Array[SpaceFighter]:
 
 
 func _check_stomps() -> void:
+	if mode == "ava":
+		return                      # keep AI vs AI fair: both fighters use the same attacks only
 	for enemy in _living_enemies():
 		if absf(player.position.x - enemy.position.x) > enemy.hit_radius:
 			continue
@@ -1199,38 +1233,6 @@ func _check_stomps() -> void:
 				_burst(player.position + Vector2(0, -45), false)
 
 
-func _request_boss_decision() -> void:
-	if segment != "boss" or not is_instance_valid(rival):
-		return
-	var distance := absf(player.position.x - rival.position.x)
-	AIClient.request_boss_decision({
-		"turn": "boss", "boss_hp": rival.health, "boss_max_hp": rival.max_health,
-		"boss_phase": 2 if rival.health < rival.max_health * 0.5 else 1,
-		"player_hp": player.health, "player_max_hp": player.max_health,
-		"player_energy": pulse_charge, "distance": distance * 0.5
-	}, str(PLANETS[planet_index]["boss"]), {"max_depth": 3, "simulations": 70}, func(result: Dictionary) -> void:
-		if phase == "fight" and segment == "boss" and bool(result.get("success", false)):
-			chosen_action = str(result.get("data", {}).get("action", ""))
-	)
-
-
-func _request_adaptive_difficulty() -> void:
-	if segment != "boss" or not is_instance_valid(rival):
-		return
-	AIClient.request_adaptive_difficulty({
-		"player_health": player.health / player.max_health * 100.0,
-		"recent_damage": (player.max_health - player.health) * 0.5,
-		"enemy_distance": absf(player.position.x - rival.position.x) * 0.4,
-		"repeated_failures": 0
-	}, "", func(result: Dictionary) -> void:
-		if phase == "fight" and segment == "boss" and is_instance_valid(rival) and bool(result.get("success", false)):
-			var data: Dictionary = result.get("data", {})
-			var stage_floor := 0.90 + planet_index * 0.05
-			ai_aggression = clampf(float(data.get("enemy_aggression", 0.6)) + 0.4 + planet_index * 0.045, stage_floor, 1.30 + planet_index * 0.055)
-			rival.move_speed = boss_base_speed * ai_aggression
-	)
-
-
 func _on_strike(fighter: SpaceFighter, kind: String) -> void:
 	if kind == "punch":
 		play_sound("throw")
@@ -1244,11 +1246,9 @@ func _on_strike(fighter: SpaceFighter, kind: String) -> void:
 			var dx: float = target.position.x - fighter.position.x
 			if absf(dx) < 82.0 + maxf(0.0, target.hit_radius - 34.0) and absf(target.position.y - fighter.position.y) < 64.0 + maxf(0.0, target.hit_radius - 34.0) and dx * fighter.facing > -10.0:
 				var toward := 1 if dx > 0.0 else -1
-				var damage := fighter.punch_damage * (1.20 if fighter == player and suit_mode == "ATTACK" else 1.0)
-				_deal_damage(target, damage, toward)
+				_deal_damage(target, fighter.punch_damage, toward)
 	else:
-		var damage := fighter.punch_damage * 0.78 * (1.20 if fighter == player and suit_mode == "ATTACK" else 1.0)
-		_spawn_projectile(fighter.position + Vector2(fighter.facing * 32, -8), fighter.facing, fighter == player, damage)
+		_spawn_projectile(fighter.position + Vector2(fighter.facing * 32, -8), fighter.facing, fighter == player, fighter.punch_damage * 0.78)
 		play_sound("magic")
 
 
@@ -1262,6 +1262,8 @@ func _spawn_projectile(at: Vector2, direction: int, friendly: bool, damage: floa
 	projectile.z_index = 4
 	world_layer.add_child(projectile)
 	var projectile_speed := 640.0 if friendly else (525.0 + planet_index * 18.0 if segment == "boss" else 525.0)
+	if mode == "ava":
+		projectile_speed = 600.0    # same speed for both AIs
 	projectiles.append({"node": projectile, "speed": direction * projectile_speed, "friendly": friendly, "damage": damage, "life": 2.2})
 
 
@@ -1283,6 +1285,8 @@ func _update_projectiles(delta: float) -> void:
 				_burst(projectile.position, bool(item["friendly"]))
 				impact = true
 				break
+		if wall_rect.has_point(projectile.position):
+			impact = true               # the middle wall stops shots
 		if impact or float(item["life"]) <= 0.0 or projectile.position.x < -30.0 or projectile.position.x > get_arena_width() + 30.0:
 			projectile.queue_free()
 			projectiles.remove_at(index)
@@ -1307,12 +1311,20 @@ func _burst(at: Vector2, friendly: bool) -> void:
 
 
 func _deal_damage(target: SpaceFighter, amount: float, direction: int) -> void:
-	if target == player and suit_mode == "GUARD":
-		amount *= 0.65
 	var before := target.health
 	target.take_damage(amount, direction)
-	if target != player and target.health < before:
-		pulse_charge = minf(100.0, pulse_charge + 15.0)
+	var dealt := before - target.health
+	if dealt > 0.0:
+		# Hitting someone gives energy to the attacker.
+		if mode == "ava":
+			var attacker := rival if target == player else player
+			attacker.energy = minf(100.0, attacker.energy + 12.0)
+			var brain: FighterBrain = blue_brain if attacker == player else red_brain
+			brain.damage_dealt += dealt
+		elif target != player:
+			pulse_charge = minf(100.0, pulse_charge + 15.0)
+		elif is_instance_valid(rival):
+			rival.energy = minf(100.0, rival.energy + 10.0)
 	_refresh_ui()
 
 
@@ -1337,109 +1349,276 @@ func _orbit_pulse() -> void:
 	queue_redraw()
 
 
-func _update_suit() -> void:
-	if suit_mode != "HEAL" or suit_timer > 0.0:
-		return
-	suit_timer = 3.0
-	if pulse_charge >= 15.0 and player.health < player.max_health:
-		pulse_charge -= 15.0
-		player.health = minf(player.max_health, player.health + 7.0)
-		_burst(player.position + Vector2(0, -18), true)
-		_announce("SUIT REPAIR  •  HEALTH +7", 1.2)
+func _spawn_pickup(kind: String, at: Vector2) -> void:
+	var sprite := Sprite2D.new()
+	sprite.texture = load(ASSET + ("effects/gem_red.png" if kind == "health" else "effects/gem_yellow.png")) as Texture2D
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.position = at
+	sprite.scale = Vector2.ONE * 0.72
+	sprite.z_index = 2
+	world_layer.add_child(sprite)
+	pickups.append({"node": sprite, "kind": kind, "y": at.y})
 
 
-func _cycle_suit_mode() -> void:
-	var modes := ["ATTACK", "GUARD", "HEAL"]
-	suit_mode = modes[(modes.find(suit_mode) + 1) % modes.size()]
-	suit_timer = 3.0
-	_announce("SUIT MODE: %s" % suit_mode, 1.4)
-	_refresh_ui()
+func _update_pickups() -> void:
+	for index in range(pickups.size() - 1, -1, -1):
+		var item: Dictionary = pickups[index]
+		var sprite: Sprite2D = item["node"]
+		sprite.position.y = float(item["y"]) + sin(Time.get_ticks_msec() * 0.004 + index) * 7.0
+		if mode == "pva" and sprite.position.distance_to(player.position) < 53.0:
+			if item["kind"] == "health":
+				player.health = minf(player.max_health, player.health + 20.0)
+				_announce("HEALTH +20", 1.2)
+			else:
+				pulse_charge = minf(100.0, pulse_charge + 30.0)
+				_announce("ENERGY +30", 1.2)
+			play_sound("gem")
+			sprite.queue_free()
+			pickups.remove_at(index)
 
 
-func _set_suit_mode(mode: String) -> void:
-	suit_mode = mode
-	suit_timer = 3.0
-	_announce("SUIT MODE: %s" % mode, 1.4)
-	_refresh_ui()
+# ---------------------------------------------------------------------------
+# AI helpers used by FighterBrain and the backend algorithms
+# ---------------------------------------------------------------------------
+## Energy of a fighter (the human player uses the Orbit Pulse meter).
+func energy_of(fighter: SpaceFighter) -> float:
+	return pulse_charge if mode == "pva" and fighter == player else fighter.energy
 
 
-func _on_order_submitted(value: String) -> void:
-	order_line.visible = false
-	order_line.release_focus()
-	order_line.clear()
-	if value.strip_edges().is_empty():
-		return
-	AIClient.request_command_parse(value, {}, func(result: Dictionary) -> void:
-		if phase != "fight":
+## Called when Minimax / MCTS chooses "special". Returns false if not possible.
+func perform_special(fighter: SpaceFighter, foe: SpaceFighter) -> bool:
+	if fighter.special_cooldown > 0.0 or energy_of(fighter) < 50.0:
+		return false
+	if mode == "pva":
+		# The boss uses its planet's telegraphed special move.
+		if not boss_special.is_empty() or absf(foe.position.x - fighter.position.x) > 760.0:
+			return false
+		fighter.energy -= 50.0
+		fighter.special_cooldown = 6.0
+		_begin_boss_special()
+		return true
+	# AI vs AI special: a 3-shot volley.
+	fighter.energy -= 50.0
+	fighter.special_cooldown = 4.0
+	var toward := 1 if foe.position.x >= fighter.position.x else -1
+	fighter.facing = toward
+	for lane in [-30.0, -8.0, 14.0]:
+		_spawn_projectile(fighter.position + Vector2(toward * 40.0, lane), toward, fighter == player, fighter.punch_damage)
+	play_sound("magic")
+	return true
+
+
+## Called by FighterBrain after every path search.
+func record_search(_brain: FighterBrain) -> void:
+	if show_paths:
+		queue_redraw()
+
+
+## Fuzzy logic: player health + distance -> boss aggression (changes boss speed).
+func _request_fuzzy_aggression() -> void:
+	AIClient.request_fuzzy(player.health / player.max_health * 100.0, absf(player.position.x - rival.position.x), func(result: Dictionary) -> void:
+		if phase != "fight" or mode != "pva" or not is_instance_valid(rival) or not bool(result.get("success", false)):
 			return
-		var intent := ""
-		if bool(result.get("success", false)):
-			intent = str(result.get("data", {}).get("parsed", {}).get("intent", ""))
-		else:
-			var lower := value.to_lower()
-			if "attack" in lower:
-				intent = "suit_attack"
-			elif "guard" in lower or "defend" in lower:
-				intent = "suit_guard"
-			elif "heal" in lower:
-				intent = "suit_heal"
-		match intent:
-			"suit_attack": _set_suit_mode("ATTACK")
-			"suit_guard": _set_suit_mode("GUARD")
-			"suit_heal": _set_suit_mode("HEAL")
-			"check_vitals": _announce("HEALTH %d / %d" % [ceili(player.health), ceili(player.max_health)], 2.0)
-			_: _announce("SUIT: ATTACK, DEFEND, HEAL, OR STATUS", 2.0)
+		aggression = str(result["data"].get("label", "medium"))
+		rival.move_speed = boss_base_speed * float({"low": 0.85, "medium": 1.0, "high": 1.2}.get(aggression, 1.0))
 	)
 
 
-func _request_pickup_location() -> void:
-	AIClient.request_placement_suggestions({
-		"structure_id": "defense_turret",
-		"search_zone": [3, 3, 18, 5],
-		"max_suggestions": 6,
-		"available_resources": {"titanium": 10, "crystals": 10},
-		"grid_size": [20, 6],
-		"build_zone": [2, 2, 18, 5],
-		"blocked_cells": [[5, 5], [9, 5], [12, 5], [15, 5]],
-		"occupied_cells": []
-	}, func(result: Dictionary) -> void:
-		if phase != "fight" or segment != "explore":
+## CSP: place 3 pickups on free tiles, away from the boss and from each other.
+func _request_pickups() -> void:
+	var candidates: Array = []
+	var walls: Array = []
+	for cell in grid.all_cells():
+		candidates.append([cell.x, cell.y])
+		if grid.blocked.has(cell):
+			walls.append([cell.x, cell.y])       # walls, platforms, ground and unreachable air
+	var enemy := grid.to_cell(rival.position)
+	var request := {"candidates": candidates, "walls": walls, "enemy": [enemy.x, enemy.y], "items": ["health", "energy", "health"]}
+	AIClient.request_pickups(request, func(result: Dictionary) -> void:
+		if phase != "fight" or mode != "pva" or segment != "boss" or grid == null:
 			return
-		var x := 1650.0
-		var suggestions: Array = result.get("data", {}).get("suggestions", [])
-		if bool(result.get("success", false)) and not suggestions.is_empty():
-			x = clampf(70.0 + float(suggestions[0][0]) * 150.0, 200.0, ARENA_WIDTH - 200.0)
-		_spawn_pickup(Vector2(x, 535))
+		var data: Dictionary = result.get("data", {})
+		if not bool(result.get("success", false)) or not bool(data.get("success", false)):
+			return
+		for placement in data["placements"]:
+			_spawn_pickup(str(placement["item"]), grid.to_world(Vector2i(int(placement["tile"][0]), int(placement["tile"][1]))))
 	)
 
 
-func _spawn_pickup(at: Vector2) -> void:
-	if is_instance_valid(pickup):
-		pickup.queue_free()
-	pickup = Sprite2D.new()
-	pickup.texture = load(ASSET + "effects/gem_blue.png") as Texture2D
-	pickup.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	pickup.position = at
-	pickup.scale = Vector2.ONE * 0.72
-	pickup.z_index = 2
-	world_layer.add_child(pickup)
+# ---------------------------------------------------------------------------
+# AI vs AI mode
+# ---------------------------------------------------------------------------
+func open_ai_setup() -> void:
+	mode = "ava"
+	batch_total = 0
+	Engine.time_scale = 1.0
+	_set_screen("ai_setup")
+	ai_screen.call("show_setup")
+	ai_screen.call("set_backend", AIClient.is_backend_available)
+	AIClient.check_health(func(result: Dictionary) -> void:
+		ai_screen.call("set_backend", bool(result.get("success", false)))
+	)
+	play_sound("select")
 
 
-func _update_pickup(_delta: float) -> void:
-	if not is_instance_valid(pickup):
+func start_ai_match(config: Dictionary) -> void:
+	ai_config = config
+	batch_total = 0
+	batch_results.clear()
+	Engine.time_scale = 1.0
+	_begin_ai_match()
+
+
+## "Run 10 matches": plays `count` matches back to back at BATCH_SPEED.
+func start_ai_batch(config: Dictionary, count: int) -> void:
+	ai_config = config
+	batch_total = count
+	batch_results.clear()
+	Engine.time_scale = BATCH_SPEED
+	_begin_ai_match()
+
+
+func _begin_ai_match() -> void:
+	mode = "ava"
+	planet_index = int(ai_config.get("planet", 0))
+	_clear_level()
+	segment = "boss"
+	_set_screen("fight")
+	_build_boss_arena()
+	var gravity := float(PLANETS[planet_index]["gravity"])
+	player = _make_ai_fighter("purple", Color(0.62, 0.8, 1.0), "AI 1", BLUE, Vector2(210, 585), 1, gravity)
+	rival = _make_ai_fighter("pink", Color(1.0, 0.62, 0.62), "AI 2", RED, Vector2(BOSS_WIDTH - 210, 585), -1, gravity)
+	blue_brain = BrainScript.new(str(ai_config["blue_search"]), str(ai_config["blue_decision"]))
+	red_brain = BrainScript.new(str(ai_config["red_search"]), str(ai_config["red_decision"]))
+	match_time = 0.0
+	ui_timer = 0.0
+	_announce("AI 1  vs  AI 2  •  FIGHT!", 1.5)
+	queue_redraw()
+	_refresh_ui()
+
+
+func _make_ai_fighter(color_name: String, tint: Color, tag: String, tag_color: Color, at: Vector2, facing: int, gravity: float) -> SpaceFighter:
+	var fighter := FighterScript.new() as SpaceFighter
+	fighter.configure(self, false, color_name, AI_HEALTH)
+	fighter.punch_damage = 10.0
+	fighter.move_speed = 250.0
+	fighter.gravity_scale = gravity
+	fighter.position = at
+	fighter.facing = facing
+	fighter.strike_requested.connect(_on_strike)
+	fighter.knocked_out.connect(_on_knockout)
+	world_layer.add_child(fighter)
+	fighter.sprite.modulate = tint
+	var label := _label(fighter, tag, Vector2(-24, -84), Vector2(48, 22), 16, tag_color)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	return fighter
+
+
+func _update_ai_match(delta: float) -> void:
+	match_time += delta
+	var middle := (player.position.x + rival.position.x) * 0.5
+	camera.position = camera.position.lerp(Vector2(clampf(middle, 640.0, BOSS_WIDTH - 640.0), 360.0), minf(1.0, delta * 3.0))
+	blue_brain.update(delta, player, rival, self)
+	red_brain.update(delta, rival, player, self)
+	if match_time >= MATCH_SECONDS:
+		_end_ai_match()
+
+
+## Ends the match (knockout or time limit) and shows the result.
+func _end_ai_match() -> void:
+	if phase != "fight" or mode != "ava" or blue_brain == null:
 		return
-	pickup.position.y = 535.0 + sin(Time.get_ticks_msec() * 0.004) * 9.0
-	if pickup.position.distance_to(player.position) < 53.0:
-		pickup.queue_free()
-		pickup = null
-		player.health = minf(player.max_health, player.health + 18.0)
-		pulse_charge = minf(100.0, pulse_charge + 18.0)
-		play_sound("gem")
-		_announce("STAR CORE  •  HEALTH + ENERGY", 1.5)
+	blue_brain.active = false
+	red_brain.active = false
+	var blue_left := player.health / player.max_health
+	var red_left := rival.health / rival.max_health
+	var winner := "draw"
+	if blue_left > red_left:
+		winner = "blue"
+	elif red_left > blue_left:
+		winner = "red"
+	var result := {
+		"winner": winner,
+		"time": match_time,
+		"knockout": player.knocked_out_state or rival.knocked_out_state,
+		"blue": _ai_stats(blue_brain, blue_left),
+		"red": _ai_stats(red_brain, red_left),
+	}
+	if batch_total > 0:
+		batch_results.append(result)
+		if batch_results.size() < batch_total:
+			call_deferred("_begin_ai_match")      # next match of the batch
+			return
+		Engine.time_scale = 1.0
+		_set_screen("ai_result")
+		_show_batch_result()
+		return
+	_set_screen("ai_result")
+	_show_match_result(result)
+
+
+func _ai_stats(brain: FighterBrain, health_left: float) -> Dictionary:
+	return {
+		"title": brain.title(),
+		"health": health_left * 100.0,
+		"damage": brain.damage_dealt,
+		"searches": brain.searches,
+		"avg_nodes": brain.average_nodes(),
+		"avg_ms": brain.average_time_ms(),
+	}
+
+
+func _show_match_result(result: Dictionary) -> void:
+	var blue: Dictionary = result["blue"]
+	var red: Dictionary = result["red"]
+	var title: String = {"blue": "AI 1 (BLUE) WINS", "red": "AI 2 (RED) WINS", "draw": "DRAW"}[result["winner"]]
+	var how := "knockout" if result["knockout"] else "time limit (more health wins)"
+	ai_screen.call("show_result", title, "Time taken %.1f s  •  %s" % [result["time"], how], [
+		["", "AI 1 (BLUE)", "AI 2 (RED)"],
+		["Algorithms", blue["title"], red["title"]],
+		["Health left", "%d %%" % roundi(blue["health"]), "%d %%" % roundi(red["health"])],
+		["Total damage dealt", "%.0f" % blue["damage"], "%.0f" % red["damage"]],
+		["Searches run", str(blue["searches"]), str(red["searches"])],
+		["Avg nodes expanded", "%.1f" % blue["avg_nodes"], "%.1f" % red["avg_nodes"]],
+		["Avg search time", "%.3f ms" % blue["avg_ms"], "%.3f ms" % red["avg_ms"]],
+	])
+
+
+func _show_batch_result() -> void:
+	var wins := {"blue": 0, "red": 0, "draw": 0}
+	var totals := {"blue": {"damage": 0.0, "nodes": 0.0, "ms": 0.0}, "red": {"damage": 0.0, "nodes": 0.0, "ms": 0.0}}
+	var total_time := 0.0
+	for result in batch_results:
+		wins[result["winner"]] += 1
+		total_time += float(result["time"])
+		for side in ["blue", "red"]:
+			totals[side]["damage"] += float(result[side]["damage"])
+			totals[side]["nodes"] += float(result[side]["avg_nodes"])
+			totals[side]["ms"] += float(result[side]["avg_ms"])
+	var n := float(batch_results.size())
+	var first: Dictionary = batch_results[0]
+	ai_screen.call("show_result", "%d MATCHES:  AI 1  %d  -  %d  AI 2" % [batch_results.size(), wins["blue"], wins["red"]],
+		"Draws %d  •  average match %.1f s" % [wins["draw"], total_time / n], [
+		["", "AI 1 (BLUE)", "AI 2 (RED)"],
+		["Algorithms", first["blue"]["title"], first["red"]["title"]],
+		["Wins", str(wins["blue"]), str(wins["red"])],
+		["Avg damage per match", "%.0f" % (totals["blue"]["damage"] / n), "%.0f" % (totals["red"]["damage"] / n)],
+		["Avg nodes expanded", "%.1f" % (totals["blue"]["nodes"] / n), "%.1f" % (totals["red"]["nodes"] / n)],
+		["Avg search time", "%.3f ms" % (totals["blue"]["ms"] / n), "%.3f ms" % (totals["red"]["ms"] / n)],
+	])
+
+
+## Esc during AI vs AI: stop the match (or the batch) and go back to the setup screen.
+func stop_ai_match() -> void:
+	_clear_level()
+	open_ai_setup()
 
 
 func _on_knockout(fighter: SpaceFighter) -> void:
 	if phase != "fight":
+		return
+	if mode == "ava":
+		call_deferred("_end_ai_match")
 		return
 	if fighter == player:
 		campaign_screen.call("present", "defeat", PLANETS[planet_index], {"stage_index": planet_index, "stage_count": PLANETS.size()})
@@ -1463,16 +1642,13 @@ func _on_knockout(fighter: SpaceFighter) -> void:
 		return
 	rule_pending = true
 	wins += 1
-	AIClient.request_rule_inference({
-		"duel_active": true,
-		"duel_rival_down": true,
-		"duel_player_alive": player.health > 0.0
-	}, ["duel"], 10, func(result: Dictionary) -> void:
+	# Forward chaining: IF boss_hp <= 0 AND player_hp > 0 THEN duel_won.
+	AIClient.request_rules({"boss_hp": rival.health, "player_hp": player.health, "planet": planet_index}, func(result: Dictionary) -> void:
 		if phase != "fight":
 			return
-		var facts: Dictionary = result.get("data", {}).get("derived_facts", {})
-		if bool(result.get("success", false)) and bool(facts.get("duel_won", false)):
-			_announce("VICTORY  •  AI REFEREE CONFIRMED", 2.0)
+		var derived: Dictionary = result.get("data", {}).get("derived", {})
+		if bool(result.get("success", false)) and bool(derived.get("duel_won", false)):
+			_announce("VICTORY  •  RULE ENGINE: duel_won", 2.0)
 		_finish_planet()
 	)
 
@@ -1520,8 +1696,6 @@ func _complete_upgrade() -> void:
 func _show_pause() -> void:
 	_set_screen("paused")
 	player.desired_direction = 0.0
-	if order_line.visible:
-		order_line.visible = false
 	_show_modal("PAUSED", "BIOSPHERE X", "Take a breath. Your planet and campaign progress are waiting.", [
 		{"label": "RESUME FIGHT", "callback": Callable(self, "_resume_fight")},
 		{"label": "RESTART PLANET", "callback": Callable(self, "_start_planet")},

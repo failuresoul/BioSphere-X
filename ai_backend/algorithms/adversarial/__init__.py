@@ -1,20 +1,6 @@
-"""
-BioSphere-X Adversarial AI Modules.
-Includes Minimax, Alpha-Beta pruning, MCTS, and Combat State representation.
-"""
-from .combat_state import CombatState, evaluate_combat_state, BOSS_ACTIONS, PLAYER_ACTIONS
-from .minimax import MinimaxDecision
-from .alpha_beta import AlphaBetaDecision
-from .mcts import MCTSDecision
-from .router import router
+"""Adversarial search: Minimax (with optional alpha-beta) and MCTS."""
+from .combat_state import ACTIONS, CombatState, evaluate
+from .minimax import minimax_decision
+from .mcts import mcts_decision
 
-__all__ = [
-    "CombatState",
-    "evaluate_combat_state",
-    "BOSS_ACTIONS",
-    "PLAYER_ACTIONS",
-    "MinimaxDecision",
-    "AlphaBetaDecision",
-    "MCTSDecision",
-    "router"
-]
+__all__ = ["ACTIONS", "CombatState", "evaluate", "minimax_decision", "mcts_decision"]

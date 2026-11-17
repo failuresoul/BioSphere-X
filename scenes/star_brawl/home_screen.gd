@@ -1,6 +1,7 @@
 extends Control
 
-signal play_requested
+signal play_requested          # Player vs AI
+signal ai_vs_ai_requested      # AI vs AI
 signal exit_requested
 signal pilot_selected(index: int)
 signal restart_confirmed
@@ -73,19 +74,21 @@ func _build_controls() -> void:
 	_text("NOVA COMMAND // SECTOR 07", Vector2(68, 60), Vector2(650, 32), 18, Color("65e6eb"))
 	_text("BIOSPHERE", Vector2(64, 124), Vector2(650, 103), 82, Color("f5fbff"))
 	_text("X", Vector2(548, 124), Vector2(105, 103), 82, Color("72eae8"))
-	play_button = _button("PLAY  ›", Vector2(126, 294), Vector2(390, 60), Color("087f96"), Color("69f1f1"))
-	play_button.add_theme_font_size_override("font_size", 26)
+	# The two game modes: big buttons.
+	play_button = _button("PLAYER  vs  AI", Vector2(126, 270), Vector2(390, 84), Color("087f96"), Color("69f1f1"))
+	play_button.add_theme_font_size_override("font_size", 30)
 	play_button.pressed.connect(func() -> void: play_requested.emit())
-	var help_button := _button("GUIDE", Vector2(126, 370), Vector2(390, 60), Color("202d56"), Color("829bd8"))
-	help_button.add_theme_font_size_override("font_size", 25)
+	var ai_button := _button("AI  vs  AI", Vector2(126, 370), Vector2(390, 84), Color("6b2f8f"), Color("d9a0ff"))
+	ai_button.add_theme_font_size_override("font_size", 30)
+	ai_button.pressed.connect(func() -> void: ai_vs_ai_requested.emit())
+	# Small extra buttons.
+	var help_button := _button("GUIDE", Vector2(126, 478), Vector2(124, 48), Color("202d56"), Color("829bd8"))
 	help_button.pressed.connect(_show_controls)
-	var settings_button := _button("SETTINGS", Vector2(126, 446), Vector2(390, 60), Color("202d56"), Color("829bd8"))
-	settings_button.add_theme_font_size_override("font_size", 25)
+	var settings_button := _button("SETTINGS", Vector2(259, 478), Vector2(124, 48), Color("202d56"), Color("829bd8"))
 	settings_button.pressed.connect(_show_settings)
-	var restart_button := _button("RESTART", Vector2(126, 522), Vector2(390, 60), Color("202d56"), Color("829bd8"))
-	restart_button.add_theme_font_size_override("font_size", 25)
+	var restart_button := _button("RESTART", Vector2(392, 478), Vector2(124, 48), Color("202d56"), Color("829bd8"))
 	restart_button.pressed.connect(_show_restart_confirmation)
-	progress_text = _text("", Vector2(127, 605), Vector2(390, 28), 16, Color("f6da88"))
+	progress_text = _text("", Vector2(127, 545), Vector2(390, 28), 16, Color("f6da88"))
 	progress_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pilot_preview = PilotAvatarScript.new() as Node2D
 	pilot_preview.position = Vector2(952, 457)
@@ -118,7 +121,7 @@ func _build_controls() -> void:
 	menu_scrim.add_child(controls_panel)
 	var heading := _panel_text("PILOT CONTROLS", Vector2(36, 32), Vector2(540, 52), 36, Color("e9fbff"))
 	controls_panel.add_child(heading)
-	var body := _panel_text("A / D or arrows       Move through the arena\nSpace or W              Double jump and stomp\nJ                                 Close strike\nK                                Star blaster\nShift                          Dash past traps\nE                                Orbit Pulse at 70 energy\nQ                               Cycle suit modes\nTab                            Type a suit command\nEsc                            Pause the fight", Vector2(53, 103), Vector2(520, 313), 20, Color("cce0f4"))
+	var body := _panel_text("A / D or arrows       Move through the arena\nSpace or W              Double jump and stomp\nJ                                 Close strike\nK                                Star blaster\nShift                          Dash past traps\nE                                Orbit Pulse at 70 energy\nP                                Show / hide AI search paths\nEsc (AI vs AI)          Stop the match\nEsc                            Pause the fight", Vector2(53, 103), Vector2(520, 313), 20, Color("cce0f4"))
 	controls_panel.add_child(body)
 	var close_button := _button("BACK TO HOME", Vector2(178, 420), Vector2(254, 55), Color("12637d"), Color("71e9f1"))
 	close_button.reparent(controls_panel)
@@ -218,7 +221,6 @@ func _on_fullscreen_changed(enabled: bool) -> void:
 
 
 func set_progress(unlocked_stage: int, completed: int, total_stages: int = 10) -> void:
-	play_button.text = "CONTINUE  ›" if completed > 0 else "PLAY  ›"
 	progress_text.text = "%d / %d CHAPTERS  •  %d WORLDS OPEN" % [completed, total_stages, unlocked_stage + 1]
 
 

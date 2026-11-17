@@ -1,132 +1,95 @@
 # BioSphere X
 
-BioSphere X is a 2D space platform fighting game. Choose a human pilot in space armor, follow the Horizon Ark's distress signal across ten planet chapters, and fight an AI guardian at the end of each one. The playable project is the Godot scene [`scenes/star_brawl/star_brawl.tscn`](scenes/star_brawl/star_brawl.tscn), configured as the main scene in [`project.godot`](project.godot).
+A 2D space fighting game made for an AI course. Fighters move with **search algorithms** and choose their attacks with **adversarial search**. The game is made in **Godot 4**; some AI algorithms run in a small **Python (FastAPI)** backend.
 
-## Requirements
+## How to run (Windows)
 
-- **Godot 4** with the standard (non-.NET) editor. The project was tested with Godot **4.7.2** and uses its Compatibility renderer.
-- **Python** and `pip` for the local AI service. The setup below was tested with Python **3.13**.
-- **Windows** for the supplied one-click launcher. The Godot project and Python backend can also be started manually on other desktop systems.
+You need **Godot 4** (tested with 4.7.2) and **Python 3** (tested with 3.13).
 
-The game assets are included. No account or API key is needed. Godot talks to the Python AI service at `http://127.0.0.1:8000` on your own computer.
-
-## Install and run on Windows
-
-1. Install [Godot for Windows](https://godotengine.org/download/windows/) and [Python for Windows](https://www.python.org/downloads/windows/) if they are not installed. With Windows Package Manager, the tested major versions can be installed using:
+1. Install the backend once (in PowerShell, in this folder):
 
    ```powershell
-   winget install --id GodotEngine.GodotEngine --exact
-   winget install --id Python.Python.3.13 --exact
-   ```
-
-2. Open PowerShell in the folder containing this README. Create the backend environment and install its dependencies once:
-
-   ```powershell
-   py -3.13 -m venv ai_backend\.venv
+   python -m venv ai_backend\.venv
    .\ai_backend\.venv\Scripts\python.exe -m pip install -r ai_backend\requirements.txt
    ```
 
-   If `py -3.13` is unavailable but `python` runs your installed Python, use `python -m venv ai_backend\.venv` for the first command.
-
-3. Launch both the AI service and game:
+2. Start the game and the backend together:
 
    ```powershell
    .\launch_game_with_ai.bat
    ```
 
-The launcher reuses a running backend or starts [`start_ai_backend.bat`](start_ai_backend.bat), then opens Godot. Keep the backend window open while playing. To check it, open `http://127.0.0.1:8000/health`; it should report `"status":"ok"` and `"service":"BioSphere-X AI Backend"`. Interactive API documentation is at `http://127.0.0.1:8000/docs`.
+   The launcher starts the backend (`start_ai_backend.bat`) and opens Godot. Check the backend at http://127.0.0.1:8000/health.
 
-### Run the two processes manually
+**Run them by hand instead:** start the backend with `.\ai_backend\.venv\Scripts\python.exe -m uvicorn ai_backend.main:app --port 8000`, then open `project.godot` in Godot and press **F5**.
 
-From the project root, start the backend in one terminal:
+If the backend is not running, the game still works: the AI uses a simple fallback rule and the HUD shows `(offline)`.
 
-```powershell
-.\ai_backend\.venv\Scripts\python.exe -m uvicorn ai_backend.main:app --host 127.0.0.1 --port 8000
-```
+## The two game modes
 
-In a second terminal, run `godot --path .`, or import [`project.godot`](project.godot) in the Godot editor and press **F5**. If `godot` is not on your `PATH`, use the path to your Godot executable. On Linux or macOS, create a Python virtual environment with `python3 -m venv ai_backend/.venv`, install `ai_backend/requirements.txt`, start the same Uvicorn module with that environment's Python, then open the Godot project.
+On the home screen, pick one of two buttons.
 
-The AI service is required for the complete campaign: it confirms boss victories and supplies boss decisions, adaptive difficulty, CSP pickup placement, and command parsing. The game tries to start the service when launched directly, but the Windows launcher or the manual two-terminal method is the reliable setup.
+### Player vs AI
 
-## How to play
+You play through 10 planets. On each planet you explore the level, go through the portal, and fight the boss.
 
-The flow is **Home → Planet Map → Level Preview → Exploration → Boss Portal → Boss Fight → Result → Upgrade/Next Planet**. Home has **Play**, **Guide**, **Settings**, pilot selection, a confirmed **Restart**, and **Exit Game** at the top right.
+- The boss **moves** with a search algorithm. Each planet uses a different one: planet 1 DFS, 2 DLS, 3 IDDFS, 4 Bidirectional, 5 Best-First, 6 A*, and then the list repeats.
+- The boss **decides** what to do with **Minimax** on odd planets (1, 3, 5, 7, 9) and **MCTS** on even planets (2, 4, 6, 8, 10).
+- The HUD shows the boss's algorithms, its current action, nodes expanded, path length, search time and its fuzzy aggression level.
 
-- Select one of three armored human pilots. Your selection is saved.
-- Clear ten story chapters based on catalogued exoplanets. The map and level previews show each planet's radius and orbital period from NASA's Exoplanet Catalog; the terrain, colors, story, and enemies are fictional game art. Source URLs for each planet are in [`planet_facts.gd`](scenes/star_brawl/planet_facts.gd).
-- Cross a scrolling 3,000-pixel level with alien patrols, platforms, and planet-specific hazards. Enter the portal near the end to reach a separate boss arena.
-- Fight ten distinct, progressively larger and faster guardians. Each has a different telegraphed special attack and a character built from downloaded sprite assets.
-- A victory unlocks the next chapter and awards one to three stars based on remaining health. A first clear offers **Armor** (+25 maximum health), **Power** (+5 attack damage), or **Flux** (+35 movement speed and energy).
-- Replay cleared planets for a better star rating. Settings, pilot choice, stars, unlocks, and upgrades persist between runs.
+| Key | Action |
+|---|---|
+| A / D or arrow keys | Move |
+| Space / W | Jump (double jump) |
+| J | Punch |
+| K | Blaster shot |
+| Shift | Dash |
+| E | Orbit Pulse (needs 70 energy) |
+| P | Show / hide the AI's search grid and path |
+| Esc | Pause |
 
-| Control | Action |
-| --- | --- |
-| `A` / `D` or left / right arrows | Move |
-| `Space`, `W`, or up arrow | Jump; jump again for a double jump, or land on an enemy to stomp |
-| `J` | Close strike |
-| `K` | Star blaster |
-| `Shift` | Dash |
-| `E` | Orbit Pulse when the meter reaches 70 |
-| `Q` | Cycle suit modes: attack, guard, heal |
-| `Tab` | Type a suit command such as `attack`, `defend`, `heal`, or `status` |
-| `Esc` | Pause, resume, or go back from a menu |
+### AI vs AI
 
-The pause menu also offers **Restart Planet**, **Galaxy Map**, and **Home**.
+Two AI fighters fight each other, and nobody controls them.
 
-## Where the algorithms are implemented
+1. For **AI 1 (blue)** and **AI 2 (red)**, choose a **search algorithm** (DFS / DLS / IDDFS / Bidirectional / Best-First / A*) and a **decision algorithm** (Minimax / MCTS).
+2. Choose an arena (planet) and press **Start**.
+3. During the match the HUD shows, for each AI: its algorithms, health, current action, nodes expanded, path length and search time (ms). Press **P** to draw each AI's path (blue and red lines).
+4. A match ends by knockout, or after 60 seconds. If time runs out, the AI with more health wins. The result panel shows the winner, time taken, total damage dealt, and each AI's average nodes expanded and average search time.
+5. **Run 10 matches** plays 10 matches back to back at 3x speed and shows a win table.
 
-The active game is [`star_brawl.gd`](scenes/star_brawl/star_brawl.gd). It calls local Godot code for boss navigation and the Python service through [`ai_client.gd`](scripts/autoloads/ai_client.gd) for the other AI systems. The service entry point is [`ai_backend/main.py`](ai_backend/main.py).
+Press **Esc** to stop a match and go back to the setup screen.
 
-| Algorithm | Implementation | Use in the current game |
-| --- | --- | --- |
-| A* search | [`modular_pathfinder.gd`](scripts/utils/modular_pathfinder.gd); Python version [`astar.py`](ai_backend/algorithms/pathfinding/astar.py) | Boss navigation; also the fallback if another route search cannot find a path. |
-| Breadth-first search (BFS) | [`modular_pathfinder.gd`](scripts/utils/modular_pathfinder.gd); [`bfs.py`](ai_backend/algorithms/pathfinding/bfs.py) | One of the rotating boss route searches. |
-| Depth-first search (DFS) | [`modular_pathfinder.gd`](scripts/utils/modular_pathfinder.gd); [`dfs.py`](ai_backend/algorithms/pathfinding/dfs.py) | Rotating boss route search. |
-| Depth-limited search (DLS) | [`modular_pathfinder.gd`](scripts/utils/modular_pathfinder.gd); [`dls.py`](ai_backend/algorithms/pathfinding/dls.py) | Rotating boss route search with a depth limit. |
-| Iterative deepening DFS (IDDFS) | [`modular_pathfinder.gd`](scripts/utils/modular_pathfinder.gd); [`iddfs.py`](ai_backend/algorithms/pathfinding/iddfs.py) | Rotating boss route search with short lookahead to avoid long frame stalls. |
-| Bidirectional search | [`modular_pathfinder.gd`](scripts/utils/modular_pathfinder.gd); [`bidirectional.py`](ai_backend/algorithms/pathfinding/bidirectional.py) | Rotating boss route search from both ends. |
-| Greedy best-first search | [`modular_pathfinder.gd`](scripts/utils/modular_pathfinder.gd); [`greedy.py`](ai_backend/algorithms/pathfinding/greedy.py) | Rotating heuristic boss route search. |
-| Alpha-beta pruning | [`alpha_beta.py`](ai_backend/algorithms/adversarial/alpha_beta.py) | Boss action decisions on chapters 1, 4, 7, and 10. |
-| Minimax | [`minimax.py`](ai_backend/algorithms/adversarial/minimax.py) | Boss action decisions on chapters 2, 5, and 8. |
-| Monte Carlo tree search (MCTS) | [`mcts.py`](ai_backend/algorithms/adversarial/mcts.py) | Boss action decisions on chapters 3, 6, and 9. |
-| Fuzzy inference | [`engine.py`](ai_backend/algorithms/fuzzy/engine.py), [`membership.py`](ai_backend/algorithms/fuzzy/membership.py), [`rules.py`](ai_backend/algorithms/fuzzy/rules.py) | Adjusts boss aggression and movement speed from player health, recent damage, and distance. |
-| Constraint satisfaction (CSP) | [`solver.py`](ai_backend/algorithms/csp/solver.py) | Finds a legal position for the exploration arena's health and energy pickup. |
-| Forward-chaining rules | [`engine.py`](ai_backend/algorithms/logic/engine.py) | Confirms `duel_won` after the boss falls and the player is alive, allowing the result and unlock. |
-| Natural language command parsing | [`parser.py`](ai_backend/algorithms/nlp/parser.py) | Interprets typed suit mode and status commands. Simple attack/guard/heal keyword handling remains if the service does not answer. |
+## Algorithms
 
-The rotating route searches run in Godot via `star_brawl.gd::_plan_rival_route()`. The matching Python pathfinding implementations are available through the API and are covered by backend tests, but **the current boss navigation does not call that Python endpoint**. Boss action choices are requested in `_request_boss_decision()`, fuzzy aggression in `_request_adaptive_difficulty()`, CSP placement in `_request_pickup_location()`, rule inference in `_on_knockout()`, and NLP in `_on_order_submitted()`. Chapter-specific special attacks are scripted in `BOSS_SPECIALS` and `_resolve_boss_special()`; they are separate from the search and decision algorithms.
+| Algorithm | Type | File | Where it is used in the game |
+|---|---|---|---|
+| DFS | Uninformed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planets 1 and 7; AI vs AI choice) |
+| DLS (depth limit 30) | Uninformed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planets 2 and 8; AI vs AI choice) |
+| IDDFS | Uninformed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planets 3 and 9; AI vs AI choice) |
+| Bidirectional search | Uninformed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planets 4 and 10; AI vs AI choice) |
+| Greedy Best-First (Manhattan) | Informed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planet 5; AI vs AI choice) |
+| A* (Manhattan) | Informed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planet 6; AI vs AI choice) |
+| Minimax, depth 3 (alpha-beta optional) | Adversarial | `ai_backend/algorithms/adversarial/minimax.py` | Combat decisions (boss on odd planets; AI vs AI choice) |
+| MCTS, 200 simulations, UCB1 | Adversarial | `ai_backend/algorithms/adversarial/mcts.py` | Combat decisions (boss on even planets; AI vs AI choice) |
+| Fuzzy logic | Other | `ai_backend/algorithms/fuzzy.py` | Player health + distance give the boss aggression (low / medium / high), which changes the boss's speed |
+| CSP (backtracking + forward checking) | Other | `ai_backend/algorithms/csp.py` | Places 3 health / energy pickups in the boss arena |
+| Forward chaining | Other | `ai_backend/algorithms/rules.py` | Confirms the win (`IF boss_hp <= 0 AND player_hp > 0 THEN duel_won`) |
 
-Older prototype guides in this repository describe 3D/base-building or AI-vs-AI features that are not in the current main scene. In particular, GOAP/STRIPS planning is only a package placeholder in [`ai_backend/algorithms/planning`](ai_backend/algorithms/planning/__init__.py), and Theta*, Dijkstra, and JPS are not used by this 2D campaign.
+**How it fits together**
 
-## Project layout and saved data
+- `scenes/star_brawl/arena_grid.gd` turns the boss arena into tiles: ground, platforms and the middle wall are solid, and free tiles are the ones a fighter can reach.
+- `scenes/star_brawl/fighter_brain.gd` is the AI for one fighter. It searches a path on that grid and asks the backend for an action: `attack`, `block`, `dodge`, `move_closer`, `move_away` or `special`.
+- The combat state used by Minimax and MCTS is defined in `ai_backend/algorithms/adversarial/combat_state.py`. It holds both fighters' health and energy, the distance between them, and cooldowns. The evaluation is `(my_hp - enemy_hp)` plus small bonuses.
 
-| Location | Purpose |
-| --- | --- |
-| [`scenes/star_brawl/`](scenes/star_brawl/star_brawl.gd) | Current game screens, fighters, bosses, levels, planets, and progression. |
-| [`scripts/utils/modular_pathfinder.gd`](scripts/utils/modular_pathfinder.gd) | Local seven-algorithm navigation used during boss fights. |
-| [`scripts/autoloads/ai_client.gd`](scripts/autoloads/ai_client.gd) | Godot HTTP bridge to the local AI service. |
-| [`ai_backend/algorithms/`](ai_backend/algorithms/__init__.py) | Python decision, fuzzy, CSP, rule, NLP, and pathfinding implementations. |
-| [`assets/star_brawl/`](assets/star_brawl/ASSET_CREDITS.md) | Bundled sprites, boss parts, audio, and asset credits. |
-| [`tests/test_star_brawl.tscn`](tests/test_star_brawl.tscn) and [`ai_backend/tests/`](ai_backend/tests/test_api.py) | Game-flow and Python backend tests. |
-
-Godot saves campaign progress to `user://orbit_breakers_progress.cfg` and sound/fullscreen settings to `user://biosphere_x_settings.cfg`. On Windows, `user://` normally resolves under `%APPDATA%\Godot\app_userdata\BioSphere X\`. Use **Restart** on Home to reset campaign progress through the in-game confirmation; the selected pilot is kept.
-
-## Run the tests
-
-From the project root after installing dependencies:
+## Tests
 
 ```powershell
+# Python: minimax, MCTS, fuzzy, CSP, rules
 .\ai_backend\.venv\Scripts\python.exe -m pytest -q ai_backend\tests
-godot --headless --path . res://tests/test_star_brawl.tscn
+
+# Godot: search algorithms, and a smoke test that opens both game modes
+godot --headless --path . --import
+godot --headless --path . res://tests/test_search.tscn
+godot --headless --path . res://tests/test_game_modes.tscn
 ```
-
-Use the full path to the Godot executable for the second command if `godot` is not on your `PATH`. The Godot test runs the home, map, portal, boss, result, upgrade, ten-chapter progression, and restart flows. The Python suite covers the service and algorithm modules.
-
-## Troubleshooting
-
-- **Godot is not found:** install it or open `project.godot` from the Godot editor. The Windows launcher searches `PATH` and WinGet's package directory.
-- **Backend fails to start:** rerun the dependency installation command, then run the manual Uvicorn command to see its error. Check that `http://127.0.0.1:8000/health` identifies the BioSphere-X service and that port 8000 is free.
-- **A fallen boss does not open the result screen:** check the backend health endpoint. Victory confirmation requires the Python forward-chaining rule engine. Restart the planet from Pause after restoring the service.
-- **New artwork is missing in the editor:** open the project in Godot once so it can import the bundled PNG files, then run it again.
-
-Art and audio licenses are documented in [`assets/star_brawl/ASSET_CREDITS.md`](assets/star_brawl/ASSET_CREDITS.md).

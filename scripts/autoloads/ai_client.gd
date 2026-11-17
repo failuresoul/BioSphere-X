@@ -1,7 +1,7 @@
 extends Node
-## BioSphere-X Python AI Backend HTTP Client.
-## Handles asynchronous HTTP communication, health checks, error handling,
-## timeouts, and offline-backend graceful degradation.
+## HTTP client for the Python AI backend (autoload "AIClient").
+## Sends JSON requests asynchronously, times out after 2 s, and reports
+## {"success": false} when the backend is offline so the game keeps running.
 
 signal backend_availability_changed(is_available: bool)
 signal response_received(endpoint: String, success: bool, data: Dictionary)
@@ -86,132 +86,24 @@ func check_health(callback: Callable = Callable()) -> void:
 	)
 
 
-func send_test(callback: Callable = Callable()) -> void:
-	send_request("/api/test", HTTPClient.METHOD_GET, {}, callback)
+## Minimax / MCTS picks a combat action. state = my_hp, enemy_hp, distance, energies, cooldowns.
+func request_decision(state: Dictionary, algorithm: String, callback: Callable = Callable()) -> void:
+	send_request("/api/ai/decision", HTTPClient.METHOD_POST, {"state": state, "algorithm": algorithm, "depth": 3, "simulations": 200}, callback)
 
 
-func send_test_echo(message: String, payload: Dictionary = {}, callback: Callable = Callable()) -> void:
-	var body := {
-		"message": message,
-		"payload": payload
-	}
-	send_request("/api/test-echo", HTTPClient.METHOD_POST, body, callback)
+## Fuzzy logic: player health (percent) + distance (pixels) -> boss aggression.
+func request_fuzzy(player_health: float, distance: float, callback: Callable = Callable()) -> void:
+	send_request("/api/ai/fuzzy", HTTPClient.METHOD_POST, {"player_health": player_health, "distance": distance}, callback)
 
 
-func request_path(start_grid: Vector2i, goal_grid: Vector2i, blocked: Array[Vector2i] = [], callback: Callable = Callable()) -> void:
-	request_pathfinding(start_grid, goal_grid, "astar", blocked, 80, 80, true, 100, callback)
+## CSP: place pickups. body = candidates, walls, enemy, items.
+func request_pickups(body: Dictionary, callback: Callable = Callable()) -> void:
+	send_request("/api/ai/csp", HTTPClient.METHOD_POST, body, callback)
 
 
-func request_pathfinding(
-	start_grid: Vector2i,
-	goal_grid: Vector2i,
-	algorithm: String = "astar",
-	blocked: Array[Vector2i] = [],
-	grid_width: int = 80,
-	grid_height: int = 80,
-	allow_diagonal: bool = true,
-	depth_limit: int = 100,
-	callback: Callable = Callable()
-) -> void:
-	var blocked_list: Array = []
-	for b in blocked:
-		blocked_list.append([b.x, b.y])
-	
-	var body := {
-		"start": [start_grid.x, start_grid.y],
-		"goal": [goal_grid.x, goal_grid.y],
-		"algorithm": algorithm,
-		"grid_width": grid_width,
-		"grid_height": grid_height,
-		"blocked_cells": blocked_list,
-		"allow_diagonal": allow_diagonal,
-		"depth_limit": depth_limit
-	}
-	send_request("/api/ai/pathfinding/find-path", HTTPClient.METHOD_POST, body, callback)
-
-
-func request_boss_decision(
-	state_data: Dictionary,
-	algorithm: String = "alpha_beta",
-	options: Dictionary = {},
-	callback: Callable = Callable()
-) -> void:
-	var body := {
-		"state": state_data,
-		"algorithm": algorithm,
-		"max_depth": options.get("max_depth", 4),
-		"simulations": options.get("simulations", 150),
-		"exploration_c": options.get("exploration_c", 1.414)
-	}
-	send_request("/api/ai/boss/decision", HTTPClient.METHOD_POST, body, callback)
-
-
-func request_boss_algorithms(callback: Callable = Callable()) -> void:
-	send_request("/api/ai/boss/algorithms", HTTPClient.METHOD_GET, {}, callback)
-
-
-func request_adaptive_difficulty(inputs: Dictionary, fixed_mode: String = "", callback: Callable = Callable()) -> void:
-	var body := {
-		"player_health": float(inputs.get("player_health", 100.0)),
-		"recent_damage": float(inputs.get("recent_damage", 0.0)),
-		"enemy_distance": float(inputs.get("enemy_distance", 200.0)),
-		"fixed_mode": (fixed_mode if not fixed_mode.is_empty() and fixed_mode != "adaptive" else null)
-	}
-	send_request("/api/ai/fuzzy/difficulty", HTTPClient.METHOD_POST, body, callback)
-
-
-func request_fuzzy_profiles(callback: Callable = Callable()) -> void:
-	send_request("/api/ai/fuzzy/profiles", HTTPClient.METHOD_GET, {}, callback)
-
-
-func request_placement_validation(placement_data: Dictionary, callback: Callable = Callable()) -> void:
-	send_request("/api/ai/csp/validate-placement", HTTPClient.METHOD_POST, placement_data, callback)
-
-
-func request_placement_catalog(callback: Callable = Callable()) -> void:
-	send_request("/api/ai/csp/structures", HTTPClient.METHOD_GET, {}, callback)
-
-
-func request_placement_suggestions(suggestion_data: Dictionary, callback: Callable = Callable()) -> void:
-	send_request("/api/ai/csp/suggest-placements", HTTPClient.METHOD_POST, suggestion_data, callback)
-
-
-func request_rule_inference(facts: Dictionary, categories: Array = [], max_iterations: int = 50, callback: Callable = Callable()) -> void:
-	var body := {
-		"facts": facts,
-		"categories": (categories if not categories.is_empty() else null),
-		"max_iterations": max_iterations
-	}
-	send_request("/api/ai/logic/infer", HTTPClient.METHOD_POST, body, callback)
-
-
-func request_rule_catalog(category: String = "", callback: Callable = Callable()) -> void:
-	var endpoint := "/api/ai/logic/rules"
-	if not category.is_empty():
-		endpoint += "?category=" + category.uri_encode()
-	send_request(endpoint, HTTPClient.METHOD_GET, {}, callback)
-
-
-func request_rule_explanation(target: String, facts: Dictionary = {}, callback: Callable = Callable()) -> void:
-	var body := {
-		"target": target,
-		"facts": facts
-	}
-	send_request("/api/ai/logic/explain", HTTPClient.METHOD_POST, body, callback)
-
-
-func request_command_parse(query: String, context: Dictionary = {}, callback: Callable = Callable()) -> void:
-	var body := {
-		"query": query,
-		"context": (context if not context.is_empty() else null)
-	}
-	send_request("/api/ai/nlp/parse", HTTPClient.METHOD_POST, body, callback)
-
-
-func request_command_catalog(callback: Callable = Callable()) -> void:
-	send_request("/api/ai/nlp/commands", HTTPClient.METHOD_GET, {}, callback)
-
-
+## Forward chaining over the IF-THEN rules, e.g. facts = {"boss_hp": 0, "player_hp": 40, "planet": 2}.
+func request_rules(facts: Dictionary, callback: Callable = Callable()) -> void:
+	send_request("/api/ai/rules", HTTPClient.METHOD_POST, {"facts": facts}, callback)
 
 
 # ---------------------------------------------------------------------------

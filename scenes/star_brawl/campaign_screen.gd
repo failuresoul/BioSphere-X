@@ -45,7 +45,7 @@ func _build_ui() -> void:
 	heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description = _text("", Vector2(637, 277), Vector2(485, 85), 20, Color("cad8f2"))
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail = _text("", Vector2(637, 365), Vector2(485, 53), 17, Color("ffdea1"))
+	detail = _text("", Vector2(637, 355), Vector2(485, 80), 17, Color("ffdea1"))
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	action_buttons = VBoxContainer.new()
 	action_buttons.position = Vector2(636, 441)
@@ -67,7 +67,7 @@ func present(mode: String, stage: Dictionary, info: Dictionary) -> void:
 			eyebrow.text = "CHAPTER %02d / %02d  •  %s" % [stage_number, stage_count, stage["chapter"]]
 			heading.text = str(stage["name"])
 			description.text = str(stage["story"])
-			detail.text = "%s\nPORTAL → DEFEAT %s  •  BEST %s" % [PlanetFacts.short_fact(stage_number - 1), stage["rival"], _stars(int(info.get("stars", 0)))]
+			detail.text = "%s\nPORTAL → DEFEAT %s  •  BEST %s\nBOSS AI: %s" % [PlanetFacts.short_fact(stage_number - 1), stage["rival"], _stars(int(info.get("stars", 0))), info.get("ai", "")]
 			_add_action("START LEVEL  ›", "start", true)
 			_add_action("BACK TO PLANETS", "map")
 		"clear":
