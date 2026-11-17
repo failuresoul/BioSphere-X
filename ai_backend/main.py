@@ -2,13 +2,12 @@
 BioSphere-X AI backend (FastAPI).
 
 Godot sends the current game situation here and gets back an AI answer:
-  POST /pathfinding/find -> BFS, DFS, DLS, IDDFS, Bidirectional, Greedy or A* path
+  POST /pathfinding/find   -> BFS, DFS, DLS, IDDFS, Bidirectional, Greedy or A* path
   POST /adversarial/decide -> Minimax (+ alpha-beta) or MCTS picks the boss's move
-  POST /api/ai/fuzzy     -> fuzzy logic picks the boss aggression
-  POST /api/ai/csp       -> CSP places health / energy pickups
-  POST /api/ai/rules     -> forward chaining derives facts (e.g. duel_won)
-If this server does not answer in time, Godot uses its own local A*
-(scripts/utils/modular_pathfinder.gd) so the game never freezes.
+  POST /fuzzy/aggression   -> fuzzy logic: how aggressive the boss should be (0-1)
+  POST /logic/infer        -> forward chaining: new facts (duel_won, oxygen_warning, ...)
+  POST /csp/place          -> CSP: where to put oxygen tanks, the safe dome and pickups
+If this server is off or slow, Godot uses simple fallbacks so the game never freezes.
 """
 import sys
 from pathlib import Path
@@ -20,10 +19,10 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # so "algorithms" can be imported
 
 from algorithms.adversarial import CombatState, mcts_decision, minimax_decision  # noqa: E402
-from algorithms.csp import place_pickups  # noqa: E402
+from algorithms.csp import place_items  # noqa: E402
 from algorithms.fuzzy import fuzzy_aggression  # noqa: E402
+from algorithms.logic import forward_chain  # noqa: E402
 from algorithms.pathfinding import ALGORITHMS, find_path  # noqa: E402
-from algorithms.rules import forward_chain  # noqa: E402
 
 app = FastAPI(title="BioSphere-X AI Backend")
 
@@ -53,21 +52,23 @@ class DecideIn(BaseModel):
 
 class FuzzyIn(BaseModel):
     player_health: float = 100.0          # percent
+    recent_damage: float = 0.0            # damage the player took in the last few seconds
     distance: float = 300.0               # pixels
 
 
+class LogicIn(BaseModel):
+    facts: Dict[str, Any]                 # e.g. {"boss_hp": 0, "player_hp": 40, "oxygen": 15}
+
+
 class CspIn(BaseModel):
-    candidates: List[List[int]]           # free floor tiles [x, y]
-    walls: List[List[int]] = []
-    enemy: List[int]
-    items: List[str] = ["health", "energy", "health"]
-    min_enemy_distance: int = 5
-    min_spacing: int = 4
+    candidates: List[List[int]]           # walkable tiles [x, y]
+    walls: List[List[int]] = []           # blocked tiles (walls, hazards)
+    enemies: List[List[int]] = []         # enemy tiles
+    boss_spawn: List[int]                 # tile of the boss portal
+    level_width: int                      # number of tiles across the level
+    min_enemy_distance: int = 4
+    min_spacing: int = 5
     seed: Optional[int] = None
-
-
-class RulesIn(BaseModel):
-    facts: Dict[str, Any]
 
 
 @app.get("/health")
@@ -94,20 +95,20 @@ def decide(req: DecideIn):
     return {"algorithm": req.algorithm, "use_alpha_beta": req.use_alpha_beta and req.algorithm == "minimax", **result}
 
 
-@app.post("/api/ai/fuzzy")
+@app.post("/fuzzy/aggression")
 def fuzzy(req: FuzzyIn):
-    return fuzzy_aggression(req.player_health, req.distance)
+    return fuzzy_aggression(req.player_health, req.recent_damage, req.distance)
 
 
-@app.post("/api/ai/csp")
-def csp(req: CspIn):
-    return place_pickups(req.candidates, req.walls, req.enemy, req.items,
-                         req.min_enemy_distance, req.min_spacing, req.seed)
-
-
-@app.post("/api/ai/rules")
-def rules(req: RulesIn):
+@app.post("/logic/infer")
+def logic(req: LogicIn):
     return forward_chain(req.facts)
+
+
+@app.post("/csp/place")
+def csp(req: CspIn):
+    return place_items(req.candidates, req.walls, req.enemies, req.boss_spawn, req.level_width,
+                       req.min_enemy_distance, req.min_spacing, req.seed)
 
 
 if __name__ == "__main__":

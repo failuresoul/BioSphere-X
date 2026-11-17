@@ -81,6 +81,15 @@ func free_cells() -> Array[Vector2i]:
 	return cells
 
 
+## Walkable tiles a fighter can stand on: free, with a solid tile right below.
+func floor_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for cell in free_cells():
+		if solid.has(cell + Vector2i.DOWN):
+			cells.append(cell)
+	return cells
+
+
 func all_cells() -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []
 	for x in size.x:

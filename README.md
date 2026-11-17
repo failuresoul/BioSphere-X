@@ -23,7 +23,7 @@ You need **Godot 4** (tested with 4.7.2) and **Python 3** (tested with 3.13).
 
 **Run them by hand instead:** start the backend with `.\ai_backend\.venv\Scripts\python.exe -m uvicorn ai_backend.main:app --port 8000`, then open `project.godot` in Godot and press **F5**.
 
-If the backend is not running, the game still works: paths come from a local A* in Godot (the HUD shows `A* (local)`), and combat decisions use a simple fallback rule (the HUD shows `(offline)`). Path requests are asynchronous, so the game never freezes: each agent keeps its last path until the new one arrives.
+If the backend is not running, the game still works. Paths come from a local A* in Godot (the HUD shows `A* (local)`). The boss uses a fallback rule: attack if near, else move closer. Items go to fixed spots, and the warnings are checked locally. Path requests are asynchronous, so the game never freezes: each agent keeps its last path until the new one arrives.
 
 ## The two game modes
 
@@ -33,13 +33,15 @@ On the home screen, pick one of two buttons.
 
 You play through 10 planets. On each planet you explore the level, go through the portal, and fight the boss.
 
+- **Oxygen survival.** While exploring, the oxygen bar (top left) drops 1.5 per second, so a full bar lasts about 65 s. An oxygen tank gives +40, and standing in the **safe dome** refills 8 per second. At 0 oxygen you lose 4 health per second. Below 20 oxygen a warning appears.
+- **Item placement (CSP).** At the start of each level a CSP solver places 2 oxygen tanks, the safe dome, a health pickup and an energy pickup.
 - **Aliens (Agent 1)** patrol the level using a **Finite State Machine**: IDLE → PATROL → CHASE → ATTACK, CHASE → SEARCH → PATROL, and any state → DEAD. An alien sees you only when you are in front of it and no wall or platform is in between (a raycast). In CHASE it follows an A* path. Its state is shown in a small label above it (F toggles the labels).
 
 - The boss **moves** with A*.
 - The boss **decides** its next move with adversarial search. Planets 1, 4, 7 and 10 use **Minimax with alpha-beta**, planets 2, 5 and 8 use **Minimax without pruning**, and planets 3, 6 and 9 use **MCTS**.
-- Every frame the boss runs a 4-step loop. **Look**: read the distance, both health bars and the cooldowns. **Think**: ask the server for the best move without freezing the game. **Adjust**: a hook for fuzzy difficulty (Prompt 3). **Attack and rest**: after a big attack (special) the boss rests 1.5 s so you can hit back.
+- Every frame the boss runs a 4-step loop. **Look**: read the distance, both health bars and the cooldowns. **Think**: ask the server for the best move without freezing the game. **Adjust**: fuzzy logic sets the boss's aggression (0 to 1) from your health, the damage you took recently, and the distance. The boss's speed and attack rate follow it slowly. **Attack and rest**: after a big attack (special) the boss rests 1.5 s so you can hit back.
 - If the server is slow (no answer in 0.8 s), the boss uses a fallback: attack if near, otherwise move closer.
-- The HUD (top right) shows the boss's thinking, e.g. `Boss: Minimax+αβ → attack | nodes 120, pruned 64` (or `MCTS → attack | win rate 0.62, 200 sims`), and the latest search, e.g. `Search: A* | Nodes: 34 | 0.4 ms`.
+- The HUD (top right) shows the boss's thinking, e.g. `Boss: Minimax+αβ → attack | nodes 120, pruned 64` (or `MCTS → attack | win rate 0.62, 200 sims`), the latest search, e.g. `Search: A* | Nodes: 34 | 0.4 ms`, and `Aggression 0.72`.
 
 | Key | Action |
 |---|---|
@@ -81,13 +83,16 @@ Press **Esc** to stop a match and go back to the setup screen.
 | Minimax, depth 4, with alpha-beta | Adversarial | `ai_backend/algorithms/adversarial/minimax.py` (`use_alpha_beta=True`) | Boss on planets 1, 4, 7, 10; AI vs AI choice |
 | Minimax, depth 4, no pruning | Adversarial | `ai_backend/algorithms/adversarial/minimax.py` (`use_alpha_beta=False`) | Boss on planets 2, 5, 8; AI vs AI choice |
 | MCTS (200 simulations, UCB1 c = 1.41) | Adversarial | `ai_backend/algorithms/adversarial/mcts.py` | Boss on planets 3, 6, 9; AI vs AI choice |
-| Fuzzy logic | Other | `ai_backend/algorithms/fuzzy.py` | Player health + distance give the boss aggression (low / medium / high), which changes the boss's speed |
-| CSP (backtracking + forward checking) | Other | `ai_backend/algorithms/csp.py` | Places 3 health / energy pickups in the boss arena |
-| Forward chaining | Other | `ai_backend/algorithms/rules.py` | Confirms the win (`IF boss_hp <= 0 AND player_hp > 0 THEN duel_won`) |
+| Fuzzy logic (3 inputs, 5 rules, centroid) | Other | `ai_backend/algorithms/fuzzy/engine.py` | Boss aggression 0 to 1 from player health, recent damage and distance; changes the boss's speed and attack rate slowly (boss loop step 3) |
+| CSP (backtracking + forward checking) | Other | `ai_backend/algorithms/csp/solver.py` | Places 2 oxygen tanks, the safe dome, a health and an energy pickup at the start of each level |
+| Forward chaining (5 rules) | Other | `ai_backend/algorithms/logic/engine.py` | `duel_won`, then `unlock_next_planet` after the boss; `low_health_warning` and `oxygen_warning` while playing |
 
 **How it fits together**
 
 - `scenes/star_brawl/arena_grid.gd` turns a level into tiles (the same rules for every agent): ground, platforms and walls are blocked, free tiles are the ones a fighter can reach. Moves go in 4 directions.
+- Fuzzy logic: inputs `player_health`, `recent_damage` (damage taken in the last 5 s) and `distance` use triangle memberships (low / medium / high, or near / medium / far). The rules use AND = min, and the result is defuzzified with the centroid. Endpoint: `POST /fuzzy/aggression`.
+- CSP: the variables are `oxygen_tank_1`, `oxygen_tank_2`, `safe_dome`, `health_pickup` and `energy_pickup`. The domain is the walkable floor tiles. The constraints are: not in a wall or hazard, not near aliens or the boss portal, at least 5 tiles apart, and at least one oxygen item in each third of the level. The answer is the positions plus the number of backtracks. Endpoint: `POST /csp/place`.
+- Forward chaining fires IF-THEN rules until no new fact appears, and returns the new facts and the order the rules fired in. Endpoint: `POST /logic/infer`.
 - `scripts/utils/path_planner.gd` sends the grid to `POST /pathfinding/find` asynchronously and falls back to the local A* if no answer arrives in time.
 - `scenes/star_brawl/fighter_brain.gd` is the AI for one fighter. It searches a path on that grid and asks the backend for an action: `attack`, `block`, `dodge`, `move_closer`, `move_away` or `special`.
 - The combat state used by Minimax and MCTS is in `ai_backend/algorithms/adversarial/combat_state.py`: `boss_hp`, `player_hp`, `distance`, `boss_energy`, `player_energy` and both cooldowns. One `apply_action()` holds the damage rules, and both algorithms use it. The evaluation rewards the boss keeping its health, the player losing health, and the boss staying at a good distance. Endpoint: `POST /adversarial/decide {algorithm, use_alpha_beta, state}`.
@@ -95,10 +100,10 @@ Press **Esc** to stop a match and go back to the setup screen.
 ## Tests
 
 ```powershell
-# Python: 7 path-finding algorithms, minimax (+ alpha-beta), MCTS, fuzzy, CSP, rules
+# Python: 7 path-finding algorithms, minimax (+ alpha-beta), MCTS, fuzzy, CSP, forward chaining
 .\ai_backend\.venv\Scripts\python.exe -m pytest -q ai_backend\tests
 
-# Godot: local A* + grid, and a smoke test (both game modes + alien FSM)
+# Godot: local A* + grid, and a smoke test (both game modes, alien FSM, oxygen, items)
 godot --headless --path . --import
 godot --headless --path . res://tests/test_search.tscn
 godot --headless --path . res://tests/test_game_modes.tscn

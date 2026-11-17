@@ -14,6 +14,15 @@ const BrainScript = preload("res://scenes/star_brawl/fighter_brain.gd")
 const GridScript = preload("res://scenes/star_brawl/arena_grid.gd")
 const AiScreenScript = preload("res://scenes/star_brawl/ai_vs_ai_screen.gd")
 const ASSET := "res://assets/star_brawl/"
+## Oxygen survival (exploration only). Simple, fair numbers:
+## a full tank lasts about 65 s; a tank gives +40; the safe dome refills 8 per second.
+const OXYGEN_DRAIN := 1.5          # oxygen lost per second while exploring
+const OXYGEN_TANK := 40.0          # oxygen from one tank
+const DOME_REFILL := 8.0           # oxygen per second inside the safe dome
+const DOME_RADIUS := 90.0
+const SUFFOCATION := 4.0           # health lost per second when oxygen is 0
+const RECENT_DAMAGE_TIME := 5.0    # "recent damage" for fuzzy logic = last 5 seconds
+
 ## AI vs AI settings.
 const AI_HEALTH := 150.0
 const MATCH_SECONDS := 60.0     # time limit; then the AI with more health % wins
@@ -74,8 +83,11 @@ var boss_special: Dictionary = {}
 var boss_impact: Dictionary = {}
 var boss_impact_timer := 0.0
 var boss_base_speed := 220.0
-var fuzzy_timer := 2.0
-var aggression := "medium"            # output of the fuzzy logic controller
+var oxygen := 100.0                   # 0-100
+var dome_center := Vector2.INF        # safe dome position (placed by the CSP solver)
+var level_item_spots: Dictionary = {} # where the CSP put each item this level
+var recent_hits: Array = []           # [time, damage] the player took (for fuzzy logic)
+var warning_timer := 0.0              # forward chaining is asked every second
 var hazard_clock := 0.0
 var hazard_mask := -1
 var message_timer := 0.0
@@ -83,7 +95,7 @@ var pulse_timer := 0.0
 var rule_pending := false
 var projectiles: Array[Dictionary] = []
 var platforms: Array[StaticBody2D] = []
-var pickups: Array[Dictionary] = []   # placed by the CSP solver: {"node", "kind"}
+var pickups: Array[Dictionary] = []   # placed by the CSP solver: {"node", "kind", "y"}
 
 # --- AI ---
 var grid: ArenaGrid                   # boss arena as a tile grid (for the search algorithms)
@@ -118,6 +130,10 @@ var right_fill: ColorRect
 var left_name: Label
 var right_name: Label
 var left_info: Label
+var oxygen_label: Label
+var oxygen_back: ColorRect
+var oxygen_fill: ColorRect
+var warning_label: Label
 var right_info: Label
 var stage_label: Label
 var stage_subtitle: Label
@@ -224,6 +240,7 @@ func _draw() -> void:
 				_draw_platform(platform.position, (shape.shape as RectangleShape2D).size.x, bool(platform.get_meta("ground")))
 	_draw_hazards()
 	_draw_boss_special()
+	_draw_dome()
 	_draw_paths()
 	if pulse_timer > 0.0 and is_instance_valid(player):
 		var radius := (0.38 - pulse_timer) / 0.38 * 245.0
@@ -322,6 +339,15 @@ func _draw_wall(facts: Dictionary) -> void:
 	draw_rect(wall_rect, Color(facts["dark"]))
 	draw_rect(wall_rect.grow(-6), Color(facts["base"]))
 	draw_rect(Rect2(wall_rect.position, Vector2(wall_rect.size.x, 8)), Color(facts["rim"]))
+
+
+## The safe dome: a glowing bubble. Standing inside it refills oxygen.
+func _draw_dome() -> void:
+	if dome_center == Vector2.INF or segment != "explore":
+		return
+	draw_circle(dome_center, DOME_RADIUS, Color(0.45, 0.85, 1.0, 0.16))
+	draw_arc(dome_center, DOME_RADIUS, 0.0, TAU, 48, Color(0.6, 0.95, 1.0, 0.8), 3.0)
+	draw_string(ThemeDB.fallback_font, dome_center + Vector2(-40, -DOME_RADIUS - 8), "SAFE DOME", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d8f6ff"))
 
 
 ## P key: draw the grid and each AI's current path (blue / red line).
@@ -430,6 +456,9 @@ func _load_planet() -> void:
 	rival = null
 	_build_grid(ARENA_WIDTH)              # same grid rules as the boss arena
 	_spawn_aliens()
+	oxygen = 100.0
+	dome_center = Vector2.INF
+	recent_hits.clear()
 	var shift := float(planet_index % 3) * 24.0
 	hazards = [
 		{"kind": "spikes", "x": 835.0 + shift, "width": 138.0, "phase": 0.0},
@@ -447,6 +476,7 @@ func _load_planet() -> void:
 	hazard_mask = -1
 	camera.position = Vector2(640, 360)
 	rule_pending = false
+	_request_level_items()                # CSP places oxygen tanks, the safe dome and pickups
 	queue_redraw()
 	_refresh_ui()
 
@@ -489,9 +519,9 @@ func _enter_boss_arena() -> void:
 	# Boss AI: moves with A*, thinks with the planet's algorithm (see PLANETS "ai").
 	boss_brain = BrainScript.new("astar", boss_decision_algorithm(planet_index))
 	boss_brain.decide_interval = maxf(0.6, 1.2 - planet_index * 0.05)
-	fuzzy_timer = 1.2
-	aggression = "medium"
-	_request_pickups()
+	boss_brain.use_fuzzy = true                       # step 3 ADJUST: fuzzy difficulty
+	boss_brain.base_speed = rival.move_speed
+	boss_brain.base_attack_interval = rival.attack_interval
 	play_sound("magic")
 	_announce(str(planet["boss_line"]), 2.4)
 	portal_flash.visible = true
@@ -638,6 +668,19 @@ func _build_ui() -> void:
 	_make_health_bar(overlay, Vector2(922, 45), false)
 	# AI info lines under the health bars: algorithm, action, nodes, path length, time.
 	left_info = _label(overlay, "", Vector2(28, 84), Vector2(600, 44), 15, Color("bfe6ff"))
+	# Oxygen bar (exploration only) and the warnings from forward chaining.
+	oxygen_label = _label(overlay, "OXYGEN", Vector2(28, 86), Vector2(90, 22), 15, Color("bfe9ff"))
+	oxygen_back = ColorRect.new()
+	oxygen_back.position = Vector2(105, 92)
+	oxygen_back.size = Vector2(225, 12)
+	oxygen_back.color = Color("152c43")
+	overlay.add_child(oxygen_back)
+	oxygen_fill = ColorRect.new()
+	oxygen_fill.position = Vector2(107, 94)
+	oxygen_fill.size = Vector2(221, 8)
+	oxygen_fill.color = Color("5fd0ff")
+	overlay.add_child(oxygen_fill)
+	warning_label = _label(overlay, "", Vector2(28, 110), Vector2(500, 24), 16, Color("ff7d7d"))
 	right_info = _label(overlay, "", Vector2(652, 84), Vector2(600, 44), 15, Color("ffd6dd"))
 	right_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	stage_label = _label(overlay, "01 / 10", Vector2(515, 6), Vector2(250, 38), 25, Color("fff1b5"))
@@ -765,7 +808,7 @@ func _refresh_ui() -> void:
 		if boss_brain != null:
 			# e.g. "Boss: Minimax+αβ → attack | nodes 120, pruned 64"
 			#      "Search: A* | Nodes: 34 | 0.4 ms | Aggression: HIGH"
-			right_info.text = "Boss: %s | Aggression: %s" % [boss_brain.stats_text(), aggression.to_upper()]
+			right_info.text = "Boss: %s | Aggression %.2f" % [boss_brain.stats_text(), boss_brain.aggression]
 		elif hud_planner != null:
 			right_info.text = hud_planner.hud_text()          # e.g. "Search: A* | Nodes: 34 | 0.4 ms"
 		else:
@@ -781,6 +824,14 @@ func _refresh_ui() -> void:
 	right_fill.visible = duel
 	if duel:
 		right_fill.size.x = 324.0 * clampf(rival.health / rival.max_health, 0.0, 1.0)
+	var exploring := mode == "pva" and segment == "explore"
+	oxygen_label.visible = exploring
+	oxygen_back.visible = exploring
+	oxygen_fill.visible = exploring
+	oxygen_fill.size.x = 221.0 * clampf(oxygen / 100.0, 0.0, 1.0)
+	oxygen_fill.color = Color("ff6f6f") if oxygen < 20.0 else Color("5fd0ff")
+	if mode != "pva":
+		warning_label.text = ""
 	meter_fill.size.x = 140.0 * clampf(pulse_charge / 100.0, 0.0, 1.0)
 	meter_fill.color = Color("fbe789") if pulse_charge >= 70.0 else Color("44edcf")
 
@@ -942,7 +993,6 @@ func _start_planet() -> void:
 	pending_upgrade = false
 	alien_kills = 0
 	ui_timer = 0.0
-	fuzzy_timer = 2.0
 	_load_planet()
 	_announce("%s  •  REACH THE BOSS PORTAL" % PLANETS[planet_index]["name"], 2.4)
 	play_sound("select")
@@ -985,17 +1035,15 @@ func _update_player_vs_ai(delta: float) -> void:
 	var move_right := Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)
 	var move_left := Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)
 	player.desired_direction = float(move_right) - float(move_left)
+	_update_warnings(delta)
 	if segment != "boss":
 		_update_aliens(delta)
+		_update_oxygen(delta)
 		_check_portal()
 		return
 	_update_boss_special(delta)
 	if phase != "fight" or not is_instance_valid(rival):
 		return
-	fuzzy_timer -= delta
-	if fuzzy_timer <= 0.0:
-		fuzzy_timer = 3.0
-		_request_fuzzy_aggression()
 	if boss_special.is_empty():
 		boss_brain.update(delta, rival, player, self)       # search + Minimax/MCTS
 	else:
@@ -1333,8 +1381,10 @@ func _deal_damage(target: SpaceFighter, amount: float, direction: int) -> void:
 			brain.damage_dealt += dealt
 		elif target != player:
 			pulse_charge = minf(100.0, pulse_charge + 15.0)
-		elif is_instance_valid(rival):
-			rival.energy = minf(100.0, rival.energy + 10.0)
+		else:
+			recent_hits.append([Time.get_ticks_msec() / 1000.0, dealt])
+			if is_instance_valid(rival):
+				rival.energy = minf(100.0, rival.energy + 10.0)
 	_refresh_ui()
 
 
@@ -1361,7 +1411,8 @@ func _orbit_pulse() -> void:
 
 func _spawn_pickup(kind: String, at: Vector2) -> void:
 	var sprite := Sprite2D.new()
-	sprite.texture = load(ASSET + ("effects/gem_red.png" if kind == "health" else "effects/gem_yellow.png")) as Texture2D
+	var textures := {"oxygen": "effects/gem_blue.png", "health": "effects/gem_red.png", "energy": "effects/gem_yellow.png"}
+	sprite.texture = load(ASSET + textures[kind]) as Texture2D
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.position = at
 	sprite.scale = Vector2.ONE * 0.72
@@ -1376,7 +1427,10 @@ func _update_pickups() -> void:
 		var sprite: Sprite2D = item["node"]
 		sprite.position.y = float(item["y"]) + sin(Time.get_ticks_msec() * 0.004 + index) * 7.0
 		if mode == "pva" and sprite.position.distance_to(player.position) < 53.0:
-			if item["kind"] == "health":
+			if item["kind"] == "oxygen":
+				oxygen = minf(100.0, oxygen + OXYGEN_TANK)
+				_announce("OXYGEN +%d" % OXYGEN_TANK, 1.2)
+			elif item["kind"] == "health":
 				player.health = minf(player.max_health, player.health + 20.0)
 				_announce("HEALTH +20", 1.2)
 			else:
@@ -1425,35 +1479,126 @@ func record_search(planner) -> void:
 		queue_redraw()
 
 
-## Fuzzy logic: player health + distance -> boss aggression (changes boss speed).
-func _request_fuzzy_aggression() -> void:
-	AIClient.request_fuzzy(player.health / player.max_health * 100.0, absf(player.position.x - rival.position.x), func(result: Dictionary) -> void:
-		if phase != "fight" or mode != "pva" or not is_instance_valid(rival) or not bool(result.get("success", false)):
+## Damage the player took in the last few seconds (fuzzy logic input).
+func recent_damage_taken() -> float:
+	var now := Time.get_ticks_msec() / 1000.0
+	while not recent_hits.is_empty() and now - float(recent_hits[0][0]) > RECENT_DAMAGE_TIME:
+		recent_hits.pop_front()
+	var total := 0.0
+	for hit in recent_hits:
+		total += float(hit[1])
+	return total
+
+
+# ---------------------------------------------------------------------------
+# Oxygen survival
+# ---------------------------------------------------------------------------
+## Oxygen goes down every second while exploring. The safe dome refills it
+## slowly. At 0 oxygen the player slowly loses health.
+func _update_oxygen(delta: float) -> void:
+	var in_dome := dome_center != Vector2.INF and player.position.distance_to(dome_center) < DOME_RADIUS
+	if in_dome:
+		oxygen = minf(100.0, oxygen + DOME_REFILL * delta)
+	else:
+		oxygen = maxf(0.0, oxygen - OXYGEN_DRAIN * delta)
+	if oxygen <= 0.0:
+		player.drain(SUFFOCATION * delta)
+
+
+## Forward chaining once per second: low_health_warning, oxygen_warning.
+## If the server is off, the same two rules are checked here instead.
+func _update_warnings(delta: float) -> void:
+	warning_timer -= delta
+	if warning_timer > 0.0:
+		return
+	warning_timer = 1.0
+	var facts := {"player_hp": player.health / player.max_health * 100.0}
+	if segment == "explore":
+		facts["oxygen"] = oxygen
+	AIClient.request_rules(facts, func(result: Dictionary) -> void:
+		if phase != "fight" or mode != "pva":
 			return
-		aggression = str(result["data"].get("label", "medium"))
-		rival.move_speed = boss_base_speed * float({"low": 0.85, "medium": 1.0, "high": 1.2}.get(aggression, 1.0))
+		var new_facts: Dictionary
+		if bool(result.get("success", false)):
+			new_facts = result["data"].get("new_facts", {})
+		else:                                       # fallback: same rules, checked locally
+			new_facts = {}
+			if float(facts["player_hp"]) < 30.0:
+				new_facts["low_health_warning"] = true
+			if facts.has("oxygen") and float(facts["oxygen"]) < 20.0:
+				new_facts["oxygen_warning"] = true
+		var lines: Array[String] = []
+		if new_facts.get("oxygen_warning", false):
+			lines.append("! LOW OXYGEN: find a tank or the safe dome")
+		if new_facts.get("low_health_warning", false):
+			lines.append("! LOW HEALTH")
+		warning_label.text = "   ".join(lines)
 	)
 
 
-## CSP: place 3 pickups on free tiles, away from the boss and from each other.
-func _request_pickups() -> void:
+# ---------------------------------------------------------------------------
+# CSP: place the level's items
+# ---------------------------------------------------------------------------
+## Asks the CSP solver where to put 2 oxygen tanks, the safe dome, a health and an
+## energy pickup. Domain = walkable floor tiles; hazards count as walls; items stay
+## away from aliens and the boss portal. If the server is off: fixed positions.
+func _request_level_items() -> void:
 	var candidates: Array = []
-	var walls: Array = []
-	for cell in grid.all_cells():
+	for cell in grid.floor_cells():
 		candidates.append([cell.x, cell.y])
-		if grid.blocked.has(cell):
-			walls.append([cell.x, cell.y])       # walls, platforms, ground and unreachable air
-	var enemy := grid.to_cell(rival.position)
-	var request := {"candidates": candidates, "walls": walls, "enemy": [enemy.x, enemy.y], "items": ["health", "energy", "health"]}
-	AIClient.request_pickups(request, func(result: Dictionary) -> void:
-		if phase != "fight" or mode != "pva" or segment != "boss" or grid == null:
+	var walls: Array = []
+	for cell in grid.solid:
+		walls.append([cell.x, cell.y])
+	for hazard in hazards:                          # hazard columns are treated as walls
+		var left := floori((float(hazard["x"]) - float(hazard["width"]) * 0.5 - 20.0) / GridScript.CELL)
+		var right := floori((float(hazard["x"]) + float(hazard["width"]) * 0.5 + 20.0) / GridScript.CELL)
+		for x in range(left, right + 1):
+			for y in grid.size.y:
+				walls.append([x, y])
+	var enemies: Array = []
+	for alien in aliens:
+		var tile: Vector2i = grid.to_cell(alien.position)
+		enemies.append([tile.x, tile.y])
+	var boss_tile: Vector2i = grid.to_cell(Vector2(PORTAL_X, 585))
+	var level := planet_index
+	var request := {"candidates": candidates, "walls": walls, "enemies": enemies,
+		"boss_spawn": [boss_tile.x, boss_tile.y], "level_width": grid.size.x, "seed": planet_index}
+	AIClient.request_items(request, func(result: Dictionary) -> void:
+		if phase != "fight" or mode != "pva" or segment != "explore" or planet_index != level:
 			return
 		var data: Dictionary = result.get("data", {})
-		if not bool(result.get("success", false)) or not bool(data.get("success", false)):
-			return
-		for placement in data["placements"]:
-			_spawn_pickup(str(placement["item"]), grid.to_world(Vector2i(int(placement["tile"][0]), int(placement["tile"][1]))))
+		if bool(result.get("success", false)) and bool(data.get("success", false)):
+			var positions: Dictionary = data["positions"]
+			var spots := {}
+			for item in positions:
+				spots[item] = grid.to_world(Vector2i(int(positions[item][0]), int(positions[item][1])))
+			_place_level_items(spots)
+			_announce("CSP placed the items  •  %d backtracks" % int(data.get("backtracks", 0)), 2.0)
+		else:
+			_place_level_items(_fallback_item_spots())
 	)
+
+
+## Fallback when the server is off: fixed spots, one oxygen item in each third.
+func _fallback_item_spots() -> Dictionary:
+	return {
+		"oxygen_tank_1": Vector2(450, 600), "safe_dome": Vector2(1560, 600), "oxygen_tank_2": Vector2(2420, 600),
+		"health_pickup": Vector2(640, 600), "energy_pickup": Vector2(2060, 600),
+	}
+
+
+func _place_level_items(spots: Dictionary) -> void:
+	for item in pickups:
+		if is_instance_valid(item["node"]):
+			item["node"].queue_free()
+	pickups.clear()
+	level_item_spots = spots
+	_spawn_pickup("oxygen", spots["oxygen_tank_1"])
+	_spawn_pickup("oxygen", spots["oxygen_tank_2"])
+	_spawn_pickup("health", spots["health_pickup"])
+	_spawn_pickup("energy", spots["energy_pickup"])
+	dome_center = spots["safe_dome"]
+	queue_redraw()
 
 
 # ---------------------------------------------------------------------------
@@ -1653,14 +1798,15 @@ func _on_knockout(fighter: SpaceFighter) -> void:
 		return
 	rule_pending = true
 	wins += 1
-	# Forward chaining: IF boss_hp <= 0 AND player_hp > 0 THEN duel_won.
-	AIClient.request_rules({"boss_hp": rival.health, "player_hp": player.health, "planet": planet_index}, func(result: Dictionary) -> void:
+	# Forward chaining: IF boss_hp <= 0 AND player_hp > 0 THEN duel_won,
+	#                  IF duel_won THEN unlock_next_planet.
+	AIClient.request_rules({"boss_hp": rival.health, "player_hp": player.health}, func(result: Dictionary) -> void:
 		if phase != "fight":
 			return
-		var derived: Dictionary = result.get("data", {}).get("derived", {})
-		if bool(result.get("success", false)) and bool(derived.get("duel_won", false)):
-			_announce("VICTORY  •  RULE ENGINE: duel_won", 2.0)
-		_finish_planet()
+		var new_facts: Dictionary = result.get("data", {}).get("new_facts", {})
+		if bool(result.get("success", false)) and bool(new_facts.get("duel_won", false)):
+			_announce("VICTORY  •  RULES: duel_won → unlock_next_planet", 2.0)
+		_finish_planet()                            # (also the fallback when the server is off)
 	)
 
 

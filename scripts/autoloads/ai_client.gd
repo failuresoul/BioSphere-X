@@ -102,19 +102,22 @@ func request_decision(state: Dictionary, algorithm: String, use_alpha_beta: bool
 	send_request("/adversarial/decide", HTTPClient.METHOD_POST, body, callback, timeout)
 
 
-## Fuzzy logic: player health (percent) + distance (pixels) -> boss aggression.
-func request_fuzzy(player_health: float, distance: float, callback: Callable = Callable()) -> void:
-	send_request("/api/ai/fuzzy", HTTPClient.METHOD_POST, {"player_health": player_health, "distance": distance}, callback)
+## Fuzzy logic: player health (percent), damage taken recently and distance -> aggression 0-1.
+func request_fuzzy(player_health: float, recent_damage: float, distance: float, callback: Callable = Callable()) -> void:
+	var body := {"player_health": player_health, "recent_damage": recent_damage, "distance": distance}
+	send_request("/fuzzy/aggression", HTTPClient.METHOD_POST, body, callback)
 
 
-## CSP: place pickups. body = candidates, walls, enemy, items.
-func request_pickups(body: Dictionary, callback: Callable = Callable()) -> void:
-	send_request("/api/ai/csp", HTTPClient.METHOD_POST, body, callback)
+## CSP: where to put the oxygen tanks, safe dome and pickups.
+## body = candidates, walls, enemies, boss_spawn, level_width, seed.
+func request_items(body: Dictionary, callback: Callable = Callable()) -> void:
+	send_request("/csp/place", HTTPClient.METHOD_POST, body, callback, 0.8)
 
 
-## Forward chaining over the IF-THEN rules, e.g. facts = {"boss_hp": 0, "player_hp": 40, "planet": 2}.
+## Short timeouts (0.8 s) so the game switches to its fallback quickly when the server is off.
+## Forward chaining over the IF-THEN rules, e.g. facts = {"boss_hp": 0, "player_hp": 40, "oxygen": 15}.
 func request_rules(facts: Dictionary, callback: Callable = Callable()) -> void:
-	send_request("/api/ai/rules", HTTPClient.METHOD_POST, {"facts": facts}, callback)
+	send_request("/logic/infer", HTTPClient.METHOD_POST, {"facts": facts}, callback, 0.8)
 
 
 # ---------------------------------------------------------------------------

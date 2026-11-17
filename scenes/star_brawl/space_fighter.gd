@@ -244,6 +244,17 @@ func block() -> void:
 		block_timer = maxf(block_timer, 0.25)
 
 
+## Slow health loss (no knock-back, no hit flash), e.g. when out of oxygen.
+func drain(amount: float) -> void:
+	if knocked_out_state:
+		return
+	health = maxf(0.0, health - amount)
+	if health <= 0.0:
+		knocked_out_state = true
+		_set_pose("hit")
+		knocked_out.emit(self)
+
+
 func take_damage(amount: float, push_direction: int) -> void:
 	if invulnerable > 0.0 or knocked_out_state:
 		return

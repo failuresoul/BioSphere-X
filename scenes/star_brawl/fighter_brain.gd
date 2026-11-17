@@ -6,7 +6,8 @@ extends RefCounted
 ##   1) LOOK    read the distance, both health bars, energy and cooldowns
 ##   2) THINK   ask Minimax (+ alpha-beta) or MCTS on the Python server for the
 ##              best move. Async: the game never waits for the answer.
-##   3) ADJUST  hook for fuzzy difficulty (filled in by Prompt 3)
+##   3) ADJUST  fuzzy logic sets the aggression (0-1); the boss's speed and attack
+##              rate follow it SLOWLY (smooth, never sudden)
 ##   4) ATTACK AND REST  do the move; after a big attack (special) rest 1.5 s
 ##              so the player can hit back
 ##
@@ -15,7 +16,8 @@ extends RefCounted
 ## Actions: attack, block, dodge, move_closer, move_away, special.
 ##
 ## The arena that owns the brain must provide: grid, energy_of(fighter),
-## perform_special(fighter, foe) -> bool, and record_search(planner).
+## perform_special(fighter, foe) -> bool, record_search(planner) and
+## recent_damage_taken() (only when use_fuzzy is on).
 
 const Pathfinder = preload("res://scripts/utils/modular_pathfinder.gd")
 const PlannerScript = preload("res://scripts/utils/path_planner.gd")
@@ -28,6 +30,8 @@ const NEAR := 300.0                 # fallback rule: "near" means closer than th
 const REACH_HEIGHT := 50.0          # a punch only lands if the height difference is below this
 const REST_TIME := 1.5              # rest after a big attack
 const SERVER_TIMEOUT := 0.8         # seconds to wait for Minimax / MCTS
+const FUZZY_INTERVAL := 2.0         # ask the fuzzy controller every 2 s
+const AGGRESSION_CHANGE := 0.1      # aggression moves at most 0.1 per second (smooth)
 
 var search_algorithm := "astar"
 var decision_algorithm := "minimax_ab"   # "minimax_ab", "minimax" or "mcts"
@@ -41,6 +45,14 @@ var rest_timer := 0.0                 # > 0 while resting after a big attack
 var active := true
 var planner                           # path_planner.gd: current path + search statistics
 var damage_dealt := 0.0
+
+# Step 3 ADJUST (fuzzy difficulty). Only the Player vs AI boss uses it.
+var use_fuzzy := false
+var aggression := 0.5                 # current value, shown on the HUD
+var aggression_target := 0.5          # latest answer from the fuzzy controller
+var base_speed := 0.0                 # boss speed / attack interval at aggression 0.5
+var base_attack_interval := 0.0
+var _fuzzy_timer := 0.0
 
 var _route_timer := 0.0
 var _decide_timer := 0.0
@@ -65,6 +77,8 @@ func update(delta: float, me: SpaceFighter, foe: SpaceFighter, arena) -> void:
 	_me = weakref(me)
 	_foe = weakref(foe)
 	_arena = weakref(arena)
+
+	_adjust(delta, me, foe, arena)               # Step 3: ADJUST (fuzzy difficulty), also while resting
 
 	# Step 4b: REST after a big attack: stand still, no new decisions.
 	if rest_timer > 0.0:
@@ -129,7 +143,6 @@ func _on_decision(response: Dictionary, state: Dictionary) -> void:
 		source = "fallback"                      # server slow or offline
 		last_decision = {}
 		next_action = fallback_action(state)
-	next_action = adjust(next_action, state)     # Step 3: ADJUST
 	_set_action(next_action, me, foe, arena)
 
 
@@ -139,12 +152,29 @@ static func fallback_action(state: Dictionary) -> String:
 
 
 # ---------------------------------------------------------------------------
-# Step 3: ADJUST
+# Step 3: ADJUST (fuzzy difficulty)
 # ---------------------------------------------------------------------------
-## Placeholder hook for the fuzzy difficulty controller (Prompt 3).
-## For now the move is returned unchanged.
-func adjust(next_action: String, _state: Dictionary) -> String:
-	return next_action
+## Every 2 s ask the fuzzy controller for a target aggression. Every frame move
+## the real aggression a little toward it, then set speed and attack rate:
+##   aggression 0 -> 80% speed, attacks 30% slower
+##   aggression 1 -> 120% speed, attacks 30% faster
+## If the server is off, the last target is kept.
+func _adjust(delta: float, me: SpaceFighter, foe: SpaceFighter, arena) -> void:
+	if not use_fuzzy:
+		return
+	_fuzzy_timer -= delta
+	if _fuzzy_timer <= 0.0:
+		_fuzzy_timer = FUZZY_INTERVAL
+		var health := foe.health / foe.max_health * 100.0
+		AIClient.request_fuzzy(health, arena.recent_damage_taken(), absf(foe.position.x - me.position.x), _on_fuzzy)
+	aggression = move_toward(aggression, aggression_target, AGGRESSION_CHANGE * delta)
+	me.move_speed = base_speed * (0.8 + 0.4 * aggression)
+	me.attack_interval = base_attack_interval * (1.3 - 0.6 * aggression)
+
+
+func _on_fuzzy(response: Dictionary) -> void:
+	if response.get("success", false):
+		aggression_target = clampf(float(response["data"].get("aggression", 0.5)), 0.0, 1.0)
 
 
 # ---------------------------------------------------------------------------
