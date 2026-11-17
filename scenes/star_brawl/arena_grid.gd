@@ -1,6 +1,7 @@
 class_name ArenaGrid
 extends RefCounted
-## Turns the boss arena into a simple tile grid for the search algorithms.
+## Turns an arena (boss arena or exploration level) into a tile grid for the
+## search algorithms. The SAME grid is used by every agent.
 ##
 ## Each tile is CELL x CELL pixels. A tile is:
 ##   - SOLID  if it is inside the ground, a platform or a wall
@@ -15,6 +16,7 @@ const JUMP_TILES := 4
 var size := Vector2i.ZERO
 var blocked := {}                    # Vector2i -> true (solid or unreachable)
 var solid := {}                      # Vector2i -> true (ground / platforms / walls)
+var rows: Array = []                 # rows[y][x]: 0 = walkable, 1 = blocked (sent to the Python server)
 
 
 func build(arena_size: Vector2, solid_rects: Array[Rect2]) -> void:
@@ -32,6 +34,12 @@ func build(arena_size: Vector2, solid_rects: Array[Rect2]) -> void:
 			var cell := Vector2i(x, y)
 			if solid.has(cell) or not _floor_below(cell):
 				blocked[cell] = true
+	rows.clear()
+	for y in size.y:
+		var row: Array[int] = []
+		for x in size.x:
+			row.append(1 if blocked.has(Vector2i(x, y)) else 0)
+		rows.append(row)
 
 
 ## True if a solid tile is within JUMP_TILES below this tile (same or next column).

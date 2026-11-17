@@ -74,7 +74,6 @@ var fuzzy_timer := 2.0
 var aggression := "medium"            # output of the fuzzy logic controller
 var hazard_clock := 0.0
 var hazard_mask := -1
-var alien_attack_clock := 0.0
 var message_timer := 0.0
 var pulse_timer := 0.0
 var rule_pending := false
@@ -88,7 +87,9 @@ var wall_rect := Rect2()
 var boss_brain: FighterBrain          # Player vs AI: controls the boss
 var blue_brain: FighterBrain          # AI vs AI: AI 1, drives the `player` fighter
 var red_brain: FighterBrain           # AI vs AI: AI 2, drives the `rival` fighter
-var show_paths := false               # P key
+var show_paths := false               # P key: draw the grid and the current paths
+var show_states := true               # F key: show each alien's FSM state label
+var hud_planner                       # path planner whose search is shown top-right
 var match_time := 0.0
 var ai_config: Dictionary = {}
 var batch_total := 0                  # > 0 while "Run 10 matches" is running
@@ -325,16 +326,22 @@ func _draw_paths() -> void:
 		return
 	for cell in grid.free_cells():
 		draw_rect(Rect2(Vector2(cell) * GridScript.CELL, Vector2.ONE * GridScript.CELL), Color(1, 1, 1, 0.07), false, 1.0)
+	var lines: Array = []                 # [path, colour]
 	for entry in [[boss_brain, RED], [blue_brain, BLUE], [red_brain, RED]]:
-		var brain: FighterBrain = entry[0]
-		if brain == null or not brain.active or brain.path.size() < 2:
+		if entry[0] != null and entry[0].active:
+			lines.append([entry[0].planner.path, entry[1]])
+	for alien in aliens:
+		if is_instance_valid(alien) and alien.get("state") in [AlienScript.State.CHASE, AlienScript.State.ATTACK]:
+			lines.append([alien.get("planner").path, Color("ffd36b")])
+	for line in lines:
+		if line[0].size() < 2:
 			continue
 		var points := PackedVector2Array()
-		for cell in brain.path:
+		for cell in line[0]:
 			points.append(grid.to_world(cell))
-		draw_polyline(points, entry[1], 5.0)
+		draw_polyline(points, line[1], 5.0)
 		for point in points:
-			draw_circle(point, 6.0, entry[1])
+			draw_circle(point, 6.0, line[1])
 
 
 func _draw_hazards() -> void:
@@ -417,6 +424,7 @@ func _load_planet() -> void:
 	player.knocked_out.connect(_on_knockout)
 	world_layer.add_child(player)
 	rival = null
+	_build_grid(ARENA_WIDTH)              # same grid rules as the boss arena
 	_spawn_aliens()
 	var shift := float(planet_index % 3) * 24.0
 	hazards = [
@@ -512,12 +520,18 @@ func _build_boss_arena() -> void:
 	_add_wall(Rect2(776, 555, 48, 64))
 	camera.limit_right = int(BOSS_WIDTH)
 	camera.position = Vector2(640, 360)
+	_build_grid(BOSS_WIDTH)
+
+
+## Turns the current platforms and walls into the tile grid used by every agent.
+func _build_grid(width: float) -> void:
 	var solids: Array[Rect2] = []
 	for platform in platforms:
 		var size := ((platform.get_child(0) as CollisionShape2D).shape as RectangleShape2D).size
 		solids.append(Rect2(platform.position - size * 0.5, size))
 	grid = GridScript.new()
-	grid.build(Vector2(BOSS_WIDTH, 720), solids)
+	grid.build(Vector2(width, 720), solids)
+	hud_planner = null
 
 
 ## Removes everything from the current level (optionally keeping the player).
@@ -566,6 +580,7 @@ func _spawn_aliens() -> void:
 		alien.strike_requested.connect(_on_strike)
 		alien.knocked_out.connect(_on_knockout)
 		world_layer.add_child(alien)
+		alien.get("state_label").visible = show_states
 		aliens.append(alien)
 
 
@@ -749,7 +764,12 @@ func _refresh_ui() -> void:
 		left_name.text = str(PilotAvatarScript.PILOTS[selected_pilot]["name"])
 		right_name.text = "%s  •  %s" % [planet["rival"], boss_brain.title()] if boss_brain != null else "REACH THE PORTAL"
 		left_info.text = ""
-		right_info.text = "%s   aggression %s" % [boss_brain.stats_text(), aggression.to_upper()] if boss_brain != null else ""
+		if boss_brain != null:
+			right_info.text = "%s | Aggression: %s" % [boss_brain.stats_text(), aggression.to_upper()]
+		elif hud_planner != null:
+			right_info.text = hud_planner.hud_text()          # e.g. "Search: A* | Nodes: 34 | 0.4 ms"
+		else:
+			right_info.text = ""
 		stage_label.text = "%02d / %02d" % [planet_index + 1, PLANETS.size()]
 		stage_subtitle.text = "BOSS DUEL" if segment == "boss" else "EXPLORATION"
 		if duel:
@@ -828,7 +848,7 @@ func _set_screen(next_phase: String) -> void:
 	if mode == "ava":
 		controls_label.text = "AI vs AI     P SHOW PATHS     ESC STOP MATCH"
 	else:
-		controls_label.text = "A/D MOVE   SPACE JUMP   J HIT   K BLAST   SHIFT DASH   E PULSE   P PATHS   ESC PAUSE"
+		controls_label.text = "A/D MOVE   SPACE JUMP   J HIT   K BLAST   SHIFT DASH   E PULSE   P PATHS   F STATES   ESC PAUSE"
 	if next_phase != "paused":
 		modal_shade.visible = false
 
@@ -923,7 +943,6 @@ func _start_planet() -> void:
 	alien_kills = 0
 	ui_timer = 0.0
 	fuzzy_timer = 2.0
-	alien_attack_clock = 0.0
 	_load_planet()
 	_announce("%s  •  REACH THE BOSS PORTAL" % PLANETS[planet_index]["name"], 2.4)
 	play_sound("select")
@@ -944,7 +963,6 @@ func _physics_process(delta: float) -> void:
 	if phase != "fight":
 		return
 	hazard_clock += delta
-	alien_attack_clock += delta
 	if mode == "ava":
 		_update_ai_match(delta)
 	else:
@@ -968,7 +986,7 @@ func _update_player_vs_ai(delta: float) -> void:
 	var move_left := Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)
 	player.desired_direction = float(move_right) - float(move_left)
 	if segment != "boss":
-		_update_aliens()
+		_update_aliens(delta)
 		_check_portal()
 		return
 	_update_boss_special(delta)
@@ -990,6 +1008,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event.keycode == KEY_P and phase == "fight":
 		show_paths = not show_paths
 		queue_redraw()
+		return
+	if event.keycode == KEY_F and phase == "fight":
+		show_states = not show_states
+		for alien in aliens:
+			if is_instance_valid(alien):
+				alien.get("state_label").visible = show_states
 		return
 	if event.keycode == KEY_ESCAPE:
 		if mode == "ava" and phase in ["fight", "ai_result"]:
@@ -1142,25 +1166,11 @@ func _draw_boss_special() -> void:
 				draw_line(Vector2(origin, 547), Vector2(origin + (280 if x >= origin else -280), 547 + lane * 35), Color(danger, alpha * 0.80), 3 if telegraph else 9)
 
 
-func _update_aliens() -> void:
-	for alien in aliens.duplicate():
-		if not is_instance_valid(alien) or alien.knocked_out_state:
-			continue
-		var dx: float = player.position.x - alien.position.x
-		var dy: float = player.position.y - alien.position.y
-		if absf(dx) > 700.0:
-			alien.desired_direction = 0.0
-			continue
-		alien.desired_direction = signf(dx) if absf(dx) > 75.0 else 0.0
-		if dy < -85.0 and alien.is_on_floor():
-			alien.jump()
-		if absf(dx) < 74.0 and absf(dy) < 67.0 and alien_attack_clock > 0.9:
-			alien.punch()
-			alien.attack_cooldown = 1.35
-			alien_attack_clock = 0.0
-		elif absf(dx) < 400.0 and absf(dy) < 125.0 and alien.blast_cooldown <= 0.0 and randf() < 0.003:
-			alien.facing = 1 if dx > 0.0 else -1
-			alien.blast()
+## Each alien runs its own Finite State Machine (alien_enemy.gd).
+func _update_aliens(delta: float) -> void:
+	for alien in aliens:
+		if is_instance_valid(alien) and not alien.knocked_out_state:
+			alien.call("think", delta, player, grid)
 
 
 func _hazard_active(hazard: Dictionary) -> bool:
@@ -1408,8 +1418,9 @@ func perform_special(fighter: SpaceFighter, foe: SpaceFighter) -> bool:
 	return true
 
 
-## Called by FighterBrain after every path search.
-func record_search(_brain: FighterBrain) -> void:
+## Called after every path search (fighters and aliens): updates the HUD and the P-key drawing.
+func record_search(planner) -> void:
+	hud_planner = planner
 	if show_paths:
 		queue_redraw()
 
@@ -1562,7 +1573,7 @@ func _ai_stats(brain: FighterBrain, health_left: float) -> Dictionary:
 		"title": brain.title(),
 		"health": health_left * 100.0,
 		"damage": brain.damage_dealt,
-		"searches": brain.searches,
+		"searches": brain.planner.searches,
 		"avg_nodes": brain.average_nodes(),
 		"avg_ms": brain.average_time_ms(),
 	}

@@ -23,15 +23,16 @@ func _ready() -> void:
 	game._select_planet(0)
 	game._on_campaign_action("start")
 	_check(game.phase == "fight" and game.segment == "explore", "Planet 1 starts with exploration")
+	await _test_alien_fsm()
 	game.player.position = Vector2(game.PORTAL_X, 585)
 	game._check_portal()
 	await get_tree().process_frame
 	_check(game.segment == "boss" and is_instance_valid(game.rival) and game.grid != null, "Portal opens the boss arena and its grid")
-	_check(game.boss_brain.search_algorithm == "dfs" and game.boss_brain.decision_algorithm == "minimax", "Planet 1 boss uses DFS + Minimax")
+	_check(game.boss_brain.search_algorithm == "bfs" and game.boss_brain.decision_algorithm == "minimax", "Planet 1 boss uses BFS + Minimax")
 	_check(game.boss_decision_algorithm(1) == "mcts" and game.boss_decision_algorithm(2) == "minimax", "Even planets use MCTS, odd planets Minimax")
 	await _run_seconds(2.0)
-	_check(game.boss_brain.searches > 0 and game.boss_brain.last_nodes > 0, "Boss searched a path (%d searches)" % game.boss_brain.searches)
-	_check("DFS + MINIMAX" in game.right_name.text and "nodes" in game.right_info.text, "HUD shows boss algorithm, action and stats")
+	_check(game.boss_brain.planner.searches > 0 and game.boss_brain.planner.nodes > 0, "Boss got paths asynchronously (%d searches, from %s)" % [game.boss_brain.planner.searches, game.boss_brain.planner.source])
+	_check("BFS + MINIMAX" in game.right_name.text and "Search: " in game.right_info.text and "Nodes: " in game.right_info.text, "HUD shows: %s" % game.right_info.text)
 	game._unhandled_key_input(_key(KEY_P))
 	_check(game.show_paths, "P shows the AI path")
 	game._unhandled_key_input(_key(KEY_P))
@@ -59,10 +60,10 @@ func _ready() -> void:
 	_check(game.phase == "ai_result" and game.ai_screen.result_panel.visible, "Match finishes and shows the result panel")
 	_check(game.ai_screen.result_title.text != "", "Result: %s" % game.ai_screen.result_title.text)
 	print("  blue: searches %d, avg nodes %.1f, damage %.0f  |  red: searches %d, avg nodes %.1f, damage %.0f" % [
-		game.blue_brain.searches, game.blue_brain.average_nodes(), game.blue_brain.damage_dealt,
-		game.red_brain.searches, game.red_brain.average_nodes(), game.red_brain.damage_dealt])
+		game.blue_brain.planner.searches, game.blue_brain.average_nodes(), game.blue_brain.damage_dealt,
+		game.red_brain.planner.searches, game.red_brain.average_nodes(), game.red_brain.damage_dealt])
 	print("  decisions came from: %s" % game.blue_brain.source)
-	_check(game.blue_brain.searches > 10 and game.red_brain.searches > 10, "Both AIs kept searching during the match")
+	_check(game.blue_brain.planner.searches > 10 and game.red_brain.planner.searches > 10, "Both AIs kept searching during the match")
 
 	# "Run N matches": force quick knockouts to step through a 2-match batch.
 	game.start_ai_batch(config, 2)
@@ -80,6 +81,49 @@ func _ready() -> void:
 	game.queue_free()
 	await get_tree().create_timer(2.5).timeout      # let pending HTTP requests finish
 	get_tree().quit(0 if failures == 0 else 1)
+
+
+## Agent 1: the alien Finite State Machine.
+func _test_alien_fsm() -> void:
+	var alien = game.aliens[0]
+	var States = alien.State
+	_check(alien.state == States.IDLE and alien.state_label.text == "IDLE", "Alien starts in IDLE with a state label")
+	# Player in front of the alien (it faces left) -> CHASE with an A* path.
+	game.player.position = alien.position + Vector2(-300, 0)
+	await _run_seconds(0.8)
+	_check(alien.state == States.CHASE, "Alien sees the player in front -> CHASE (state %s)" % alien.STATE_NAMES[alien.state])
+	_check(alien.planner.searches > 0 and alien.planner.used == "astar", "CHASE uses A* (%s)" % alien.planner.hud_text())
+	_check("Search: A*" in game.right_info.text, "HUD top-right shows: %s" % game.right_info.text)
+	# Close enough -> ATTACK.
+	game.player.position = alien.position + Vector2(-50, 0)
+	await _run_seconds(0.3)
+	_check(alien.state == States.ATTACK, "Close to the player -> ATTACK")
+	# Player behind the alien -> it cannot see it.
+	alien.facing = -1
+	game.player.position = alien.position + Vector2(250, 0)
+	_check(not alien.can_see(game.player), "Alien does not see a player behind it")
+	# A wall between them blocks the view (raycast).
+	game.player.position = alien.position + Vector2(-300, 0)
+	game._add_wall(Rect2(alien.position.x - 160, alien.position.y - 80, 40, 130))
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check(not alien.can_see(game.player), "Alien does not see through a wall")
+	# Lost the player -> SEARCH, then gives up -> PATROL.
+	alien._change_state(States.CHASE)
+	await _run_seconds(0.3)
+	_check(alien.state == States.SEARCH, "Loses the player -> SEARCH")
+	game.player.position = Vector2(150, 585)
+	await _run_seconds(alien.SEARCH_TIME + 0.5)
+	_check(alien.state == States.PATROL, "Gives up searching -> PATROL")
+	# F hides / shows the state labels.
+	game._unhandled_key_input(_key(KEY_F))
+	_check(not alien.state_label.visible, "F hides the state labels")
+	game._unhandled_key_input(_key(KEY_F))
+	# Health 0 -> DEAD.
+	alien.invulnerable = 0.0
+	alien.take_damage(5000.0, 1)
+	_check(alien.state == States.DEAD, "Health 0 -> DEAD")
+	game.player.health = game.player.max_health
 
 
 func _run_seconds(seconds: float) -> void:

@@ -2,8 +2,9 @@ class_name FighterBrain
 extends RefCounted
 ## The AI that controls one fighter (the boss in Player vs AI, both fighters in AI vs AI).
 ##
-##  - MOVES with a search algorithm (DFS, DLS, IDDFS, Bidirectional, Best-First, A*)
-##    that finds a path on the arena grid (see modular_pathfinder.gd).
+##  - MOVES with a search algorithm (BFS, DFS, DLS, IDDFS, Bidirectional, Greedy, A*).
+##    The path is asked from the Python server asynchronously (path_planner.gd);
+##    the fighter keeps its last path until the new one arrives.
 ##  - CHOOSES an action with an adversarial algorithm (Minimax or MCTS), computed by
 ##    the Python backend. Actions: attack, block, dodge, move_closer, move_away, special.
 ##  - If the backend is offline it uses a tiny fallback rule so the fight never freezes.
@@ -12,8 +13,10 @@ extends RefCounted
 ## perform_special(fighter, foe) -> bool, and record_search(brain).
 
 const Pathfinder = preload("res://scripts/utils/modular_pathfinder.gd")
-const MELEE_RANGE := 115.0
+const PlannerScript = preload("res://scripts/utils/path_planner.gd")
+const MELEE_RANGE := 75.0           # a punch only reaches about 82 px (see _on_strike)
 const BLAST_RANGE := 450.0
+const REACH_HEIGHT := 50.0          # a punch only lands if the height difference is below this
 
 var search_algorithm := "astar"
 var decision_algorithm := "minimax"
@@ -23,15 +26,7 @@ var route_interval := 0.35            # seconds between path searches
 var action := "move_closer"           # current action from Minimax / MCTS
 var source := "waiting"               # "backend", "offline" or "waiting"
 var active := true
-var path: Array = []                  # last path (Array of Vector2i tiles)
-var path_found := false
-
-# Statistics shown on screen and in the result panel.
-var last_nodes := 0
-var last_time_ms := 0.0
-var searches := 0
-var total_nodes := 0
-var total_time_ms := 0.0
+var planner                           # path_planner.gd: current path + search statistics
 var damage_dealt := 0.0
 
 var _route_timer := 0.0
@@ -47,12 +42,16 @@ var _arena: WeakRef
 func _init(p_search: String = "astar", p_decision: String = "minimax") -> void:
 	search_algorithm = p_search
 	decision_algorithm = p_decision
+	planner = PlannerScript.new(p_search)
 
 
 ## Called every physics frame by the arena.
 func update(delta: float, me: SpaceFighter, foe: SpaceFighter, arena) -> void:
 	if not active or me.knocked_out_state or foe.knocked_out_state:
 		return
+	_me = weakref(me)
+	_foe = weakref(foe)
+	_arena = weakref(arena)
 	_route_timer -= delta
 	_decide_timer -= delta
 	if _decide_timer <= 0.0:
@@ -75,23 +74,21 @@ func plan_route(me: SpaceFighter, foe: SpaceFighter, arena) -> void:
 		# Retreat target: the floor tile at the far side of the arena from the foe.
 		var far_x := 1 if foe.position.x > me.position.x else grid.size.x - 2
 		goal = grid.to_cell(Vector2(grid.to_world(Vector2i(far_x, 0)).x, me.position.y))
-	var result: Dictionary = Pathfinder.search(search_algorithm, start, goal, grid.blocked, grid.size)
-	path = result["path"]
-	path_found = result["found"]
-	last_nodes = result["nodes_expanded"]
-	last_time_ms = result["time_ms"]
-	searches += 1
-	total_nodes += last_nodes
-	total_time_ms += last_time_ms
-	arena.record_search(self)
+	planner.request(grid, start, goal, _on_path_ready)   # async: never blocks the game
+
+
+func _on_path_ready() -> void:
+	var arena = _arena.get_ref() if _arena else null
+	if active and arena != null:
+		arena.record_search(planner)
 
 
 func average_nodes() -> float:
-	return float(total_nodes) / maxf(1.0, searches)
+	return float(planner.total_nodes) / maxf(1.0, planner.searches)
 
 
 func average_time_ms() -> float:
-	return total_time_ms / maxf(1.0, searches)
+	return planner.total_time_ms / maxf(1.0, planner.searches)
 
 
 # ---------------------------------------------------------------------------
@@ -110,9 +107,6 @@ func _request_decision(me: SpaceFighter, foe: SpaceFighter, arena) -> void:
 		"enemy_cooldown": ceili(foe.special_cooldown),
 	}
 	_waiting = true
-	_me = weakref(me)
-	_foe = weakref(foe)
-	_arena = weakref(arena)
 	AIClient.request_decision(state, decision_algorithm, _on_decision.bind(state))
 
 
@@ -161,7 +155,7 @@ func _set_action(next_action: String, me: SpaceFighter, foe: SpaceFighter, arena
 # ---------------------------------------------------------------------------
 func _execute(me: SpaceFighter, foe: SpaceFighter, arena) -> void:
 	var distance := absf(foe.position.x - me.position.x)
-	var same_height := absf(foe.position.y - me.position.y) < 80.0
+	var same_height := absf(foe.position.y - me.position.y) < REACH_HEIGHT
 	match action:
 		"attack", "special":
 			if distance < MELEE_RANGE and same_height:
@@ -187,19 +181,10 @@ func _execute(me: SpaceFighter, foe: SpaceFighter, arena) -> void:
 
 ## Walk/jump toward the next tile of the path.
 func _follow_path(me: SpaceFighter, foe: SpaceFighter, arena) -> void:
-	if path.size() < 2:
-		# No path (search failed or already there): move straight at the target.
+	if not PlannerScript.follow(me, planner.path, arena.grid):
+		# No path yet (or the search failed): move straight at / away from the target.
 		var away := action in ["move_away", "dodge"]
 		me.desired_direction = -_toward(me, foe) if away else _toward(me, foe)
-		return
-	var grid: ArenaGrid = arena.grid
-	var here := grid.to_cell(me.position)
-	var index := path.find(here)
-	var next: Vector2i = path[mini(index + 1, path.size() - 1)] if index >= 0 else path[1]
-	var dx := grid.to_world(next).x - me.position.x
-	me.desired_direction = signf(dx) if absf(dx) > 10.0 else 0.0
-	if next.y < here.y and (me.is_on_floor() or me.velocity.y > 0.0):
-		me.jump()                            # next tile is higher: jump (or double jump)
 
 
 static func _toward(me: SpaceFighter, foe: SpaceFighter) -> int:
@@ -211,7 +196,8 @@ func title() -> String:
 	return "%s + %s" % [Pathfinder.NAMES[search_algorithm], decision_algorithm.to_upper()]
 
 
+## HUD text, e.g. "Search: A* | Nodes: 34 | 0.4 ms | Path: 12 | ATTACK".
 func stats_text() -> String:
-	var path_text := "%d" % path.size() if path_found else "none"
-	var offline := "  (offline)" if source == "offline" else ""
-	return "%s%s   nodes %d   path %s   %.2f ms" % [action.to_upper(), offline, last_nodes, path_text, last_time_ms]
+	var path_text := "%d" % planner.path.size() if planner.found else "none"
+	var offline := " (offline)" if source == "offline" else ""
+	return "%s | Path: %s | %s%s" % [planner.hud_text(), path_text, action.to_upper(), offline]

@@ -23,7 +23,7 @@ You need **Godot 4** (tested with 4.7.2) and **Python 3** (tested with 3.13).
 
 **Run them by hand instead:** start the backend with `.\ai_backend\.venv\Scripts\python.exe -m uvicorn ai_backend.main:app --port 8000`, then open `project.godot` in Godot and press **F5**.
 
-If the backend is not running, the game still works: the AI uses a simple fallback rule and the HUD shows `(offline)`.
+If the backend is not running, the game still works: paths come from a local A* in Godot (the HUD shows `A* (local)`), and combat decisions use a simple fallback rule (the HUD shows `(offline)`). Path requests are asynchronous, so the game never freezes: each agent keeps its last path until the new one arrives.
 
 ## The two game modes
 
@@ -33,9 +33,11 @@ On the home screen, pick one of two buttons.
 
 You play through 10 planets. On each planet you explore the level, go through the portal, and fight the boss.
 
-- The boss **moves** with a search algorithm. Each planet uses a different one: planet 1 DFS, 2 DLS, 3 IDDFS, 4 Bidirectional, 5 Best-First, 6 A*, and then the list repeats.
+- **Aliens (Agent 1)** patrol the level using a **Finite State Machine**: IDLE → PATROL → CHASE → ATTACK, CHASE → SEARCH → PATROL, and any state → DEAD. An alien sees you only when you are in front of it and no wall or platform is in between (a raycast). In CHASE it follows an A* path. Its state is shown in a small label above it (F toggles the labels).
+
+- The boss **moves** with a search algorithm. Each planet uses a different one: planet 1 BFS, 2 DFS, 3 DLS, 4 IDDFS, 5 Bidirectional, 6 Greedy, 7 A*, and then the list repeats.
 - The boss **decides** what to do with **Minimax** on odd planets (1, 3, 5, 7, 9) and **MCTS** on even planets (2, 4, 6, 8, 10).
-- The HUD shows the boss's algorithms, its current action, nodes expanded, path length, search time and its fuzzy aggression level.
+- The HUD (top right) shows the latest search, e.g. `Search: A* | Nodes: 34 | 0.4 ms`, plus the boss's path length, current action and fuzzy aggression level.
 
 | Key | Action |
 |---|---|
@@ -45,14 +47,15 @@ You play through 10 planets. On each planet you explore the level, go through th
 | K | Blaster shot |
 | Shift | Dash |
 | E | Orbit Pulse (needs 70 energy) |
-| P | Show / hide the AI's search grid and path |
+| P | Show / hide the grid and the current AI paths |
+| F | Show / hide the aliens' state labels |
 | Esc | Pause |
 
 ### AI vs AI
 
 Two AI fighters fight each other, and nobody controls them.
 
-1. For **AI 1 (blue)** and **AI 2 (red)**, choose a **search algorithm** (DFS / DLS / IDDFS / Bidirectional / Best-First / A*) and a **decision algorithm** (Minimax / MCTS).
+1. For **AI 1 (blue)** and **AI 2 (red)**, choose a **search algorithm** (BFS / DFS / DLS / IDDFS / Bidirectional / Greedy / A*) and a **decision algorithm** (Minimax / MCTS).
 2. Choose an arena (planet) and press **Start**.
 3. During the match the HUD shows, for each AI: its algorithms, health, current action, nodes expanded, path length and search time (ms). Press **P** to draw each AI's path (blue and red lines).
 4. A match ends by knockout, or after 60 seconds. If time runs out, the AI with more health wins. The result panel shows the winner, time taken, total damage dealt, and each AI's average nodes expanded and average search time.
@@ -64,12 +67,15 @@ Press **Esc** to stop a match and go back to the setup screen.
 
 | Algorithm | Type | File | Where it is used in the game |
 |---|---|---|---|
-| DFS | Uninformed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planets 1 and 7; AI vs AI choice) |
-| DLS (depth limit 30) | Uninformed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planets 2 and 8; AI vs AI choice) |
-| IDDFS | Uninformed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planets 3 and 9; AI vs AI choice) |
-| Bidirectional search | Uninformed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planets 4 and 10; AI vs AI choice) |
-| Greedy Best-First (Manhattan) | Informed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planet 5; AI vs AI choice) |
-| A* (Manhattan) | Informed search | `scripts/utils/modular_pathfinder.gd` | Fighter movement (boss on planet 6; AI vs AI choice) |
+| BFS | Uninformed search | `ai_backend/algorithms/pathfinding/bfs.py` | Fighter movement (boss on planets 1 and 8; AI vs AI choice) |
+| DFS | Uninformed search | `ai_backend/algorithms/pathfinding/dfs.py` | Fighter movement (boss on planets 2 and 9; AI vs AI choice) |
+| DLS (limit 20) | Uninformed search | `ai_backend/algorithms/pathfinding/dls.py` | Fighter movement (boss on planets 3 and 10; AI vs AI choice) |
+| IDDFS (limit 1..40) | Uninformed search | `ai_backend/algorithms/pathfinding/iddfs.py` | Fighter movement (boss on planet 4; AI vs AI choice) |
+| Bidirectional search | Uninformed search | `ai_backend/algorithms/pathfinding/bidirectional.py` | Fighter movement (boss on planet 5; AI vs AI choice) |
+| Greedy Best-First (Manhattan) | Informed search | `ai_backend/algorithms/pathfinding/greedy.py` | Fighter movement (boss on planet 6; AI vs AI choice) |
+| A* (f = g + h, Manhattan) | Informed search | `ai_backend/algorithms/pathfinding/astar.py` | Fighter movement (boss on planet 7; AI vs AI choice), alien CHASE |
+| A* (local backup) | Informed search | `scripts/utils/modular_pathfinder.gd` | Used when the server does not answer within 0.4 s |
+| Finite State Machine | Agent behaviour | `scenes/star_brawl/alien_enemy.gd` | Alien patrols in the exploration levels |
 | Minimax, depth 3 (alpha-beta optional) | Adversarial | `ai_backend/algorithms/adversarial/minimax.py` | Combat decisions (boss on odd planets; AI vs AI choice) |
 | MCTS, 200 simulations, UCB1 | Adversarial | `ai_backend/algorithms/adversarial/mcts.py` | Combat decisions (boss on even planets; AI vs AI choice) |
 | Fuzzy logic | Other | `ai_backend/algorithms/fuzzy.py` | Player health + distance give the boss aggression (low / medium / high), which changes the boss's speed |
@@ -78,17 +84,18 @@ Press **Esc** to stop a match and go back to the setup screen.
 
 **How it fits together**
 
-- `scenes/star_brawl/arena_grid.gd` turns the boss arena into tiles: ground, platforms and the middle wall are solid, and free tiles are the ones a fighter can reach.
+- `scenes/star_brawl/arena_grid.gd` turns a level into tiles (the same rules for every agent): ground, platforms and walls are blocked, free tiles are the ones a fighter can reach. Moves go in 4 directions.
+- `scripts/utils/path_planner.gd` sends the grid to `POST /pathfinding/find` asynchronously and falls back to the local A* if no answer arrives in time.
 - `scenes/star_brawl/fighter_brain.gd` is the AI for one fighter. It searches a path on that grid and asks the backend for an action: `attack`, `block`, `dodge`, `move_closer`, `move_away` or `special`.
 - The combat state used by Minimax and MCTS is defined in `ai_backend/algorithms/adversarial/combat_state.py`. It holds both fighters' health and energy, the distance between them, and cooldowns. The evaluation is `(my_hp - enemy_hp)` plus small bonuses.
 
 ## Tests
 
 ```powershell
-# Python: minimax, MCTS, fuzzy, CSP, rules
+# Python: 7 path-finding algorithms, minimax, MCTS, fuzzy, CSP, rules
 .\ai_backend\.venv\Scripts\python.exe -m pytest -q ai_backend\tests
 
-# Godot: search algorithms, and a smoke test that opens both game modes
+# Godot: local A* + grid, and a smoke test (both game modes + alien FSM)
 godot --headless --path . --import
 godot --headless --path . res://tests/test_search.tscn
 godot --headless --path . res://tests/test_game_modes.tscn

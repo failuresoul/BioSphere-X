@@ -86,6 +86,14 @@ func check_health(callback: Callable = Callable()) -> void:
 	)
 
 
+## Path finding on the server (BFS, DFS, DLS, IDDFS, Bidirectional, Greedy, A*).
+## grid = rows of 0 (walkable) / 1 (wall). Uses a short timeout: if the server is
+## too slow the caller falls back to the local A*.
+func request_path(algorithm: String, grid: Array, start: Vector2i, goal: Vector2i, timeout: float, callback: Callable = Callable()) -> void:
+	var body := {"algorithm": algorithm, "grid": grid, "start": [start.x, start.y], "goal": [goal.x, goal.y]}
+	send_request("/pathfinding/find", HTTPClient.METHOD_POST, body, callback, timeout)
+
+
 ## Minimax / MCTS picks a combat action. state = my_hp, enemy_hp, distance, energies, cooldowns.
 func request_decision(state: Dictionary, algorithm: String, callback: Callable = Callable()) -> void:
 	send_request("/api/ai/decision", HTTPClient.METHOD_POST, {"state": state, "algorithm": algorithm, "depth": 3, "simulations": 200}, callback)
@@ -109,7 +117,9 @@ func request_rules(facts: Dictionary, callback: Callable = Callable()) -> void:
 # ---------------------------------------------------------------------------
 # Core Asynchronous HTTP Request Pipeline
 # ---------------------------------------------------------------------------
-func send_request(endpoint: String, method: int = HTTPClient.METHOD_GET, json_data: Dictionary = {}, callback: Callable = Callable()) -> void:
+func send_request(endpoint: String, method: int = HTTPClient.METHOD_GET, json_data: Dictionary = {}, callback: Callable = Callable(), timeout: float = -1.0) -> void:
+	if timeout <= 0.0:
+		timeout = timeout_seconds
 	if not is_inside_tree():
 		var not_in_tree_res := {
 			"success": false,
@@ -121,7 +131,7 @@ func send_request(endpoint: String, method: int = HTTPClient.METHOD_GET, json_da
 		return
 	
 	var http := HTTPRequest.new()
-	http.timeout = timeout_seconds
+	http.timeout = timeout
 	add_child(http)
 	
 	var url := base_url + endpoint
@@ -132,11 +142,12 @@ func send_request(endpoint: String, method: int = HTTPClient.METHOD_GET, json_da
 	http.request_completed.connect(_on_http_request_completed.bind(http, endpoint, callback))
 	
 	# Explicit timeout timer safeguard to avoid hanging on OS socket SYN timeouts
-	if timeout_seconds > 0.0:
+	if timeout > 0.0:
 		var watchdog := Timer.new()
 		watchdog.name = "TimeoutWatchdog"
 		watchdog.one_shot = true
-		watchdog.wait_time = timeout_seconds
+		watchdog.wait_time = timeout
+		watchdog.ignore_time_scale = true      # real seconds, even when the game runs at 3x
 		http.add_child(watchdog)
 		watchdog.timeout.connect(_on_watchdog_timeout.bind(http, endpoint, callback))
 		watchdog.start()

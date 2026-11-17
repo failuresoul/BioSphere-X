@@ -1,6 +1,7 @@
 extends Node
-## Tests for the 6 search algorithms in scripts/utils/modular_pathfinder.gd
-## and for the arena grid they search on.
+## Tests for the LOCAL backup A* (scripts/utils/modular_pathfinder.gd) and the
+## arena grid. The 7 server algorithms are tested with pytest
+## (ai_backend/tests/test_pathfinding.py).
 ## Run: godot --headless --path . res://tests/test_search.tscn
 
 const Pathfinder = preload("res://scripts/utils/modular_pathfinder.gd")
@@ -17,31 +18,21 @@ func _ready() -> void:
 		walls[Vector2i(4, y)] = true
 	var start := Vector2i(0, 5)
 	var goal := Vector2i(9, 5)
-	var shortest := 9 + 5 + 5 + 1    # go up to y=0, across, and back down (moves + 1 tiles)
+	var shortest := 20               # 19 moves -> 20 tiles
 
-	for algorithm in Pathfinder.ORDER:
-		var result: Dictionary = Pathfinder.search(algorithm, start, goal, walls, size, 30)
-		_check(result["found"], "%s finds a path around the wall" % algorithm)
-		_check(_valid_path(result["path"], start, goal, walls, size), "%s path is connected and avoids walls" % algorithm)
-		_check(result["nodes_expanded"] > 0 and result["time_ms"] >= 0.0, "%s reports nodes expanded and time" % algorithm)
-		var unreachable := walls.duplicate()
-		unreachable[Vector2i(4, 0)] = true
-		_check(not Pathfinder.search(algorithm, start, goal, unreachable, size, 30)["found"], "%s reports no path when the wall is closed" % algorithm)
-		_check(Pathfinder.search(algorithm, start, start, walls, size)["path"].size() == 1, "%s handles start == goal" % algorithm)
-
-	# Optimal algorithms find the shortest path.
-	for algorithm in ["iddfs", "bidirectional", "astar"]:
-		_check(Pathfinder.search(algorithm, start, goal, walls, size, 30)["path"].size() == shortest, "%s finds the shortest path" % algorithm)
-	# A* is guided by the Manhattan heuristic: fewer nodes than blind IDDFS.
-	var astar: Dictionary = Pathfinder.astar(start, goal, walls, size)
-	var iddfs: Dictionary = Pathfinder.iddfs(start, goal, walls, size, 30)
-	_check(astar["nodes_expanded"] < iddfs["nodes_expanded"], "A* expands fewer nodes than IDDFS")
-	# DLS stops at its depth limit.
-	_check(not Pathfinder.dls(start, goal, walls, size, 5)["found"], "DLS fails when the goal is deeper than the limit")
-	_check(Pathfinder.dls(start, goal, walls, size, 30)["found"], "DLS succeeds with a large enough limit")
+	var result: Dictionary = Pathfinder.astar(start, goal, walls, size)
+	_check(result["found"] and result["algorithm"] == "astar", "A* finds a path around the wall")
+	_check(_valid_path(result["path"], start, goal, walls, size), "A* path is connected and avoids walls")
+	_check(result["path"].size() == shortest, "A* path is the shortest (%d tiles)" % result["path"].size())
+	_check(result["nodes_expanded"] > 0 and result["time_ms"] >= 0.0, "A* reports nodes expanded and time")
+	var closed := walls.duplicate()
+	closed[Vector2i(4, 0)] = true
+	_check(not Pathfinder.astar(start, goal, closed, size)["found"], "A* reports no path when the wall is closed")
+	_check(Pathfinder.astar(start, start, walls, size)["path"].size() == 1, "A* handles start == goal")
 	_check(Pathfinder.manhattan(Vector2i(1, 2), Vector2i(4, 6)) == 7, "Manhattan distance heuristic")
+	_check(Pathfinder.ORDER.size() == 7 and Pathfinder.ORDER.has("bfs"), "7 server algorithms are listed")
 
-	# The boss arena grid: every algorithm can reach the top platform from the ground.
+	# The boss arena grid.
 	var grid := GridScript.new()
 	var solids: Array[Rect2] = [
 		Rect2(0, 619, 1600, 78),            # ground
@@ -53,11 +44,11 @@ func _ready() -> void:
 	grid.build(Vector2(1600, 720), solids)
 	var ground := grid.to_cell(Vector2(210, 585))
 	var top := grid.to_cell(Vector2(800, 320))
-	_check(not grid.blocked.has(ground) and not grid.blocked.has(top), "Fighter positions map to free tiles")
-	_check(grid.solid.has(Vector2i(12, 9)) and grid.blocked.has(Vector2i(12, 9)), "Wall tile is solid and blocked")
-	for algorithm in Pathfinder.ORDER:
-		var result: Dictionary = Pathfinder.search(algorithm, ground, top, grid.blocked, grid.size, 30)
-		_check(result["found"] and _valid_path(result["path"], ground, top, grid.blocked, grid.size), "%s reaches the top platform in the arena" % algorithm)
+	_check(not grid.blocked.has(ground) and not grid.blocked.has(top), "Fighter positions map to walkable tiles")
+	_check(grid.solid.has(Vector2i(12, 9)) and grid.rows[9][12] == 1, "Wall tile is blocked (1) in the grid rows")
+	_check(grid.rows.size() == grid.size.y and grid.rows[0].size() == grid.size.x, "Grid rows match the grid size")
+	var arena_path: Dictionary = Pathfinder.astar(ground, top, grid.blocked, grid.size)
+	_check(arena_path["found"] and _valid_path(arena_path["path"], ground, top, grid.blocked, grid.size), "A* reaches the top platform in the arena")
 
 	print("Search tests: %s" % ("PASS" if failures == 0 else "%d FAILURES" % failures))
 	get_tree().quit(0 if failures == 0 else 1)
