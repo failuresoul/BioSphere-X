@@ -204,6 +204,8 @@ func play_sound(name: String) -> void:
 
 
 func _draw() -> void:
+	if phase not in ["fight", "paused", "ai_paused", "ai_judging"]:
+		return
 	var planet: Dictionary = PLANETS[planet_index]
 	var facts: Dictionary = PlanetFacts.at(planet_index)
 	var sky: Color = facts["sky"] if segment == "explore" else Color(facts["sky"]).darkened(0.21)
@@ -419,29 +421,29 @@ func _load_planet() -> void:
 	_add_platform(Vector2(ARENA_WIDTH * 0.5, 658), int(ARENA_WIDTH), true)
 	match planet_index % 3:
 		0:
-			_add_platform(Vector2(255, 462), 280)
-			_add_platform(Vector2(670, 395), 280)
-			_add_platform(Vector2(1090, 493), 210)
-			_add_platform(Vector2(1480, 348), 310)
-			_add_platform(Vector2(1875, 450), 245)
-			_add_platform(Vector2(2270, 381), 310)
-			_add_platform(Vector2(2680, 492), 230)
+			_add_platform(Vector2(256, 472), 256)
+			_add_platform(Vector2(640, 408), 256)
+			_add_platform(Vector2(1056, 472), 192)
+			_add_platform(Vector2(1440, 344), 320)
+			_add_platform(Vector2(1888, 472), 256)
+			_add_platform(Vector2(2272, 408), 320)
+			_add_platform(Vector2(2656, 472), 192)
 		1:
-			_add_platform(Vector2(205, 455), 210)
-			_add_platform(Vector2(560, 374), 280)
-			_add_platform(Vector2(960, 455), 280)
-			_add_platform(Vector2(1340, 325), 210)
-			_add_platform(Vector2(1750, 410), 280)
-			_add_platform(Vector2(2180, 350), 280)
-			_add_platform(Vector2(2610, 465), 280)
+			_add_platform(Vector2(224, 472), 192)
+			_add_platform(Vector2(576, 408), 256)
+			_add_platform(Vector2(960, 472), 256)
+			_add_platform(Vector2(1312, 344), 192)
+			_add_platform(Vector2(1728, 408), 256)
+			_add_platform(Vector2(2176, 344), 256)
+			_add_platform(Vector2(2624, 472), 256)
 		2:
-			_add_platform(Vector2(300, 470), 280)
-			_add_platform(Vector2(640, 330), 280)
-			_add_platform(Vector2(1030, 470), 280)
-			_add_platform(Vector2(1410, 308), 280)
-			_add_platform(Vector2(1770, 455), 280)
-			_add_platform(Vector2(2200, 343), 280)
-			_add_platform(Vector2(2620, 470), 280)
+			_add_platform(Vector2(320, 472), 256)
+			_add_platform(Vector2(640, 344), 256)
+			_add_platform(Vector2(1024, 472), 256)
+			_add_platform(Vector2(1408, 344), 256)
+			_add_platform(Vector2(1792, 472), 256)
+			_add_platform(Vector2(2176, 344), 256)
+			_add_platform(Vector2(2624, 472), 256)
 	player = FighterScript.new() as SpaceFighter
 	player.configure(self, true, "green", player_max_health)
 	player.pilot_variant = selected_pilot
@@ -541,10 +543,10 @@ static func boss_decision_algorithm(index: int) -> String:
 ## wall. It is also turned into a tile grid for the search algorithms.
 func _build_boss_arena() -> void:
 	_add_platform(Vector2(BOSS_WIDTH * 0.5, 658), int(BOSS_WIDTH), true)
-	_add_platform(Vector2(465, 472), 250)
-	_add_platform(Vector2(1135, 472), 250)
-	_add_platform(Vector2(800, 357), 220)
-	_add_wall(Rect2(776, 555, 48, 64))
+	_add_platform(Vector2(448, 472), 256)
+	_add_platform(Vector2(1152, 472), 256)
+	_add_platform(Vector2(800, 344), 192)
+	_add_wall(Rect2(768, 555, 64, 64))
 	camera.limit_right = int(BOSS_WIDTH)
 	camera.position = Vector2(640, 360)
 	_build_grid(BOSS_WIDTH)
@@ -883,6 +885,7 @@ func _set_screen(next_phase: String) -> void:
 	controls_label.text = "A/D MOVE  SPACE JUMP  J HIT  K BLAST  SHIFT DASH  E PULSE  Q SUIT  P PATHS  F STATES  ESC PAUSE"
 	if next_phase != "paused":
 		modal_shade.visible = false
+	queue_redraw()
 
 
 func _show_home() -> void:

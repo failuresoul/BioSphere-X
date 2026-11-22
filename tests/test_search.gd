@@ -36,10 +36,10 @@ func _ready() -> void:
 	var grid := GridScript.new()
 	var solids: Array[Rect2] = [
 		Rect2(0, 619, 1600, 78),            # ground
-		Rect2(340, 463, 250, 18),           # left platform
-		Rect2(1010, 463, 250, 18),          # right platform
-		Rect2(690, 348, 220, 18),           # top platform
-		Rect2(776, 555, 48, 64),            # wall
+		Rect2(320, 463, 256, 18),           # left platform
+		Rect2(1024, 463, 256, 18),          # right platform
+		Rect2(704, 335, 192, 18),           # top platform
+		Rect2(768, 555, 64, 64),            # wall
 	]
 	grid.build(Vector2(1600, 720), solids)
 	var ground := grid.to_cell(Vector2(210, 585))

@@ -25,9 +25,9 @@ func build(arena_size: Vector2, solid_rects: Array[Rect2]) -> void:
 	blocked.clear()
 	for x in size.x:
 		for y in size.y:
-			var center := to_world(Vector2i(x, y))
+			var tile_rect := Rect2(x * CELL + 4, y * CELL + 4, CELL - 8, CELL - 8)
 			for rect in solid_rects:
-				if rect.has_point(center):
+				if rect.intersects(tile_rect):
 					solid[Vector2i(x, y)] = true
 	for x in size.x:
 		for y in size.y:

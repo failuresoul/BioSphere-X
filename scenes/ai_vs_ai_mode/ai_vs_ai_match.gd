@@ -279,7 +279,7 @@ func _on_csp(response: Dictionary, number: int) -> void:
 		log_event("CSP placed 5 items (%d backtracks)" % int(data.get("backtracks", 0)))
 	else:                                            # fallback: fixed spots, oxygen in each third
 		spots = {"oxygen_tank_1": Vector2(300, 600), "safe_dome": Vector2(640, 600), "oxygen_tank_2": Vector2(1300, 600),
-			"health_pickup": Vector2(465, 430), "energy_pickup": Vector2(1135, 430)}
+			"health_pickup": Vector2(448, 430), "energy_pickup": Vector2(1152, 430)}
 		log_event("CSP fallback: fixed item spots")
 	game._place_level_items(spots)
 
