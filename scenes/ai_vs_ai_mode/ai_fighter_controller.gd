@@ -209,5 +209,5 @@ func panel_text(me: SpaceFighter) -> String:
 		modes += "  DEFENSIVE"
 	if finisher_mode:
 		modes += "  FINISHER"
-	return "HP %d / %d\nSearch: %s\nDecision: %s\nAggression %.2f   Mode: %s%s" % [
-		ceili(me.health), ceili(me.max_health), search, decision_text(), aggression, MODE_NAMES[mode], modes]
+	return "HP %d / %d   Energy %d / 100\nSearch: %s\nDecision: %s\nAggression %.2f   Mode: %s%s" % [
+		ceili(me.health), ceili(me.max_health), floori(me.energy), search, decision_text(), aggression, MODE_NAMES[mode], modes]

@@ -556,7 +556,7 @@ func _build_hud() -> void:
 		var color := BLUE if side == "blue" else RED
 		var back := ColorRect.new()
 		back.position = Vector2(x, 8)
-		back.size = Vector2(420, 150)
+		back.size = Vector2(420, 158)
 		back.color = Color(0.03, 0.07, 0.16, 0.86)
 		back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hud.add_child(back)
@@ -570,10 +570,21 @@ func _build_hud() -> void:
 		bar.size = Vector2(396, 8)
 		bar.color = color
 		hud.add_child(bar)
+		var energy_back := ColorRect.new()
+		energy_back.position = Vector2(x + 10, 52)
+		energy_back.size = Vector2(400, 6)
+		energy_back.color = Color("152c43")
+		hud.add_child(energy_back)
+		var energy_bar := ColorRect.new()
+		energy_bar.position = Vector2(x + 12, 53)
+		energy_bar.size = Vector2(396, 4)
+		energy_bar.color = Color("44edcf")
+		hud.add_child(energy_bar)
 		panels[side] = {
 			"name": game._label(hud, "", Vector2(x + 10, 12), Vector2(400, 24), 17, color),
 			"bar": bar,
-			"text": game._label(hud, "", Vector2(x + 10, 54), Vector2(400, 100), 14, Color("e4efff")),
+			"energy_bar": energy_bar,
+			"text": game._label(hud, "", Vector2(x + 10, 61), Vector2(400, 100), 14, Color("e4efff")),
 		}
 	timer_label = game._label(hud, "", Vector2(440, 8), Vector2(400, 44), 34, Color("fff1b5"))
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -602,4 +613,6 @@ func _refresh_hud() -> void:
 		var panel: Dictionary = panels[pair[0]]
 		panel["name"].text = "%s  •  %s" % [pair[3], DECISION_NAMES[pair[1].decision_algorithm]]
 		panel["bar"].size.x = 396.0 * clampf(pair[2].health / pair[2].max_health, 0.0, 1.0)
+		panel["energy_bar"].size.x = 396.0 * clampf(pair[2].energy / 100.0, 0.0, 1.0)
+		panel["energy_bar"].color = Color("ffd84a") if pair[2].energy >= 50.0 else Color("44edcf")
 		panel["text"].text = pair[1].panel_text(pair[2])
